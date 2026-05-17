@@ -4,6 +4,7 @@ import { authenticate, forbidden, unauthorized, badRequest, serverError, success
 import { sanitizeString } from '@/lib/validation';
 import { hasPermission, getSchoolFilter } from '@/lib/permissions';
 import { sendReportNotification, isConfigured } from '@/lib/whatsapp';
+import { notifyUsers } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,16 +89,39 @@ export async function POST(request: NextRequest) {
       date || new Date().toISOString().split('T')[0],
     );
 
-    if (isConfigured() && (report_type === 'behavioral' || report_type === 'positive')) {
-      const student = await db.prepare('SELECT first_name, last_name, parent_phone FROM students WHERE id = ?').get(parseInt(student_id)) as any;
+    if (report_type === 'behavioral') {
+      const cls = await db.prepare('SELECT grade FROM classes WHERE id = ?').get(parseInt(class_id)) as any;
+      const schoolStage = cls?.grade === 'المتوسطة' ? 'middle' : 'high';
+      const targetRoles = [`${schoolStage}_supervisor`, `${schoolStage}_counselor`];
+      const targetUsers = await db.prepare(
+        `SELECT u.email, t.phone, t.first_name, t.last_name FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.role IN (?, ?)`
+      ).all(...targetRoles) as any[];
+
+      const student = await db.prepare('SELECT first_name, last_name FROM students WHERE id = ?').get(parseInt(student_id)) as any;
       const teacher = await db.prepare('SELECT first_name, last_name FROM teachers WHERE id = ?').get(parseInt(teacher_id || '0')) as any;
-      if (student?.parent_phone) {
-        sendReportNotification(student.parent_phone, {
-          student_name: `${student.first_name} ${student.last_name}`,
-          report_type, title: title || undefined,
-          content: sanitizeString(content),
-          teacher_name: teacher ? `${teacher.first_name} ${teacher.last_name}` : '',
-        }).catch(() => {});
+      const studentName = student ? `${student.first_name} ${student.last_name}` : '';
+      const teacherName = teacher ? `${teacher.first_name} ${teacher.last_name}` : '';
+      const reportTitle = title || 'تقرير سلوكي';
+
+      for (const u of targetUsers) {
+        if (isConfigured() && u.phone) {
+          sendReportNotification(u.phone, {
+            student_name: studentName, report_type: 'behavioral',
+            title: reportTitle, content: sanitizeString(content),
+            teacher_name: teacherName,
+          }).catch(() => {});
+        }
+      }
+
+      const emails = targetUsers.map((u: any) => u.email).filter(Boolean);
+      if (emails.length > 0) {
+        const clsName = (await db.prepare('SELECT class_name FROM classes WHERE id = ?').get(parseInt(class_id)) as any)?.class_name || '';
+        notifyUsers(emails,
+          '🚨 تقرير سلوكي - تنبيه عاجل',
+          `الطالب: ${studentName}\nالفصل: ${clsName}\nالمعلم: ${teacherName}\nالمحتوى: ${sanitizeString(content).slice(0, 300)}`,
+          'urgent',
+          '/dashboard/reports'
+        ).catch(() => {});
       }
     }
 

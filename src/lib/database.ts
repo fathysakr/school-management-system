@@ -488,6 +488,22 @@ function applyMigrations(bsql: Database.Database) {
       `
     },
     {
+      name: '013_notifications',
+      sql: `
+        CREATE TABLE IF NOT EXISTS notifications (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          message TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('urgent', 'info', 'warning')),
+          link TEXT,
+          is_read INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `
+    },
+    {
       name: '011_subjects',
       sql: (() => {
         try {
@@ -549,6 +565,13 @@ let db: DbAdapter;
 
 async function ensureTursoReady() {
   if (!process.env.TURSO_DB_URL || !process.env.TURSO_DB_TOKEN) return;
+  await db.exec(`CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+    title TEXT NOT NULL, message TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('urgent','info','warning')),
+    link TEXT, is_read INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
   await db.exec(`CREATE TABLE IF NOT EXISTS substitutions (
     id INTEGER PRIMARY KEY AUTOINCREMENT, date DATE NOT NULL,
     absent_teacher_id INTEGER NOT NULL, substitute_teacher_id INTEGER,
