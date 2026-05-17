@@ -414,7 +414,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           bgcolor: '#f4f6f8',
           minHeight: '100vh',
           mt: '64px',
-          ml: `${drawerWidth}px`,
+          ml: isMobile ? 0 : `${drawerWidth}px`,
           transition: muiTheme.transitions.create(['margin', 'width'], {
             easing: muiTheme.transitions.easing.easeOut,
             duration: muiTheme.transitions.duration.standard,

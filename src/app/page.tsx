@@ -27,21 +27,21 @@ export default function Home() {
       <Container maxWidth="md">
         {/* Header */}
         <Box sx={{ textAlign: 'center', mb: 5 }}>
-          <School sx={{ fontSize: 72, color: '#fff', mb: 2, opacity: 0.9 }} />
-          <Typography variant="h3" fontWeight="bold" color="#fff" gutterBottom>
+          <School sx={{ fontSize: { xs: 48, sm: 72 }, color: '#fff', mb: 2, opacity: 0.9 }} />
+          <Typography variant="h3" fontWeight="bold" color="#fff" gutterBottom sx={{ fontSize: { xs: '1.75rem', sm: '3rem' } }}>
             مدرسة صفوة الرواد الأهلية
           </Typography>
-          <Typography variant="h6" color="rgba(255,255,255,0.7)" sx={{ mb: 1 }}>
+          <Typography variant="h6" color="rgba(255,255,255,0.7)" sx={{ mb: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
             اختر القسم الذي تريد الدخول إليه
           </Typography>
         </Box>
 
         {/* Two choice cards */}
-        <Box sx={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: { xs: 2, sm: 4 }, justifyContent: 'center', flexWrap: 'wrap', px: { xs: 2, sm: 0 } }}>
           {/* Middle School */}
           <Card
             sx={{
-              width: 320, borderRadius: 4,
+              width: { xs: '100%', sm: 320 }, borderRadius: 4,
               background: 'linear-gradient(145deg, #ffffff, #f0f4ff)',
               transition: 'all 0.3s ease',
               '&:hover': {
@@ -83,7 +83,7 @@ export default function Home() {
           {/* High School */}
           <Card
             sx={{
-              width: 320, borderRadius: 4,
+              width: { xs: '100%', sm: 320 }, borderRadius: 4,
               background: 'linear-gradient(145deg, #ffffff, #fef3e2)',
               transition: 'all 0.3s ease',
               '&:hover': {

@@ -1,0 +1,26 @@
+{
+  "name": "مدرسة صفوة الرواد الأهلية",
+  "short_name": "صفوة الرواد",
+  "description": "نظام إدارة مدرسة صفوة الرواد الأهلية",
+  "start_url": "/login?school=middle",
+  "display": "standalone",
+  "background_color": "#1a237e",
+  "theme_color": "#1a237e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "lang": "ar",
+  "dir": "rtl"
+}

@@ -1,9 +1,9 @@
 'use client';
 
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider, createTheme, responsiveFontSizes } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
-const theme = createTheme({
+let theme = createTheme({
   direction: 'rtl',
   palette: {
     primary: { main: '#1976d2', light: '#42a5f5', dark: '#1565c0' },
@@ -16,6 +16,8 @@ const theme = createTheme({
     MuiCard: { styleOverrides: { root: { borderRadius: 12 } } },
   },
 });
+
+theme = responsiveFontSizes(theme);
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
