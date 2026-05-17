@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter, usePathname } from 'next/navigation';
+import { api } from '@/lib/api';
 import {
   Box, Drawer, AppBar, Toolbar, Typography, IconButton, List,
   ListItem, ListItemIcon, ListItemText, ListItemButton, Divider,
-  Avatar, Badge, Menu, MenuItem, useMediaQuery, useTheme as useMuiTheme, Tooltip
+  Avatar, Badge, Menu, MenuItem, useMediaQuery, useTheme as useMuiTheme, Tooltip,
+  Paper, Chip, ClickAwayListener
 } from '@mui/material';
 import {
   People, School, Class as ClassIcon, EventNote, Grade,
@@ -81,7 +83,7 @@ const roleColors: Record<string, string> = {
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, selectedSchool, setSelectedSchool } = useAuth();
+  const { user, token, logout, selectedSchool, setSelectedSchool } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const muiTheme = useMuiTheme();
@@ -89,8 +91,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [open, setOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [hovering, setHovering] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const isHovered = open || hovering;
+
+  const fetchNotifications = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await api.get('/notifications?unread=true&limit=50', token);
+      setNotifications(res.notifications || []);
+      setUnreadCount(res.unread_count || 0);
+    } catch { /* ignore */ }
+  }, [token]);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const markAllRead = async () => {
+    if (!token) return;
+    try { await api.put('/notifications', { mark_all: true }, token); setUnreadCount(0); setNotifications(prev => prev.map((n: any) => ({ ...n, is_read: 1 }))); } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     setOpen(!isMobile);
@@ -162,11 +187,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Tooltip title="الإشعارات">
-              <IconButton color="inherit" sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
-                <Badge badgeContent={0} color="error"><Notifications /></Badge>
-              </IconButton>
-            </Tooltip>
+            <ClickAwayListener onClickAway={() => setNotifOpen(false)}>
+              <Box sx={{ position: 'relative' }}>
+                <Tooltip title="الإشعارات">
+                  <IconButton color="inherit" onClick={() => setNotifOpen(!notifOpen)} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
+                    <Badge badgeContent={unreadCount} color="error"><Notifications /></Badge>
+                  </IconButton>
+                </Tooltip>
+                {notifOpen && (
+                  <Paper sx={{ position: 'absolute', left: 0, top: '100%', mt: 1, width: 360, maxHeight: 480, overflow: 'auto', zIndex: 9999, borderRadius: 2, boxShadow: 8 }}>
+                    <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="subtitle2" fontWeight={700}>الإشعارات</Typography>
+                      {unreadCount > 0 && <Chip label={`${unreadCount} جديد`} size="small" color="error" onClick={markAllRead} sx={{ cursor: 'pointer', fontSize: 11 }} />}
+                    </Box>
+                    {notifications.length === 0 ? (
+                      <Typography color="text.secondary" textAlign="center" py={4} variant="body2">لا توجد إشعارات</Typography>
+                    ) : (
+                      <List disablePadding>
+                        {notifications.map((n: any) => (
+                          <ListItemButton key={n.id} sx={{ gap: 1.5, py: 1.5, px: 2, bgcolor: n.is_read ? 'transparent' : 'action.hover', borderBottom: '1px solid', borderColor: 'divider' }}
+                            onClick={() => { if (n.link) router.push(n.link); setNotifOpen(false); }}>
+                            <Box sx={{ flexShrink: 0 }}>
+                              {n.type === 'urgent' ? <Box component="span" sx={{ fontSize: 20 }}>🚨</Box> : n.type === 'warning' ? <Box component="span" sx={{ fontSize: 20 }}>⚠️</Box> : <Box component="span" sx={{ fontSize: 20 }}>ℹ️</Box>}
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography variant="body2" fontWeight={600} noWrap>{n.title}</Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', whiteSpace: 'pre-line', lineHeight: 1.4 }}>{n.message}</Typography>
+                            </Box>
+                          </ListItemButton>
+                        ))}
+                      </List>
+                    )}
+                  </Paper>
+                )}
+              </Box>
+            </ClickAwayListener>
 
             <Box
               onClick={(e) => setAnchorEl(e.currentTarget)}
@@ -243,7 +298,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {user.email?.charAt(0).toUpperCase()}
             </Avatar>
             <Typography variant="subtitle2" fontWeight={600}>{user.email?.split('@')[0]}</Typography>
-            <Chip
+            <RoleChip
               label={roleLabels[user.role] || user.role}
               size="small"
               sx={{
@@ -430,7 +485,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 }
 
-function Chip({ label, size, sx }: { label: string; size?: 'small' | 'medium'; sx?: any }) {
+function RoleChip({ label, size, sx }: { label: string; size?: 'small' | 'medium'; sx?: any }) {
   return (
     <Box
       component="span"
