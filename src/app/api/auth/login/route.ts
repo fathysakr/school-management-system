@@ -6,16 +6,6 @@ import { getSchoolStage } from '@/lib/permissions';
 export async function POST(request: NextRequest) {
   try {
     await ensureTursoReady();
-    // DEBUG: check user count
-    const allUsers = await db.prepare("SELECT email, role FROM users LIMIT 10").all() as any[];
-    const userCount = await db.prepare("SELECT COUNT(*) as cnt FROM users").get() as any;
-    const subCount = await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any;
-    console.log('TURSO DEBUG:', { userCount: userCount?.cnt, subCount: subCount?.cnt, users: allUsers.map((u: any) => u.email) });
-    if (String(request.headers.get('x-debug')) === 'true') {
-      return new Response(JSON.stringify({ userCount: userCount?.cnt, subCount: subCount?.cnt, users: allUsers.map((u: any) => u.email) }), {
-        status: 200, headers: { 'Content-Type': 'application/json' },
-      });
-    }
     const body = await request.json();
     const { email, password, school } = body;
 

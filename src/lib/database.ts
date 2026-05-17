@@ -533,12 +533,22 @@ async function ensureTursoReady() {
     await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES ('القرآن','middle',3),('التوحيد','middle',2),('الفقه','middle',2),('الحديث','middle',2),('اللغة العربية','middle',5),('الرياضيات','middle',5),('العلوم','middle',4),('الاجتماعيات','middle',3),('اللغة الإنجليزية','middle',4),('الحاسب الآلي','middle',2),('التربية البدنية','middle',2),('التربية الفنية','middle',2)`);
     await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES ('القرآن','high',2),('التوحيد','high',2),('الفقه','high',2),('الحديث','high',1),('اللغة العربية','high',5),('الرياضيات','high',5),('الفيزياء','high',3),('الكيمياء','high',3),('الأحياء','high',3),('اللغة الإنجليزية','high',4),('الحاسب الآلي','high',2),('التربية البدنية','high',2),('التربية الفنية','high',1),('الاجتماعيات','high',2)`);
   }
-  const usrCnt = (await db.prepare("SELECT COUNT(*) as cnt FROM users").get() as any)?.cnt;
-  if (!usrCnt) {
-    const h = { admin:'$2a$04$QpWlATKSbm.yJD5MRt7FquL2XIrvb0foaijQRZGJvEDpCyYlWLfsm', sup:'$2a$04$r/QVAk.Y1yaztIsEeKReaeXCofMmrRhQp74TAl6BsANhU6C8oQL9G', teacher:'$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u', counselor:'$2a$04$PPYZbxrtd2evEZVcCkE9suySMeMBTa9HLU3XyBWjrFSao4axlRpLy', principal:'$2a$04$2Iju6MqiTgXFRTo6D5hiXe6KGAQCD5r2zRz3hrraJMe7ilB7O7wdC' };
-    await db.prepare("INSERT INTO users (email, password, role) VALUES (?,?,?)").run('admin@school.com', h.admin, 'admin');
-    for (const [e, p, r] of [['middle.sup@school.com',h.sup,'middle_supervisor'],['high.sup@school.com',h.sup,'high_supervisor'],['middle.teacher@school.com',h.teacher,'middle_teacher'],['high.teacher@school.com',h.teacher,'high_teacher'],['middle.counselor@school.com',h.counselor,'middle_counselor'],['high.counselor@school.com',h.counselor,'high_counselor'],['middle.principal@school.com',h.principal,'middle_principal'],['high.principal@school.com',h.principal,'high_principal']]) {
-      await db.prepare("INSERT INTO users (email, password, role) VALUES (?,?,?)").run(e as string, p as string, r as string);
+  const h = { admin:'$2a$04$QpWlATKSbm.yJD5MRt7FquL2XIrvb0foaijQRZGJvEDpCyYlWLfsm', sup:'$2a$04$r/QVAk.Y1yaztIsEeKReaeXCofMmrRhQp74TAl6BsANhU6C8oQL9G', teacher:'$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u', counselor:'$2a$04$PPYZbxrtd2evEZVcCkE9suySMeMBTa9HLU3XyBWjrFSao4axlRpLy', principal:'$2a$04$2Iju6MqiTgXFRTo6D5hiXe6KGAQCD5r2zRz3hrraJMe7ilB7O7wdC' };
+  const users: [string, string, string][] = [
+    ['admin@school.com', h.admin, 'admin'],
+    ['middle.sup@school.com', h.sup, 'middle_supervisor'],
+    ['high.sup@school.com', h.sup, 'high_supervisor'],
+    ['middle.teacher@school.com', h.teacher, 'middle_teacher'],
+    ['high.teacher@school.com', h.teacher, 'high_teacher'],
+    ['middle.counselor@school.com', h.counselor, 'middle_counselor'],
+    ['high.counselor@school.com', h.counselor, 'high_counselor'],
+    ['middle.principal@school.com', h.principal, 'middle_principal'],
+    ['high.principal@school.com', h.principal, 'high_principal'],
+  ];
+  for (const [email, hash, role] of users) {
+    const existing = await db.prepare("SELECT COUNT(*) as cnt FROM users WHERE email = ?").get(email) as any;
+    if (!existing?.cnt) {
+      await db.prepare("INSERT INTO users (email, password, role) VALUES (?,?,?)").run(email, hash, role);
     }
   }
 }
