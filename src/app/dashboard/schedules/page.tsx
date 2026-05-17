@@ -8,7 +8,7 @@ import {
   DialogActions, TextField, IconButton, Alert, CircularProgress,
   FormControl, InputLabel, Select, MenuItem, Grid, Tabs, Tab
 } from '@mui/material';
-import { Add, Close, CalendarToday, FilterList, FileDownload } from '@mui/icons-material';
+import { Add, Close, CalendarToday, FilterList, FileDownload, AutoAwesome } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
 
@@ -41,6 +41,12 @@ export default function SchedulesPage() {
     class_id: '', teacher_id: '', subject: '', day_of_week: 'sunday',
     start_time: '08:00', end_time: '09:00', room_number: '',
   });
+
+  const [genDialogOpen, setGenDialogOpen] = useState(false);
+  const [genSchool, setGenSchool] = useState('all');
+  const [genClear, setGenClear] = useState(true);
+  const [genLoading, setGenLoading] = useState(false);
+  const [genResult, setGenResult] = useState<any>(null);
 
   const canCreateSchedule = hasPermission(user?.role, 'schedules:create');
   const canEditSchedule = hasPermission(user?.role, 'schedules:edit');
@@ -142,6 +148,25 @@ api.get(`/schedules${selectedClass ? `?class_id=${selectedClass}${schoolParam}` 
       setSchedules(res.schedules || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'حدث خطأ');
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!token) return;
+    setGenLoading(true);
+    setGenResult(null);
+    setError('');
+    try {
+      const res = await api.post('/schedules/generate', { school: genSchool, clear_existing: genClear }, token);
+      setGenResult(res);
+      setSuccess(`✅ تم توليد ${res.generated} حصة دراسية لـ ${res.classes_count} فصول`);
+      setGenDialogOpen(false);
+      const reload = await api.get(`/schedules`, token);
+      setSchedules(reload.schedules || []);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'فشل توليد الجدول');
+    } finally {
+      setGenLoading(false);
     }
   };
 
@@ -349,6 +374,11 @@ api.get(`/schedules${selectedClass ? `?class_id=${selectedClass}${schoolParam}` 
               {classes.map((c) => <MenuItem key={c.id} value={c.id}>{c.class_name}</MenuItem>)}
             </Select>
           </FormControl>
+          {canCreateSchedule && (
+            <Button variant="contained" color="success" startIcon={<AutoAwesome />} onClick={() => setGenDialogOpen(true)}>
+              توليد تلقائي
+            </Button>
+          )}
           <Button variant="outlined" startIcon={<FileDownload />} onClick={handleExport}>تصدير Excel</Button>
           {canCreateSchedule && (
             <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>إضافة حصة</Button>
@@ -440,6 +470,71 @@ api.get(`/schedules${selectedClass ? `?class_id=${selectedClass}${schoolParam}` 
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setOpenDialog(false)}>إلغاء</Button>
           <Button variant="contained" onClick={handleSubmit}>{editing ? 'تحديث' : 'إضافة'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Generate Dialog */}
+      <Dialog open={genDialogOpen} onClose={() => !genLoading && setGenDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ bgcolor: 'success.main', color: 'white' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AutoAwesome /> توليد تلقائي للجدول
+          </Box>
+          <IconButton onClick={() => setGenDialogOpen(false)} sx={{ position: 'absolute', left: 8, top: 8, color: 'white' }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: '24px !important' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            سيتم توليد جدول دراسي كامل لجميع الفصول بناءً على المواد المسجلة وتخصصات المعلمين. يتم توزيع الحصص بشكل متوازن على أيام الأسبوع مع تجنب تعارض المعلمين.
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>المرحلة</InputLabel>
+                <Select value={genSchool} label="المرحلة" onChange={(e) => setGenSchool(e.target.value)}>
+                  <MenuItem value="all">جميع المراحل</MenuItem>
+                  <MenuItem value="middle">المتوسطة</MenuItem>
+                  <MenuItem value="high">الثانوية</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>طريقة التوليد</InputLabel>
+                <Select value={genClear ? 'clear' : 'keep'} label="طريقة التوليد" onChange={(e) => setGenClear(e.target.value === 'clear')}>
+                  <MenuItem value="clear">مسح الجدول الحالي وتوليد جديد</MenuItem>
+                  <MenuItem value="keep">إضافة حصص للفصول الفارغة فقط</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+          {genResult && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              تم توليد {genResult.generated} حصة بنجاح
+              {genResult.warnings?.length > 0 && (
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="caption" fontWeight="bold">ملاحظات:</Typography>
+                  {genResult.warnings.map((w: string, i: number) => (
+                    <Typography key={i} variant="caption" display="block" color="warning.dark">⚠️ {w}</Typography>
+                  ))}
+                </Box>
+              )}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setGenDialogOpen(false)} disabled={genLoading}>إلغاء</Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleGenerate}
+            disabled={genLoading}
+            startIcon={genLoading ? <CircularProgress size={18} color="inherit" /> : <AutoAwesome />}
+          >
+            {genLoading ? 'جاري التوليد...' : 'بدء التوليد'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

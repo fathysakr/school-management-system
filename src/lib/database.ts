@@ -460,6 +460,53 @@ function applyMigrations(bsql: Database.Database) {
         }
       })()
     },
+    {
+      name: '011_subjects',
+      sql: (() => {
+        try {
+          bsql.prepare("SELECT id FROM subjects LIMIT 1").get();
+          return 'SELECT 1';
+        } catch {
+          return `
+            CREATE TABLE IF NOT EXISTS subjects (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              school TEXT NOT NULL CHECK (school IN ('middle', 'high')),
+              sessions_per_week INTEGER NOT NULL DEFAULT 3,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO subjects (name, school, sessions_per_week) VALUES
+              ('القرآن', 'middle', 3),
+              ('التوحيد', 'middle', 2),
+              ('الفقه', 'middle', 2),
+              ('الحديث', 'middle', 2),
+              ('اللغة العربية', 'middle', 5),
+              ('الرياضيات', 'middle', 5),
+              ('العلوم', 'middle', 4),
+              ('الاجتماعيات', 'middle', 3),
+              ('اللغة الإنجليزية', 'middle', 4),
+              ('الحاسب الآلي', 'middle', 2),
+              ('التربية البدنية', 'middle', 2),
+              ('التربية الفنية', 'middle', 2);
+            INSERT INTO subjects (name, school, sessions_per_week) VALUES
+              ('القرآن', 'high', 2),
+              ('التوحيد', 'high', 2),
+              ('الفقه', 'high', 2),
+              ('الحديث', 'high', 1),
+              ('اللغة العربية', 'high', 5),
+              ('الرياضيات', 'high', 5),
+              ('الفيزياء', 'high', 3),
+              ('الكيمياء', 'high', 3),
+              ('الأحياء', 'high', 3),
+              ('اللغة الإنجليزية', 'high', 4),
+              ('الحاسب الآلي', 'high', 2),
+              ('التربية البدنية', 'high', 2),
+              ('التربية الفنية', 'high', 1),
+              ('الاجتماعيات', 'high', 2);
+          `;
+        }
+      })()
+    },
   ];
 
   for (const migration of migrations) {
