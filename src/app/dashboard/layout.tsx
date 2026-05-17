@@ -11,7 +11,7 @@ import {
 import {
   People, School, Class as ClassIcon, EventNote, Grade,
   Person, Logout, Menu as MenuIcon, ChevronRight, Notifications, Campaign,
-  Schedule, Assessment, AutoStories, Speed, Build, AdminPanelSettings
+  Schedule, Assessment, AutoStories, Speed, Build, AdminPanelSettings, SwapHoriz
 } from '@mui/icons-material';
 import { ToggleButtonGroup, ToggleButton } from '@mui/material';
 
@@ -36,6 +36,7 @@ const menuGroups = [
     label: 'التعليم',
     items: [
       { text: 'الجدول الدراسي', icon: <Schedule />, path: '/dashboard/schedules', roles: allRoles },
+      { text: 'حصص الانتظار', icon: <SwapHoriz />, path: '/dashboard/substitutions', roles: ['admin', 'middle_supervisor', 'high_supervisor', 'middle_principal', 'high_principal'] },
       { text: 'الحضور', icon: <EventNote />, path: '/dashboard/attendance', roles: allRoles },
       { text: 'الدرجات', icon: <Grade />, path: '/dashboard/grades', roles: allRoles },
     ],

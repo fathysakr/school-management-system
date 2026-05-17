@@ -6,6 +6,7 @@ export type Permission =
   | 'grades:view' | 'grades:create' | 'grades:edit' | 'grades:delete'
   | 'reports:view' | 'reports:create' | 'reports:edit' | 'reports:delete'
   | 'schedules:view' | 'schedules:create' | 'schedules:edit' | 'schedules:delete'
+  | 'substitutions:view' | 'substitutions:create' | 'substitutions:edit' | 'substitutions:delete'
   | 'attendance:delete'
   | 'announcements:view' | 'announcements:create' | 'announcements:edit' | 'announcements:delete'
   | 'dashboard:stats';
@@ -21,6 +22,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'grades:view', 'grades:create', 'grades:edit', 'grades:delete',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete',
     'schedules:view', 'schedules:create', 'schedules:edit', 'schedules:delete',
+    'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
     'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'dashboard:stats',
   ],
@@ -32,6 +34,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'grades:view', 'grades:create', 'grades:edit',
     'reports:view', 'reports:create', 'reports:edit',
     'schedules:view', 'schedules:create', 'schedules:edit',
+    'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
     'announcements:view', 'announcements:create', 'announcements:edit',
     'dashboard:stats',
   ],
@@ -43,6 +46,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'grades:view', 'grades:create', 'grades:edit',
     'reports:view', 'reports:create', 'reports:edit',
     'schedules:view', 'schedules:create', 'schedules:edit',
+    'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
     'announcements:view', 'announcements:create', 'announcements:edit',
     'dashboard:stats',
   ],
@@ -96,6 +100,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'grades:view', 'grades:create', 'grades:edit', 'grades:delete',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete',
     'schedules:view', 'schedules:create', 'schedules:edit', 'schedules:delete',
+    'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
     'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'dashboard:stats',
   ],
@@ -107,6 +112,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'grades:view', 'grades:create', 'grades:edit', 'grades:delete',
     'reports:view', 'reports:create', 'reports:edit', 'reports:delete',
     'schedules:view', 'schedules:create', 'schedules:edit', 'schedules:delete',
+    'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
     'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'dashboard:stats',
   ],
@@ -120,6 +126,7 @@ const allPermissions: Permission[] = [
   'grades:view', 'grades:create', 'grades:edit', 'grades:delete',
   'reports:view', 'reports:create', 'reports:edit', 'reports:delete',
   'schedules:view', 'schedules:create', 'schedules:edit', 'schedules:delete',
+  'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
   'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
   'dashboard:stats',
 ];
@@ -153,6 +160,10 @@ const permissionLabels: Record<Permission, string> = {
   'schedules:create': 'إضافة جدول',
   'schedules:edit': 'تعديل جدول',
   'schedules:delete': 'حذف جدول',
+  'substitutions:view': 'عرض البدائل',
+  'substitutions:create': 'إضافة بديل',
+  'substitutions:edit': 'تعديل بديل',
+  'substitutions:delete': 'حذف بديل',
   'announcements:view': 'عرض الإعلانات',
   'announcements:create': 'إضافة إعلان',
   'announcements:edit': 'تعديل إعلان',
@@ -168,6 +179,7 @@ const permissionGroups: { label: string; keys: Permission[] }[] = [
   { label: 'الدرجات', keys: ['grades:view', 'grades:create', 'grades:edit', 'grades:delete'] },
   { label: 'التقارير', keys: ['reports:view', 'reports:create', 'reports:edit', 'reports:delete'] },
   { label: 'الجداول', keys: ['schedules:view', 'schedules:create', 'schedules:edit', 'schedules:delete'] },
+  { label: 'البدائل', keys: ['substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete'] },
   { label: 'الإعلانات', keys: ['announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete'] },
   { label: 'عام', keys: ['dashboard:stats'] },
 ];
