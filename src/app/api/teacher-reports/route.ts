@@ -3,6 +3,7 @@ import db from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
 import { hasPermission, getSchoolFilter } from '@/lib/permissions';
+import { sendReportNotification, isConfigured } from '@/lib/whatsapp';
 
 export async function GET(request: NextRequest) {
   try {
@@ -86,6 +87,19 @@ export async function POST(request: NextRequest) {
       sanitizeString(content),
       date || new Date().toISOString().split('T')[0],
     );
+
+    if (isConfigured() && (report_type === 'behavioral' || report_type === 'positive')) {
+      const student = await db.prepare('SELECT first_name, last_name, parent_phone FROM students WHERE id = ?').get(parseInt(student_id)) as any;
+      const teacher = await db.prepare('SELECT first_name, last_name FROM teachers WHERE id = ?').get(parseInt(teacher_id || '0')) as any;
+      if (student?.parent_phone) {
+        sendReportNotification(student.parent_phone, {
+          student_name: `${student.first_name} ${student.last_name}`,
+          report_type, title: title || undefined,
+          content: sanitizeString(content),
+          teacher_name: teacher ? `${teacher.first_name} ${teacher.last_name}` : '',
+        }).catch(() => {});
+      }
+    }
 
     return success({ message: 'Report added successfully', id: result.lastInsertRowid }, 201);
   } catch (error) {
