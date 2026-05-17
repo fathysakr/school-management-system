@@ -522,6 +522,59 @@ let db: DbAdapter;
 
 if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
   db = createTursoAdapter();
+  (async () => {
+    try {
+      await db.exec(`CREATE TABLE IF NOT EXISTS subjects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        school TEXT NOT NULL CHECK (school IN ('middle', 'high')),
+        sessions_per_week INTEGER NOT NULL DEFAULT 3,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      const subCount = await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any;
+      if (subCount.cnt === 0) {
+        await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES
+          ('القرآن', 'middle', 3), ('التوحيد', 'middle', 2), ('الفقه', 'middle', 2),
+          ('الحديث', 'middle', 2), ('اللغة العربية', 'middle', 5), ('الرياضيات', 'middle', 5),
+          ('العلوم', 'middle', 4), ('الاجتماعيات', 'middle', 3), ('اللغة الإنجليزية', 'middle', 4),
+          ('الحاسب الآلي', 'middle', 2), ('التربية البدنية', 'middle', 2), ('التربية الفنية', 'middle', 2)`);
+        await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES
+          ('القرآن', 'high', 2), ('التوحيد', 'high', 2), ('الفقه', 'high', 2),
+          ('الحديث', 'high', 1), ('اللغة العربية', 'high', 5), ('الرياضيات', 'high', 5),
+          ('الفيزياء', 'high', 3), ('الكيمياء', 'high', 3), ('الأحياء', 'high', 3),
+          ('اللغة الإنجليزية', 'high', 4), ('الحاسب الآلي', 'high', 2), ('التربية البدنية', 'high', 2),
+          ('التربية الفنية', 'high', 1), ('الاجتماعيات', 'high', 2)`);
+        console.log('Turso: subjects seeded');
+      }
+    } catch (e) {
+      console.error('Turso: subjects migration error', e);
+    }
+    try {
+      const userCount = await db.prepare("SELECT COUNT(*) as cnt FROM users").get() as any;
+      if (userCount.cnt === 0) {
+        const bcrypt = await import('bcryptjs');
+        const hash = await bcrypt.hash('admin123', 10);
+        await db.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run('admin@school.com', hash, 'admin');
+        const users = [
+          ['middle.sup@school.com', 'sup123', 'middle_supervisor'],
+          ['high.sup@school.com', 'sup123', 'high_supervisor'],
+          ['middle.teacher@school.com', 'teacher123', 'middle_teacher'],
+          ['high.teacher@school.com', 'teacher123', 'high_teacher'],
+          ['middle.counselor@school.com', 'counselor123', 'middle_counselor'],
+          ['high.counselor@school.com', 'counselor123', 'high_counselor'],
+          ['middle.principal@school.com', 'principal123', 'middle_principal'],
+          ['high.principal@school.com', 'principal123', 'high_principal'],
+        ];
+        for (const [email, pw, role] of users) {
+          const h = await bcrypt.hash(pw, 10);
+          await db.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run(email, h, role);
+        }
+        console.log('Turso: users seeded');
+      }
+    } catch (e) {
+      console.error('Turso: seed error', e);
+    }
+  })();
 } else {
   const dbPath = findDbPath();
   const bsql = new Database(dbPath);
