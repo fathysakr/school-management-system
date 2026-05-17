@@ -550,22 +550,26 @@ async function ensureInit() {
       }
       const userCount = await db.prepare("SELECT COUNT(*) as cnt FROM users").get() as any;
       if (userCount?.cnt === 0) {
-        const bcrypt = await import('bcryptjs');
-        const hash = await bcrypt.hash('admin123', 10);
-        await db.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run('admin@school.com', hash, 'admin');
-        const users = [
-          ['middle.sup@school.com', 'sup123', 'middle_supervisor'],
-          ['high.sup@school.com', 'sup123', 'high_supervisor'],
-          ['middle.teacher@school.com', 'teacher123', 'middle_teacher'],
-          ['high.teacher@school.com', 'teacher123', 'high_teacher'],
-          ['middle.counselor@school.com', 'counselor123', 'middle_counselor'],
-          ['high.counselor@school.com', 'counselor123', 'high_counselor'],
-          ['middle.principal@school.com', 'principal123', 'middle_principal'],
-          ['high.principal@school.com', 'principal123', 'high_principal'],
+        const hashes: Record<string, string> = {
+          admin: '$2a$04$QpWlATKSbm.yJD5MRt7FquL2XIrvb0foaijQRZGJvEDpCyYlWLfsm',
+          sup: '$2a$04$r/QVAk.Y1yaztIsEeKReaeXCofMmrRhQp74TAl6BsANhU6C8oQL9G',
+          teacher: '$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u',
+          counselor: '$2a$04$PPYZbxrtd2evEZVcCkE9suySMeMBTa9HLU3XyBWjrFSao4axlRpLy',
+          principal: '$2a$04$2Iju6MqiTgXFRTo6D5hiXe6KGAQCD5r2zRz3hrraJMe7ilB7O7wdC',
+        };
+        await db.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run('admin@school.com', hashes.admin, 'admin');
+        const users: [string, string, string][] = [
+          ['middle.sup@school.com', hashes.sup, 'middle_supervisor'],
+          ['high.sup@school.com', hashes.sup, 'high_supervisor'],
+          ['middle.teacher@school.com', hashes.teacher, 'middle_teacher'],
+          ['high.teacher@school.com', hashes.teacher, 'high_teacher'],
+          ['middle.counselor@school.com', hashes.counselor, 'middle_counselor'],
+          ['high.counselor@school.com', hashes.counselor, 'high_counselor'],
+          ['middle.principal@school.com', hashes.principal, 'middle_principal'],
+          ['high.principal@school.com', hashes.principal, 'high_principal'],
         ];
-        for (const [email, pw, role] of users) {
-          const h = await bcrypt.hash(pw, 10);
-          await db.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run(email, h, role);
+        for (const [email, hash, role] of users) {
+          await db.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run(email, hash, role);
         }
       }
     } catch (e) {
