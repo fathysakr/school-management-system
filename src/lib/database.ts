@@ -522,33 +522,36 @@ let db: DbAdapter;
 
 let initPromise: Promise<void> | null = null;
 
+let _originalTursoDb: DbAdapter | null = null;
+
 async function ensureInit() {
   if (initPromise) return initPromise;
   if (!process.env.TURSO_DB_URL || !process.env.TURSO_DB_TOKEN) return;
   initPromise = (async () => {
+    const d = _originalTursoDb!;
     try {
-      await db.exec(`CREATE TABLE IF NOT EXISTS subjects (
+      await d.exec(`CREATE TABLE IF NOT EXISTS subjects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         school TEXT NOT NULL CHECK (school IN ('middle', 'high')),
         sessions_per_week INTEGER NOT NULL DEFAULT 3,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
-      const subCount = await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any;
+      const subCount = await d.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any;
       if (subCount?.cnt === 0) {
-        await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES
+        await d.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES
           ('القرآن', 'middle', 3), ('التوحيد', 'middle', 2), ('الفقه', 'middle', 2),
           ('الحديث', 'middle', 2), ('اللغة العربية', 'middle', 5), ('الرياضيات', 'middle', 5),
           ('العلوم', 'middle', 4), ('الاجتماعيات', 'middle', 3), ('اللغة الإنجليزية', 'middle', 4),
           ('الحاسب الآلي', 'middle', 2), ('التربية البدنية', 'middle', 2), ('التربية الفنية', 'middle', 2)`);
-        await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES
+        await d.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES
           ('القرآن', 'high', 2), ('التوحيد', 'high', 2), ('الفقه', 'high', 2),
           ('الحديث', 'high', 1), ('اللغة العربية', 'high', 5), ('الرياضيات', 'high', 5),
           ('الفيزياء', 'high', 3), ('الكيمياء', 'high', 3), ('الأحياء', 'high', 3),
           ('اللغة الإنجليزية', 'high', 4), ('الحاسب الآلي', 'high', 2), ('التربية البدنية', 'high', 2),
           ('التربية الفنية', 'high', 1), ('الاجتماعيات', 'high', 2)`);
       }
-      const userCount = await db.prepare("SELECT COUNT(*) as cnt FROM users").get() as any;
+      const userCount = await d.prepare("SELECT COUNT(*) as cnt FROM users").get() as any;
       if (userCount?.cnt === 0) {
         const hashes: Record<string, string> = {
           admin: '$2a$04$QpWlATKSbm.yJD5MRt7FquL2XIrvb0foaijQRZGJvEDpCyYlWLfsm',
@@ -557,7 +560,7 @@ async function ensureInit() {
           counselor: '$2a$04$PPYZbxrtd2evEZVcCkE9suySMeMBTa9HLU3XyBWjrFSao4axlRpLy',
           principal: '$2a$04$2Iju6MqiTgXFRTo6D5hiXe6KGAQCD5r2zRz3hrraJMe7ilB7O7wdC',
         };
-        await db.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run('admin@school.com', hashes.admin, 'admin');
+        await d.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run('admin@school.com', hashes.admin, 'admin');
         const users: [string, string, string][] = [
           ['middle.sup@school.com', hashes.sup, 'middle_supervisor'],
           ['high.sup@school.com', hashes.sup, 'high_supervisor'],
@@ -569,7 +572,7 @@ async function ensureInit() {
           ['high.principal@school.com', hashes.principal, 'high_principal'],
         ];
         for (const [email, hash, role] of users) {
-          await db.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run(email, hash, role);
+          await d.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run(email, hash, role);
         }
       }
     } catch (e) {
@@ -581,6 +584,7 @@ async function ensureInit() {
 
 if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
   db = createTursoAdapter();
+  _originalTursoDb = db;
 } else {
   const dbPath = findDbPath();
   const bsql = new Database(dbPath);
