@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { comparePassword, generateToken, badRequest, serverError, success, notFound, forbidden } from '@/lib/auth';
 import { getSchoolStage } from '@/lib/permissions';
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const body = await request.json();
     const { email, password, school } = body;
 
