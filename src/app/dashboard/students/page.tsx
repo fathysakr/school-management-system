@@ -9,7 +9,7 @@ import {
   DialogActions, TextField, IconButton, Chip, Alert, CircularProgress,
   TablePagination, Grid, Tabs, Tab, Link
 } from '@mui/material';
-import { Add, Edit, Delete, Visibility, Close, FileUpload, FileDownload, CloudUpload, Phone, RemoveCircleOutline } from '@mui/icons-material';
+import { Add, Edit, Delete, Visibility, Close, FileUpload, FileDownload, CloudUpload, Phone, RemoveCircleOutline, DeleteSweep } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
@@ -28,6 +28,8 @@ export default function StudentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
   const [formData, setFormData] = useState({
     student_id: '', first_name: '', last_name: '', email: '',
     phone: '', date_of_birth: '', address: '',
@@ -122,6 +124,21 @@ export default function StudentsPage() {
       fetchStudents();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'حدث خطأ');
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!token) return;
+    setDeletingAll(true);
+    try {
+      await api.post('/admin/bulk-delete', { action: 'delete_all_students' }, token);
+      setSuccess('تم حذف جميع الطلاب وبياناتهم');
+      setDeleteAllConfirm(false);
+      fetchStudents();
+    } catch {
+      setError('فشل حذف جميع الطلاب');
+    } finally {
+      setDeletingAll(false);
     }
   };
 
@@ -264,6 +281,9 @@ export default function StudentsPage() {
           {hasPermission(user?.role, 'students:create') && (
             <Button variant="outlined" startIcon={<FileUpload />} onClick={() => setImportDialog(true)}>استيراد Excel</Button>
           )}
+          {user?.role === 'admin' && (
+            <Button variant="outlined" color="error" startIcon={<DeleteSweep />} onClick={() => setDeleteAllConfirm(true)}>حذف الجميع</Button>
+          )}
           {hasPermission(user?.role, 'students:create') && (
             <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>إضافة طالب</Button>
           )}
@@ -271,7 +291,7 @@ export default function StudentsPage() {
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}<IconButton size="small" onClick={() => setError('')}><Close fontSize="small" /></IconButton></Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }}>{success}<IconButton size="small" onClick={() => setSuccess('')}><Close fontSize="small" /></IconButton></Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>{success}<IconButton size="small" onClick={() => setSuccess('')}><Close fontSize="small" /></IconButton></Alert>}
 
       <Paper sx={{ overflow: 'auto' }}>
         <TableContainer>
@@ -325,7 +345,7 @@ export default function StudentsPage() {
                         <IconButton size="small" onClick={() => handleOpenDialog(s)}><Edit /></IconButton>
                       )}
                       {hasPermission(user?.role, 'students:delete') && (
-                        <IconButton size="small" color="error" onClick={() => handleDelete(s.id)}><Delete /></IconButton>
+                        <Button size="small" color="error" startIcon={<Delete />} onClick={() => handleDelete(s.id)} sx={{ minWidth: 50 }}>حذف</Button>
                       )}
                     </TableCell>
                   </TableRow>
@@ -468,6 +488,26 @@ export default function StudentsPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => { setImportDialog(false); setImportTab(0); }}>إغلاق</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete all students confirm dialog */}
+      <Dialog open={deleteAllConfirm} onClose={() => !deletingAll && setDeleteAllConfirm(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DeleteSweep color="error" />
+          حذف جميع الطلاب
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <Typography variant="body2" fontWeight="bold">سيتم حذف جميع الطلاب وبياناتهم بالكامل (الدرجات، الحضور، التقارير، التسجيلات)</Typography>
+            <Typography variant="caption">هذا الإجراء لا يمكن التراجع عنه.</Typography>
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setDeleteAllConfirm(false)} disabled={deletingAll}>إلغاء</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteAll} disabled={deletingAll} startIcon={<DeleteSweep />}>
+            {deletingAll ? 'جاري الحذف...' : 'تأكيد حذف الكل'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

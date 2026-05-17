@@ -6,6 +6,7 @@ const ACTIONS = [
   'delete_all_grades',
   'delete_all_classes',
   'delete_all_reports',
+  'delete_all_students',
   'delete_all_teachers',
   'delete_all_schedules',
   'delete_all_announcements',
@@ -43,6 +44,14 @@ export async function POST(request: NextRequest) {
         case 'delete_all_reports':
           await db.prepare('DELETE FROM teacher_reports').run();
           return { message: 'تم حذف جميع التقارير بنجاح' };
+
+        case 'delete_all_students':
+          await db.prepare('DELETE FROM enrollments').run();
+          await db.prepare('DELETE FROM attendance').run();
+          await db.prepare('DELETE FROM grades').run();
+          await db.prepare('DELETE FROM teacher_reports').run();
+          await db.prepare('DELETE FROM students').run();
+          return { message: 'تم حذف جميع الطلاب والبيانات المرتبطة بهم بنجاح' };
 
         case 'delete_all_teachers':
           await db.prepare('DELETE FROM schedules').run();

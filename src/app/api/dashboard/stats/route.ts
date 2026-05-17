@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     `).all() as any[];
 
     const middleVsHigh = await db.prepare(`
-      SELECT grade, COUNT(*) as c FROM classes WHERE status = 'active' GROUP BY grade
+      SELECT grade, COUNT(*) as c FROM classes WHERE status = 'active' ${classStageFilter} GROUP BY grade
     `).all() as any[];
 
     const recentReports = await db.prepare(`

@@ -42,9 +42,11 @@ export async function GET(request: NextRequest) {
     // Get data
     const query = `
       SELECT t.*, 
-             COUNT(DISTINCT c.id) as classes_count
+             COUNT(DISTINCT c.id) as classes_count,
+             u.email as user_email
       FROM teachers t
       LEFT JOIN classes c ON t.id = c.teacher_id
+      LEFT JOIN users u ON t.user_id = u.id
       ${whereClause}
       GROUP BY t.id
       ORDER BY t.last_name, t.first_name

@@ -129,10 +129,14 @@ export async function DELETE(
     const existing = await db.prepare('SELECT id FROM students WHERE id = ?').get(id);
     if (!existing) return notFound('Student not found');
 
-    // Soft delete
-    await db.prepare('UPDATE students SET status = ? WHERE id = ?').run('inactive', id);
+    // Hard delete (cascades to enrollments, attendance, grades, teacher_reports)
+    await db.prepare('DELETE FROM enrollments WHERE student_id = ?').run(id);
+    await db.prepare('DELETE FROM attendance WHERE student_id = ?').run(id);
+    await db.prepare('DELETE FROM grades WHERE student_id = ?').run(id);
+    await db.prepare('DELETE FROM teacher_reports WHERE student_id = ?').run(id);
+    await db.prepare('DELETE FROM students WHERE id = ?').run(id);
 
-    return success({ message: 'Student deleted successfully' });
+    return success({ message: 'تم حذف الطالب وكل بياناته' });
   } catch (error) {
     console.error('Delete student error:', error);
     return serverError('Failed to delete student');

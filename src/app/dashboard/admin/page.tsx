@@ -13,7 +13,8 @@ import {
 import {
   DeleteSweep, Warning, School, Grade, Assessment, People,
   Schedule, Campaign, AutoStories, RestartAlt, ManageAccounts,
-  Add, Edit, Delete, Refresh, Search, FileDownload, Security
+  Add, Edit, Delete, Refresh, Search, FileDownload, Security,
+  LockReset, Visibility, VisibilityOff, ContentCopy
 } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { permissionGroups, permissionLabels, allPermissions } from '@/lib/permissions';
@@ -22,7 +23,8 @@ const actions = [
   { key: 'delete_all_grades', label: 'حذف جميع الدرجات', icon: <Grade />, color: '#e65100', desc: 'مسح جميع سجلات الدرجات والتقييمات' },
   { key: 'delete_all_classes', label: 'حذف جميع الفصول', icon: <School />, color: '#d32f2f', desc: 'مسح الفصول والجداول والحضور والتقارير والتسجيلات' },
   { key: 'delete_all_reports', label: 'حذف جميع التقارير', icon: <Assessment />, color: '#ed6c02', desc: 'مسح جميع تقارير المعلمين' },
-  { key: 'delete_all_teachers', label: 'حذف جميع المعلمين', icon: <People />, color: '#c62828', desc: 'مسح جميع المعلمين والجداول والتقارير المرتبطة بهم' },
+  { key: 'delete_all_students', label: 'حذف جميع الطلاب', icon: <People />, color: '#1565c0', desc: 'مسح جميع الطلاب ودرجاتهم وحضورهم وتقاريرهم' },
+  { key: 'delete_all_teachers', label: 'حذف جميع المعلمين', icon: <School />, color: '#c62828', desc: 'مسح جميع المعلمين والجداول والتقارير المرتبطة بهم' },
   { key: 'delete_all_schedules', label: 'حذف الجداول', icon: <Schedule />, color: '#6a1b9a', desc: 'مسح جميع جداول الحصص' },
   { key: 'delete_all_announcements', label: 'حذف جميع الإعلانات', icon: <Campaign />, color: '#283593', desc: 'مسح جميع الإعلانات' },
   { key: 'new_semester', label: 'بداية فصل دراسي جديد', icon: <RestartAlt />, color: '#00897b', desc: 'مسح الدرجات والحضور والجداول والتقارير والتسجيلات' },
@@ -75,6 +77,9 @@ export default function AdminPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [passwordDialog, setPasswordDialog] = useState<{ user: any } | null>(null);
+  const [passwordForm, setPasswordForm] = useState({ password: '', show: false });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -245,6 +250,7 @@ export default function AdminPage() {
           role: userForm.role,
           teacher_id: userForm.teacher_id ? parseInt(userForm.teacher_id) : null,
         }, token);
+        setCreatedCredentials({ email: userForm.email, password: userForm.password });
       }
       setUserSuccess(editingUser ? 'تم تحديث الحساب بنجاح' : 'تم إنشاء الحساب بنجاح');
       setUserDialog(false);
@@ -284,6 +290,31 @@ export default function AdminPage() {
   });
 
   const paginatedUsers = filteredUsers.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+
+  const handlePasswordReset = async () => {
+    if (!token || !passwordDialog || !passwordForm.password) return;
+    if (passwordForm.password.length < 6) { setUserError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+    try {
+      await api.put(`/admin/users?id=${passwordDialog.user.id}`, { password: passwordForm.password }, token);
+      setUserSuccess(`تم تغيير كلمة المرور للحساب: ${passwordDialog.user.email}\nكلمة المرور الجديدة: ${passwordForm.password}`);
+      setPasswordDialog(null);
+      setPasswordForm({ password: '', show: false });
+    } catch { setUserError('فشل تغيير كلمة المرور'); }
+  };
+
+  const generatePassword = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let pwd = '';
+    for (let i = 0; i < 8; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+    setPasswordForm({ ...passwordForm, password: pwd, show: true });
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setUserSuccess('تم النسخ إلى الحافظة');
+    } catch { setUserError('فشل النسخ'); }
+  };
 
   const handleExportUsers = () => {
     const rows = filteredUsers.map((u) => [
@@ -372,7 +403,7 @@ export default function AdminPage() {
       {tab === 1 && (
         <>
           {userError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setUserError('')}>{userError}</Alert>}
-          {userSuccess && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setUserSuccess('')}>{userSuccess}</Alert>}
+          {userSuccess && <Alert severity="success" sx={{ mb: 2, whiteSpace: 'pre-wrap' }} onClose={() => setUserSuccess('')}>{userSuccess}</Alert>}
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -460,6 +491,7 @@ export default function AdminPage() {
                       <TableCell>{u.created_at ? new Date(u.created_at).toLocaleDateString('ar-EG') : '—'}</TableCell>
                       <TableCell align="center">
                         <IconButton size="small" color="primary" onClick={() => handleOpenUserDialog(u)}><Edit fontSize="small" /></IconButton>
+                        <IconButton size="small" sx={{ color: '#ed6c02' }} onClick={() => { setPasswordDialog({ user: u }); setPasswordForm({ password: '', show: false }); }}><LockReset fontSize="small" /></IconButton>
                         {u.role !== 'admin' && (
                           <IconButton size="small" color="error" onClick={() => setDeleteConfirm(u.id)}><Delete fontSize="small" /></IconButton>
                         )}
@@ -518,6 +550,72 @@ export default function AdminPage() {
               <Button onClick={() => setUserDialog(false)} disabled={userSaving}>إلغاء</Button>
               <Button variant="contained" onClick={handleSaveUser} disabled={userSaving || !userForm.email || (!editingUser && !userForm.password)}>
                 {userSaving ? 'جاري الحفظ...' : editingUser ? 'تحديث' : 'إنشاء'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Credentials display dialog */}
+          <Dialog open={!!createdCredentials} onClose={() => setCreatedCredentials(null)} maxWidth="xs" fullWidth>
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ManageAccounts color="success" />
+              تم إنشاء الحساب بنجاح
+            </DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" gutterBottom>بيانات تسجيل الدخول للمستخدم الجديد:</Typography>
+              <Paper variant="outlined" sx={{ p: 2, mt: 1, mb: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                <Typography variant="body2" dir="ltr" sx={{ textAlign: 'right', mb: 1 }}>
+                  <strong>البريد الإلكتروني:</strong> {createdCredentials?.email}
+                </Typography>
+                <Typography variant="body2" dir="ltr" sx={{ textAlign: 'right' }}>
+                  <strong>كلمة المرور:</strong> {createdCredentials?.password}
+                </Typography>
+              </Paper>
+              <Button
+                variant="outlined" size="small" startIcon={<ContentCopy />}
+                onClick={() => copyToClipboard(`البريد: ${createdCredentials?.email}\nكلمة المرور: ${createdCredentials?.password}`)}
+              >
+                نسخ بيانات الدخول
+              </Button>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+              <Button variant="contained" onClick={() => setCreatedCredentials(null)}>حسناً</Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Password reset dialog */}
+          <Dialog open={!!passwordDialog} onClose={() => setPasswordDialog(null)} maxWidth="xs" fullWidth>
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LockReset sx={{ color: '#ed6c02' }} />
+              تغيير كلمة المرور
+            </DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" gutterBottom>
+                الحساب: <strong>{passwordDialog?.user?.email}</strong>
+              </Typography>
+              {passwordForm.show && passwordForm.password && (
+                <Alert severity="info" sx={{ mt: 1, mb: 1 }}>
+                  <Typography variant="body2" fontWeight="bold">كلمة المرور الجديدة: {passwordForm.password}</Typography>
+                </Alert>
+              )}
+              <Box sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'center' }}>
+                <TextField
+                  fullWidth size="small" label="كلمة المرور الجديدة"
+                  type={passwordForm.show ? 'text' : 'password'}
+                  value={passwordForm.password}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
+                />
+                <IconButton onClick={() => setPasswordForm({ ...passwordForm, show: !passwordForm.show })}>
+                  {passwordForm.show ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </Box>
+              <Button size="small" onClick={generatePassword} sx={{ mt: 1 }}>
+                توليد كلمة مرور عشوائية
+              </Button>
+            </DialogContent>
+            <DialogActions sx={{ p: 2, gap: 1 }}>
+              <Button onClick={() => setPasswordDialog(null)}>إلغاء</Button>
+              <Button variant="contained" onClick={handlePasswordReset} disabled={!passwordForm.password || passwordForm.password.length < 6}>
+                حفظ كلمة المرور
               </Button>
             </DialogActions>
           </Dialog>

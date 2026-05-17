@@ -9,7 +9,7 @@ import {
   DialogActions, TextField, IconButton, Chip, Alert, CircularProgress,
   TablePagination, Grid, Tabs, Tab, Link, FormControl, InputLabel, Select, MenuItem
 } from '@mui/material';
-import { Add, Edit, Delete, Visibility, Close, FileUpload, FileDownload, CloudUpload } from '@mui/icons-material';
+import { Add, Edit, Delete, Visibility, Close, FileUpload, FileDownload, CloudUpload, LockReset, Visibility as VisIcon, VisibilityOff } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
@@ -38,6 +38,8 @@ export default function TeachersPage() {
   });
   const isAdmin = user?.role === 'admin';
   const [isEdit, setIsEdit] = useState(false);
+  const [passwordDialog, setPasswordDialog] = useState<{ teacher: any } | null>(null);
+  const [passwordForm, setPasswordForm] = useState({ password: '', show: false });
   const [importTab, setImportTab] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,6 +124,24 @@ export default function TeachersPage() {
     } catch {
       setError('فشل في جلب بيانات المعلم');
     }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!token || !passwordDialog || !passwordForm.password) return;
+    if (passwordForm.password.length < 6) { setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+    try {
+      await api.put(`/admin/users?id=${passwordDialog.teacher.user_id}`, { password: passwordForm.password }, token);
+      setSuccess(`تم تغيير كلمة المرور للمعلم ${passwordDialog.teacher.first_name} ${passwordDialog.teacher.last_name}\nكلمة المرور الجديدة: ${passwordForm.password}`);
+      setPasswordDialog(null);
+      setPasswordForm({ password: '', show: false });
+    } catch { setError('فشل تغيير كلمة المرور'); }
+  };
+
+  const generatePassword = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let pwd = '';
+    for (let i = 0; i < 8; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+    setPasswordForm({ ...passwordForm, password: pwd, show: true });
   };
 
   const handleExport = async () => {
@@ -244,7 +264,7 @@ export default function TeachersPage() {
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}<IconButton size="small" onClick={() => setError('')}><Close fontSize="small" /></IconButton></Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }}>{success}<IconButton size="small" onClick={() => setSuccess('')}><Close fontSize="small" /></IconButton></Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>{success}<IconButton size="small" onClick={() => setSuccess('')}><Close fontSize="small" /></IconButton></Alert>}
 
       <Paper sx={{ overflow: 'auto' }}>
         <TableContainer>
@@ -258,14 +278,15 @@ export default function TeachersPage() {
                 <TableCell>الهاتف</TableCell>
                 <TableCell>المرحلة</TableCell>
                 <TableCell>الحالة</TableCell>
+                <TableCell>الحساب</TableCell>
                 <TableCell>الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={8} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} align="center"><CircularProgress /></TableCell></TableRow>
               ) : teachers.length === 0 ? (
-                <TableRow><TableCell colSpan={8} align="center">لا يوجد معلمون</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} align="center">لا يوجد معلمون</TableCell></TableRow>
               ) : (
                 teachers.map((t) => (
                   <TableRow key={t.id}>
@@ -281,6 +302,16 @@ export default function TeachersPage() {
                     <TableCell>
                       <Chip label={t.status === 'active' ? 'نشط' : 'غير نشط'}
                         color={t.status === 'active' ? 'success' : 'default'} size="small" />
+                    </TableCell>
+                    <TableCell>
+                      {t.user_email ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Chip label={t.user_email} size="small" variant="outlined" color="primary" sx={{ maxWidth: 120, '& .MuiChip-label': { fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis' } }} />
+                          <IconButton size="small" sx={{ color: '#ed6c02' }} onClick={() => { setPasswordDialog({ teacher: t }); setPasswordForm({ password: '', show: false }); }}><LockReset fontSize="small" /></IconButton>
+                        </Box>
+                      ) : (
+                        <Typography variant="caption" color="text.disabled">—</Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Button size="small" startIcon={<Visibility />} onClick={() => handleView(t.id)} sx={{ minWidth: 50 }} />
@@ -390,6 +421,44 @@ export default function TeachersPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => { setImportDialog(false); setImportTab(0); }}>إغلاق</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Password reset dialog */}
+      <Dialog open={!!passwordDialog} onClose={() => setPasswordDialog(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LockReset sx={{ color: '#ed6c02' }} />
+          تغيير كلمة المرور
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" gutterBottom>
+            المعلم: <strong>{passwordDialog?.teacher?.first_name} {passwordDialog?.teacher?.last_name}</strong>
+          </Typography>
+          {passwordForm.show && passwordForm.password && (
+            <Alert severity="info" sx={{ mt: 1, mb: 1 }}>
+              <Typography variant="body2" fontWeight="bold">كلمة المرور الجديدة: {passwordForm.password}</Typography>
+            </Alert>
+          )}
+          <Box sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'center' }}>
+            <TextField
+              fullWidth size="small" label="كلمة المرور الجديدة"
+              type={passwordForm.show ? 'text' : 'password'}
+              value={passwordForm.password}
+              onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
+            />
+            <IconButton onClick={() => setPasswordForm({ ...passwordForm, show: !passwordForm.show })}>
+              {passwordForm.show ? <VisibilityOff /> : <VisIcon />}
+            </IconButton>
+          </Box>
+          <Button size="small" onClick={generatePassword} sx={{ mt: 1 }}>
+            توليد كلمة مرور عشوائية
+          </Button>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setPasswordDialog(null)}>إلغاء</Button>
+          <Button variant="contained" onClick={handlePasswordReset} disabled={!passwordForm.password || passwordForm.password.length < 6}>
+            حفظ كلمة المرور
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

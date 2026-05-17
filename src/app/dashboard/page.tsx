@@ -25,6 +25,8 @@ const roleLabels: Record<string, string> = {
   high_teacher: 'معلم المرحلة الثانوية',
   middle_counselor: 'مرشد طلابي - متوسط',
   high_counselor: 'مرشد طلابي - ثانوي',
+  middle_principal: 'مدير المدرسة - متوسط',
+  high_principal: 'مدير المدرسة - ثانوي',
 };
 
 const dayLabels: Record<string, string> = {

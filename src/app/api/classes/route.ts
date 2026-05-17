@@ -39,7 +39,15 @@ export async function GET(request: NextRequest) {
       params.push(grade);
     }
 
-    if (teacherId) {
+    // Auto-filter by teacher for teacher roles
+    const isTeacher = user.role === 'middle_teacher' || user.role === 'high_teacher';
+    if (isTeacher) {
+      const teacher = await db.prepare('SELECT id FROM teachers WHERE user_id = ?').get(user.id) as any;
+      if (teacher) {
+        whereClause += ' AND c.teacher_id = ?';
+        params.push(teacher.id);
+      }
+    } else if (teacherId) {
       whereClause += ' AND c.teacher_id = ?';
       params.push(parseInt(teacherId));
     }
