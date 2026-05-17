@@ -520,9 +520,12 @@ function applyMigrations(bsql: Database.Database) {
 
 let db: DbAdapter;
 
-if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
-  db = createTursoAdapter();
-  (async () => {
+let initPromise: Promise<void> | null = null;
+
+async function ensureInit() {
+  if (initPromise) return initPromise;
+  if (!process.env.TURSO_DB_URL || !process.env.TURSO_DB_TOKEN) return;
+  initPromise = (async () => {
     try {
       await db.exec(`CREATE TABLE IF NOT EXISTS subjects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -532,7 +535,7 @@ if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
       const subCount = await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any;
-      if (subCount.cnt === 0) {
+      if (subCount?.cnt === 0) {
         await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES
           ('القرآن', 'middle', 3), ('التوحيد', 'middle', 2), ('الفقه', 'middle', 2),
           ('الحديث', 'middle', 2), ('اللغة العربية', 'middle', 5), ('الرياضيات', 'middle', 5),
@@ -544,14 +547,9 @@ if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
           ('الفيزياء', 'high', 3), ('الكيمياء', 'high', 3), ('الأحياء', 'high', 3),
           ('اللغة الإنجليزية', 'high', 4), ('الحاسب الآلي', 'high', 2), ('التربية البدنية', 'high', 2),
           ('التربية الفنية', 'high', 1), ('الاجتماعيات', 'high', 2)`);
-        console.log('Turso: subjects seeded');
       }
-    } catch (e) {
-      console.error('Turso: subjects migration error', e);
-    }
-    try {
       const userCount = await db.prepare("SELECT COUNT(*) as cnt FROM users").get() as any;
-      if (userCount.cnt === 0) {
+      if (userCount?.cnt === 0) {
         const bcrypt = await import('bcryptjs');
         const hash = await bcrypt.hash('admin123', 10);
         await db.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run('admin@school.com', hash, 'admin');
@@ -569,18 +567,54 @@ if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
           const h = await bcrypt.hash(pw, 10);
           await db.prepare(`INSERT INTO users (email, password, role) VALUES (?, ?, ?)`).run(email, h, role);
         }
-        console.log('Turso: users seeded');
       }
     } catch (e) {
-      console.error('Turso: seed error', e);
+      console.error('Turso: init error', e);
     }
   })();
+  return initPromise;
+}
+
+if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
+  db = createTursoAdapter();
 } else {
   const dbPath = findDbPath();
   const bsql = new Database(dbPath);
   bsql.pragma('foreign_keys = ON');
   db = createBetterSqlite3Adapter(bsql);
   applyMigrations(bsql);
+}
+
+const originalDb = db;
+if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
+  const wrapMethod = (original: any) => {
+    return async (...args: any[]) => {
+      await ensureInit();
+      return original(...args);
+    };
+  };
+  db = {
+    prepare(sql: string) {
+      const stmt = originalDb.prepare(sql);
+      return {
+        get: wrapMethod(stmt.get),
+        all: wrapMethod(stmt.all),
+        run: wrapMethod(stmt.run),
+      };
+    },
+    exec: async (sql: string) => {
+      await ensureInit();
+      return originalDb.exec(sql);
+    },
+    transaction(fn: (...args: any[]) => any) {
+      const t = originalDb.transaction(fn);
+      return async (...args: any[]) => {
+        await ensureInit();
+        return t(...args);
+      };
+    },
+    close: () => originalDb.close(),
+  };
 }
 
 export default db;
