@@ -1,0 +1,129 @@
+import { NextRequest } from 'next/server';
+import db from '@/lib/database';
+import { authenticate, forbidden, unauthorized, badRequest, notFound, serverError, success } from '@/lib/auth';
+import { sanitizeString } from '@/lib/validation';
+import { hasPermission, getSchoolFilter } from '@/lib/permissions';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await authenticate(request);
+    if (!user) return unauthorized();
+    if (!hasPermission(user.role, 'classes:view')) return forbidden();
+
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('Invalid class ID');
+
+    const { searchParams } = new URL(request.url);
+    const schoolFilter = getSchoolFilter(user.role, searchParams.get('school') || undefined);
+    let gradeClause = '';
+    const queryParams: any[] = [id];
+    if (schoolFilter.grade) {
+      gradeClause = ' AND c.grade = ?';
+      queryParams.push(schoolFilter.grade);
+    }
+
+    const classData = await db.prepare(`
+      SELECT c.*, 
+             t.first_name || ' ' || t.last_name as teacher_name
+      FROM classes c
+      LEFT JOIN teachers t ON c.teacher_id = t.id
+      WHERE c.id = ? ${gradeClause}
+    `).get(...queryParams);
+
+    if (!classData) return notFound('Class not found');
+
+    // Get enrolled students
+    const students = await db.prepare(`
+      SELECT s.*, e.enrollment_date
+      FROM students s
+      JOIN enrollments e ON s.id = e.student_id
+      WHERE e.class_id = ? AND e.status = 'active'
+      ORDER BY s.last_name, s.first_name
+    `).all(id);
+
+    return success({ class: classData, students });
+  } catch (error) {
+    console.error('Get class error:', error);
+    return serverError('Failed to fetch class');
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await authenticate(request);
+    if (!user) return unauthorized();
+    if (!hasPermission(user.role, 'classes:edit')) return forbidden();
+
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('Invalid class ID');
+
+    const body = await request.json();
+
+    const existing = await db.prepare('SELECT id FROM classes WHERE id = ?').get(id);
+    if (!existing) return notFound('Class not found');
+
+    const allowedFields = ['class_name', 'grade', 'section', 'room_number', 'capacity', 'status'];
+
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    for (const field of allowedFields) {
+      if (field in body && body[field] !== undefined) {
+        if (field.includes('name') || field === 'section' || field === 'room_number') {
+          if (body[field] && !body[field].toString().trim()) continue;
+          values.push(body[field] ? sanitizeString(body[field].toString()) : null);
+        } else if (field === 'capacity') {
+          const cap = parseInt(body[field]);
+          if (isNaN(cap) || cap < 1) return badRequest('Invalid capacity');
+          values.push(cap);
+        } else {
+          values.push(body[field]);
+        }
+        updates.push(`${field} = ?`);
+      }
+    }
+
+    if (updates.length === 0) {
+      return badRequest('No valid fields to update');
+    }
+
+    values.push(id);
+    const query = `UPDATE classes SET ${updates.join(', ')} WHERE id = ?`;
+    await db.prepare(query).run(...values);
+
+    return success({ message: 'Class updated successfully' });
+  } catch (error) {
+    console.error('Update class error:', error);
+    return serverError('Failed to update class');
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await authenticate(request);
+    if (!user) return unauthorized();
+    if (!hasPermission(user.role, 'classes:delete')) return forbidden();
+
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('Invalid class ID');
+
+    const existing = await db.prepare('SELECT id FROM classes WHERE id = ?').get(id);
+    if (!existing) return notFound('Class not found');
+
+    await db.prepare('UPDATE classes SET status = ? WHERE id = ?').run('inactive', id);
+
+    return success({ message: 'Class deleted successfully' });
+  } catch (error) {
+    console.error('Delete class error:', error);
+    return serverError('Failed to delete class');
+  }
+}

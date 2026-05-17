@@ -1,0 +1,128 @@
+'use client';
+
+import { useAuth } from '@/lib/auth-context';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import {
+  Box, Button, Container, Typography, Card, CardActionArea
+} from '@mui/material';
+import { School, AutoStories } from '@mui/icons-material';
+
+export default function Home() {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>جاري التحميل...</Box>;
+  }
+
+  return (
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a237e 0%, #4a148c 50%, #311b92 100%)', py: 4 }}>
+      <Container maxWidth="md">
+        {/* Header */}
+        <Box sx={{ textAlign: 'center', mb: 5 }}>
+          <School sx={{ fontSize: 72, color: '#fff', mb: 2, opacity: 0.9 }} />
+          <Typography variant="h3" fontWeight="bold" color="#fff" gutterBottom>
+            مدرسة صفوة الرواد الأهلية
+          </Typography>
+          <Typography variant="h6" color="rgba(255,255,255,0.7)" sx={{ mb: 1 }}>
+            اختر القسم الذي تريد الدخول إليه
+          </Typography>
+        </Box>
+
+        {/* Two choice cards */}
+        <Box sx={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
+          {/* Middle School */}
+          <Card
+            sx={{
+              width: 320, borderRadius: 4,
+              background: 'linear-gradient(145deg, #ffffff, #f0f4ff)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-8px)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+              },
+            }}
+          >
+            <CardActionArea
+              onClick={() => router.push('/login?school=middle')}
+              sx={{ p: 4, textAlign: 'center' }}
+            >
+              <Box
+                sx={{
+                  width: 100, height: 100, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #42a5f5, #1565c0)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  mx: 'auto', mb: 2.5, boxShadow: '0 8px 24px rgba(21,101,192,0.3)',
+                }}
+              >
+                <AutoStories sx={{ fontSize: 48, color: '#fff' }} />
+              </Box>
+              <Typography variant="h4" fontWeight="bold" color="#1565c0" gutterBottom>
+                المدرسة المتوسطة
+              </Typography>
+              <Button
+                variant="contained"
+                size="large"
+                sx={{
+                  bgcolor: '#1565c0', borderRadius: 8, px: 4,
+                  '&:hover': { bgcolor: '#0d47a1' },
+                }}
+              >
+                دخول
+              </Button>
+            </CardActionArea>
+          </Card>
+
+          {/* High School */}
+          <Card
+            sx={{
+              width: 320, borderRadius: 4,
+              background: 'linear-gradient(145deg, #ffffff, #fef3e2)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-8px)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+              },
+            }}
+          >
+            <CardActionArea
+              onClick={() => router.push('/login?school=high')}
+              sx={{ p: 4, textAlign: 'center' }}
+            >
+              <Box
+                sx={{
+                  width: 100, height: 100, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #ffa726, #e65100)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  mx: 'auto', mb: 2.5, boxShadow: '0 8px 24px rgba(230,81,0,0.3)',
+                }}
+              >
+                <School sx={{ fontSize: 48, color: '#fff' }} />
+              </Box>
+              <Typography variant="h4" fontWeight="bold" color="#e65100" gutterBottom>
+                المدرسة الثانوية
+              </Typography>
+              <Button
+                variant="contained"
+                size="large"
+                sx={{
+                  bgcolor: '#e65100', borderRadius: 8, px: 4,
+                  '&:hover': { bgcolor: '#bf360c' },
+                }}
+              >
+                دخول
+              </Button>
+            </CardActionArea>
+          </Card>
+        </Box>
+      </Container>
+    </Box>
+  );
+}

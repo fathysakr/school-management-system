@@ -1,0 +1,140 @@
+import { NextRequest } from 'next/server';
+import db from '@/lib/database';
+import { authenticate, forbidden, unauthorized, badRequest, notFound, serverError, success } from '@/lib/auth';
+import { sanitizeString } from '@/lib/validation';
+import { hasPermission, getSchoolFilter } from '@/lib/permissions';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await authenticate(request);
+    if (!user) return unauthorized();
+    if (!hasPermission(user.role, 'students:view')) return forbidden();
+
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('Invalid student ID');
+
+    const { searchParams } = new URL(request.url);
+    const schoolFilter = getSchoolFilter(user.role, searchParams.get('school') || undefined);
+    let schoolClause = '';
+    const schoolParams: any[] = [id];
+    if (schoolFilter.school) {
+      schoolClause = ' AND school = ?';
+      schoolParams.push(schoolFilter.school);
+    }
+
+    const student = await db.prepare(`SELECT * FROM students WHERE id = ? ${schoolClause}`).get(...schoolParams);
+    if (!student) return notFound('Student not found');
+
+    return success({ student });
+  } catch (error) {
+    console.error('Get student error:', error);
+    return serverError('Failed to fetch student');
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await authenticate(request);
+    if (!user) return unauthorized();
+    if (!hasPermission(user.role, 'students:edit')) return forbidden();
+
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('Invalid student ID');
+
+    const body = await request.json();
+
+    const existing = await db.prepare('SELECT id FROM students WHERE id = ?').get(id);
+    if (!existing) return notFound('Student not found');
+
+    const allowedFields = [
+      'first_name', 'last_name', 'email', 'phone',
+      'address', 'parent_email', 'parent_phone', 'parent_phones', 'school', 'status'
+    ];
+
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    for (const field of allowedFields) {
+      if (field in body && body[field] !== undefined && body[field] !== null) {
+        if (field === 'parent_phones') {
+          if (!Array.isArray(body[field])) {
+            return badRequest('parent_phones must be an array');
+          }
+          values.push(JSON.stringify(body[field].filter(Boolean)));
+        } else if (field.includes('name') || field.includes('address')) {
+          if (!body[field].trim()) continue;
+          values.push(sanitizeString(body[field]));
+        } else if (field.includes('email')) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (body[field] && !emailRegex.test(body[field])) {
+            return badRequest(`Invalid ${field} format`);
+          }
+          values.push(body[field]);
+        } else if (field.includes('phone')) {
+          const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
+          if (body[field] && !phoneRegex.test(body[field])) {
+            return badRequest(`Invalid ${field} format`);
+          }
+          values.push(body[field]);
+        } else {
+          values.push(body[field]);
+        }
+        updates.push(`${field} = ?`);
+      }
+    }
+
+    // Sync parent_phone with first phone in parent_phones if parent_phones is being updated
+    if (Array.isArray(body.parent_phones) && !('parent_phone' in body)) {
+      const firstPhone = body.parent_phones.filter(Boolean)[0] || '';
+      if (firstPhone) {
+        updates.push('parent_phone = ?');
+        values.push(firstPhone);
+      }
+    }
+
+    if (updates.length === 0) {
+      return badRequest('No valid fields to update');
+    }
+
+    values.push(id);
+
+    const query = `UPDATE students SET ${updates.join(', ')} WHERE id = ?`;
+    await db.prepare(query).run(...values);
+
+    return success({ message: 'Student updated successfully' });
+  } catch (error) {
+    console.error('Update student error:', error);
+    return serverError('Failed to update student');
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await authenticate(request);
+    if (!user) return unauthorized();
+    if (!hasPermission(user.role, 'students:delete')) return forbidden();
+
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('Invalid student ID');
+
+    const existing = await db.prepare('SELECT id FROM students WHERE id = ?').get(id);
+    if (!existing) return notFound('Student not found');
+
+    // Soft delete
+    await db.prepare('UPDATE students SET status = ? WHERE id = ?').run('inactive', id);
+
+    return success({ message: 'Student deleted successfully' });
+  } catch (error) {
+    console.error('Delete student error:', error);
+    return serverError('Failed to delete student');
+  }
+}
