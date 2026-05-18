@@ -16,8 +16,7 @@ export async function POST() {
   try {
     const results: string[] = [];
 
-    await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`);
-    results.push('تم إضافة عمود grade إلى جدول المواد');
+    try { await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`); results.push('تم إضافة عمود grade إلى جدول المواد'); } catch { results.push('عمود grade موجود مسبقًا'); }
 
     let totalSubjects = 0;
     for (const [grade, subjects] of Object.entries(GRADE_SUBJECTS)) {
