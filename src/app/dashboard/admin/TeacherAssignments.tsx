@@ -199,7 +199,7 @@ export default function TeacherAssignments() {
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {selected.map((id) => {
                       const sub = subjects.find((s: any) => s.id === id);
-                      return sub ? <Chip key={id} label={`${sub.name} (${sub.grade})`} size="small" /> : null;
+                      return sub ? <Chip key={id} label={`${sub.name}${sub.grade ? ` (${sub.grade})` : ''}`} size="small" /> : null;
                     })}
                   </Box>
                 )}>
@@ -220,7 +220,7 @@ export default function TeacherAssignments() {
                     if (!sub) return null;
                     return (
                       <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Chip label={`${sub.name} (${sub.grade})`} size="small" color="primary" variant="outlined" sx={{ minWidth: 140 }} />
+                        <Chip label={`${sub.name}${sub.grade ? ` (${sub.grade})` : ''}`} size="small" color="primary" variant="outlined" sx={{ minWidth: 140 }} />
                         <TextField
                           type="number" size="small" sx={{ width: 80 }}
                           value={subjectSessions[id] ?? sub.sessions_per_week ?? 3}
