@@ -9,7 +9,8 @@ export type Permission =
   | 'substitutions:view' | 'substitutions:create' | 'substitutions:edit' | 'substitutions:delete'
   | 'attendance:delete'
   | 'announcements:view' | 'announcements:create' | 'announcements:edit' | 'announcements:delete'
-  | 'dashboard:stats';
+  | 'dashboard:stats'
+  | 'settings:edit';
 
 export type UserRole = 'admin' | 'middle_supervisor' | 'high_supervisor' | 'middle_teacher' | 'high_teacher' | 'middle_counselor' | 'high_counselor' | 'middle_principal' | 'high_principal';
 
@@ -24,7 +25,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'schedules:view', 'schedules:create', 'schedules:edit', 'schedules:delete',
     'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
     'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
-    'dashboard:stats',
+    'dashboard:stats', 'settings:edit',
   ],
   middle_supervisor: [
     'teachers:view', 'teachers:create', 'teachers:edit',
@@ -169,6 +170,7 @@ const permissionLabels: Record<Permission, string> = {
   'announcements:edit': 'تعديل إعلان',
   'announcements:delete': 'حذف إعلان',
   'dashboard:stats': 'عرض الإحصائيات',
+  'settings:edit': 'إدارة الإعدادات',
 };
 
 const permissionGroups: { label: string; keys: Permission[] }[] = [
@@ -181,7 +183,7 @@ const permissionGroups: { label: string; keys: Permission[] }[] = [
   { label: 'الجداول', keys: ['schedules:view', 'schedules:create', 'schedules:edit', 'schedules:delete'] },
   { label: 'البدائل', keys: ['substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete'] },
   { label: 'الإعلانات', keys: ['announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete'] },
-  { label: 'عام', keys: ['dashboard:stats'] },
+  { label: 'عام', keys: ['dashboard:stats', 'settings:edit'] },
 ];
 
 export function hasPermission(role: UserRole | undefined, permission: Permission, customPermissions?: string[] | null): boolean {
