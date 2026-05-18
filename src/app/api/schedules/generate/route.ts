@@ -13,24 +13,30 @@ function schoolToGrade(school: string): string | null {
   return null;
 }
 
+function getTeacherSubjectNames(specialization: string | null): string[] {
+  if (!specialization) return [];
+  if (specialization.startsWith('[')) {
+    try { return JSON.parse(specialization).map((item: any) => item.n); } catch { return []; }
+  }
+  return specialization.split(',').map((s: string) => s.trim());
+}
+
 function findAvailableTeacher(
   subjectName: string,
   teachers: any[],
   day: number,
   period: number,
-  usedSlots: Set<string>
+  usedSlots: Set<string>,
+  preferredTeacherId?: number | null
 ): number | null {
+  if (preferredTeacherId) {
+    const key = `${preferredTeacherId}-${day}-${period}`;
+    if (!usedSlots.has(key)) return preferredTeacherId;
+  }
   const matching = teachers.filter(t =>
-    t.specialization && subjectName.includes(t.specialization)
+    t.specialization && getTeacherSubjectNames(t.specialization).includes(subjectName)
   );
   for (const t of matching) {
-    const key = `${t.id}-${day}-${period}`;
-    if (!usedSlots.has(key)) return t.id;
-  }
-  const fallback = teachers.filter(t =>
-    t.specialization && t.specialization.includes(subjectName.replace('اللغة الإنجليزية', 'إنجليزي'))
-  );
-  for (const t of fallback) {
     const key = `${t.id}-${day}-${period}`;
     if (!usedSlots.has(key)) return t.id;
   }
@@ -142,22 +148,20 @@ export async function POST(req: NextRequest) {
       const sessions: { subject: string; teacher_id: number | null }[] = [];
       for (const sub of classSubjects) {
         for (let i = 0; i < sub.sessions_per_week; i++) {
-          sessions.push({ subject: sub.name, teacher_id: null });
+          sessions.push({ subject: sub.name, teacher_id: sub.teacher_id || null });
         }
       }
 
       const interleaved = interleave(sessions, s => s.subject);
-
       const grid: GridSlot[][] = Array.from({ length: 5 }, () => Array(8).fill(null));
       let si = 0;
 
       for (let d = 0; d < 5 && si < interleaved.length; d++) {
         for (let p = 0; p < 8 && si < interleaved.length; p++) {
           const session = interleaved[si];
-          const tid = findAvailableTeacher(session.subject, teachers, d, p, teacherSlots);
+          const tid = findAvailableTeacher(session.subject, teachers, d, p, teacherSlots, session.teacher_id);
           if (!tid) {
-            const subjTeachers = teachers.filter((t: any) => t.specialization && session.subject.includes(t.specialization));
-            const msg = `الصف ${cls.class_name || cls.id}: المادة "${session.subject}" ليس لها معلم${subjTeachers.length > 0 ? ' متاح في هذا الوقت' : ''}`;
+            const msg = `الصف ${cls.class_name || cls.id}: المادة "${session.subject}" ليس لها معلم متاح`;
             if (!warnings.includes(msg)) warnings.push(msg);
           }
           session.teacher_id = tid;

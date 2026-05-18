@@ -35,14 +35,14 @@ export async function POST(request: NextRequest) {
     const { name, school, sessions_per_week, teacher_id } = body;
     if (!name || !school) return badRequest('اسم المادة والمرحلة مطلوبان');
     if (!['middle', 'high'].includes(school)) return badRequest('المرحلة غير صحيحة');
-    const existing = await db.prepare('SELECT id FROM subjects WHERE name = ? AND school = ? AND (grade IS NULL OR grade = ?)').get(name, school, body.grade || '') as any;
+    const existing = await db.prepare('SELECT id FROM subjects WHERE name = ? AND school = ? AND grade IS NOT DISTINCT FROM ?').get(name, school, body.grade || null) as any;
     if (existing) return badRequest('المادة موجودة مسبقاً');
     const stmt = await db.prepare(
       'INSERT INTO subjects (name, school, sessions_per_week, grade, teacher_id) VALUES (?, ?, ?, ?, ?)'
     );
     const result = await stmt.run(
       sanitizeString(name), school,
-      parseInt(sessions_per_week) || 3,
+      sessions_per_week !== undefined ? parseInt(sessions_per_week) : 3,
       body.grade || null,
       teacher_id ? parseInt(teacher_id) : null
     );
@@ -66,7 +66,7 @@ export async function PUT(request: NextRequest) {
     const values: any[] = [];
     if (body.name) { updates.push('name = ?'); values.push(sanitizeString(body.name)); }
     if (body.school) { updates.push('school = ?'); values.push(body.school); }
-    if (body.sessions_per_week) { updates.push('sessions_per_week = ?'); values.push(parseInt(body.sessions_per_week)); }
+    if (body.sessions_per_week !== undefined) { updates.push('sessions_per_week = ?'); values.push(parseInt(body.sessions_per_week)); }
     if ('grade' in body) { updates.push('grade = ?'); values.push(body.grade || null); }
     if ('teacher_id' in body) { updates.push('teacher_id = ?'); values.push(body.teacher_id ? parseInt(body.teacher_id) : null); }
     if (updates.length === 0) return badRequest('لا توجد حقول للتحديث');

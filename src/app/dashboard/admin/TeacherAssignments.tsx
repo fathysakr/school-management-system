@@ -107,9 +107,9 @@ export default function TeacherAssignments() {
       setClasses(c.classes || []);
     } catch (e: any) {
       const msg = e?.message || '';
-      if (msg.includes('unauthorized') || msg.includes('Unauthorized')) setMessage('صلاحية الوصول منتهية - سجل الدخول مرة أخرى');
-      else if (msg.includes('fetch')) setMessage('فشل الاتصال بالخادم');
-      else setMessage('فشل الحفظ');
+      if (msg.includes('401') || msg.includes('غير مصرح')) setMessage('صلاحية الوصول منتهية - سجل الدخول مرة أخرى');
+      else if (msg.includes('fetch') || msg.includes('NetworkError')) setMessage('فشل الاتصال بالخادم');
+      else setMessage('فشل الحفظ: ' + msg);
     }
     setSaving(false);
   };

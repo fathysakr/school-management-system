@@ -634,9 +634,12 @@ async function ensureTursoReady() {
       await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES ('القرآن','high',2),('التوحيد','high',2),('الفقه','high',2),('الحديث','high',1),('اللغة العربية','high',5),('الرياضيات','high',5),('الفيزياء','high',3),('الكيمياء','high',3),('الأحياء','high',3),('اللغة الإنجليزية','high',4),('الحاسب الآلي','high',2),('التربية البدنية','high',2),('التربية الفنية','high',1),('الاجتماعيات','high',2)`);
     }
 
-    await db.exec(`INSERT OR IGNORE INTO subjects (name, school, sessions_per_week, grade) VALUES ('رياضيات','high',5,'أول ثانوي'),('انجليزي','high',4,'أول ثانوي'),('كفايات لغوية','high',3,'أول ثانوي'),('علم بيئة','high',2,'أول ثانوي'),('فيزياء','high',3,'أول ثانوي'),('بدنية','high',2,'أول ثانوي'),('نفسية','high',2,'أول ثانوي'),('تقنية رقمية','high',2,'أول ثانوي')`);
-    await db.exec(`INSERT OR IGNORE INTO subjects (name, school, sessions_per_week, grade) VALUES ('رياضيات','high',5,'ثاني ثانوي'),('حديث','high',2,'ثاني ثانوي'),('توحيد','high',2,'ثاني ثانوي'),('كيمياء','high',3,'ثاني ثانوي'),('أحياء','high',3,'ثاني ثانوي'),('انجليزي','high',4,'ثاني ثانوي'),('تقنية رقمية','high',2,'ثاني ثانوي')`);
-    await db.exec(`INSERT OR IGNORE INTO subjects (name, school, sessions_per_week, grade) VALUES ('رياضيات','high',5,'ثالث ثانوي'),('انجليزي','high',4,'ثالث ثانوي'),('فيزياء','high',3,'ثالث ثانوي'),('علم الأرض','high',2,'ثالث ثانوي'),('المهارات الحياتية','high',2,'ثالث ثانوي'),('الدراسات الادبية','high',2,'ثالث ثانوي'),('الدراسات النفسية','high',2,'ثالث ثانوي'),('فقه','high',2,'ثالث ثانوي'),('جغرافيا','high',2,'ثالث ثانوي'),('بدنية','high',2,'ثالث ثانوي')`);
+    const gradeSubCnt = (await db.prepare("SELECT COUNT(*) as cnt FROM subjects WHERE grade IS NOT NULL").get() as any)?.cnt;
+    if (!gradeSubCnt) {
+      await db.exec(`INSERT OR IGNORE INTO subjects (name, school, sessions_per_week, grade) VALUES ('رياضيات','high',5,'أول ثانوي'),('انجليزي','high',4,'أول ثانوي'),('كفايات لغوية','high',3,'أول ثانوي'),('علم بيئة','high',2,'أول ثانوي'),('فيزياء','high',3,'أول ثانوي'),('بدنية','high',2,'أول ثانوي'),('نفسية','high',2,'أول ثانوي'),('تقنية رقمية','high',2,'أول ثانوي')`);
+      await db.exec(`INSERT OR IGNORE INTO subjects (name, school, sessions_per_week, grade) VALUES ('رياضيات','high',5,'ثاني ثانوي'),('حديث','high',2,'ثاني ثانوي'),('توحيد','high',2,'ثاني ثانوي'),('كيمياء','high',3,'ثاني ثانوي'),('أحياء','high',3,'ثاني ثانوي'),('انجليزي','high',4,'ثاني ثانوي'),('تقنية رقمية','high',2,'ثاني ثانوي')`);
+      await db.exec(`INSERT OR IGNORE INTO subjects (name, school, sessions_per_week, grade) VALUES ('رياضيات','high',5,'ثالث ثانوي'),('انجليزي','high',4,'ثالث ثانوي'),('فيزياء','high',3,'ثالث ثانوي'),('علم الأرض','high',2,'ثالث ثانوي'),('المهارات الحياتية','high',2,'ثالث ثانوي'),('الدراسات الادبية','high',2,'ثالث ثانوي'),('الدراسات النفسية','high',2,'ثالث ثانوي'),('فقه','high',2,'ثالث ثانوي'),('جغرافيا','high',2,'ثالث ثانوي'),('بدنية','high',2,'ثالث ثانوي')`);
+    }
 
     let hsTid = 1;
     const hsTeacher = await db.prepare("SELECT id FROM teachers WHERE school = 'high' AND status = 'active' LIMIT 1").get() as any;
