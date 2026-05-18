@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
              u.email as user_email
       FROM teachers t
       LEFT JOIN classes c ON t.id = c.teacher_id
-      LEFT JOIN users u ON t.user_id = u.id
+      LEFT JOIN users u ON u.teacher_id = t.id
       ${whereClause}
       GROUP BY t.id
       ORDER BY t.last_name, t.first_name

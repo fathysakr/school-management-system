@@ -94,7 +94,9 @@ export async function POST(request: NextRequest) {
       const schoolStage = cls?.grade === 'المتوسطة' ? 'middle' : 'high';
       const targetRoles = [`${schoolStage}_supervisor`, `${schoolStage}_counselor`];
       const targetUsers = await db.prepare(
-        `SELECT u.email, t.phone, t.first_name, t.last_name FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.role IN (?, ?)`
+        `SELECT u.email, t.phone, t.first_name, t.last_name       FROM users u
+      LEFT JOIN teachers t ON t.id = u.teacher_id
+      WHERE u.role IN (?, ?)`
       ).all(...targetRoles) as any[];
 
       const student = await db.prepare('SELECT first_name, last_name FROM students WHERE id = ?').get(parseInt(student_id)) as any;

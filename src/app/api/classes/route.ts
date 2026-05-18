@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     // Auto-filter by teacher for teacher roles
     const isTeacher = user.role === 'middle_teacher' || user.role === 'high_teacher';
     if (isTeacher) {
-      const teacher = await db.prepare('SELECT id FROM teachers WHERE user_id = ?').get(user.id) as any;
+      const teacher = await db.prepare('SELECT t.id FROM teachers t JOIN users u ON u.teacher_id = t.id WHERE u.id = ?').get(user.id) as any;
       if (teacher) {
         whereClause += ' AND c.teacher_id = ?';
         params.push(teacher.id);

@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
              t.id as teacher_id, t.first_name as teacher_first, t.last_name as teacher_last, t.specialization,
              s.id as student_id, s.first_name as student_first, s.last_name as student_last
       FROM users u
-      LEFT JOIN teachers t ON t.user_id = u.id
+      LEFT JOIN teachers t ON t.id = u.teacher_id
       LEFT JOIN students s ON s.user_id = u.id
       WHERE u.id = ?
     `).get(authUser.id) as any;

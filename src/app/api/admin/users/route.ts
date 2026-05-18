@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
     if (user.role !== 'admin') return forbidden();
     const users = await db.prepare(`
       SELECT u.id, u.email, u.role, u.status, u.created_at,
-        t.id as teacher_id, t.first_name, t.last_name
+        u.teacher_id, t.first_name, t.last_name
       FROM users u
-      LEFT JOIN teachers t ON t.user_id = u.id
+      LEFT JOIN teachers t ON t.id = u.teacher_id
       ORDER BY u.created_at DESC
     `).all();
     return success({ users });
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const userId = result.lastInsertRowid;
 
     if (teacher_id) {
-      await db.prepare('UPDATE teachers SET user_id = ? WHERE id = ? AND user_id IS NULL').run(userId, teacher_id);
+      await db.prepare('UPDATE users SET teacher_id = ? WHERE id = ?').run(teacher_id, userId);
     }
 
     return success({ message: 'User created successfully', user_id: userId }, 201);
@@ -108,18 +108,16 @@ export async function PUT(request: NextRequest) {
       values.push(status);
     }
 
+    if (teacher_id !== undefined) {
+      updates.push('teacher_id = ?');
+      values.push(teacher_id || null);
+    }
+
     if (updates.length === 0) return badRequest('No fields to update');
 
     updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(parseInt(id));
     await db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...values);
-
-    if (teacher_id !== undefined) {
-      await db.prepare('UPDATE teachers SET user_id = NULL WHERE user_id = ?').run(id);
-      if (teacher_id) {
-        await db.prepare('UPDATE teachers SET user_id = ? WHERE id = ?').run(id, teacher_id);
-      }
-    }
 
     return success({ message: 'User updated successfully' });
   } catch (error) {

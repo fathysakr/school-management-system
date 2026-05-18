@@ -550,6 +550,16 @@ function applyMigrations(bsql: Database.Database) {
         );
       `
     },
+    {
+      name: '014_user_teacher_id',
+      sql: (() => {
+        if (colExists('users', 'teacher_id')) return 'SELECT 1';
+        return `
+          ALTER TABLE users ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL;
+          UPDATE users SET teacher_id = (SELECT id FROM teachers WHERE teachers.user_id = users.id) WHERE EXISTS (SELECT 1 FROM teachers WHERE teachers.user_id = users.id);
+        `;
+      })()
+    },
   ];
 
   for (const migration of migrations) {
@@ -588,6 +598,11 @@ async function ensureTursoReady() {
     sessions_per_week INTEGER NOT NULL DEFAULT 3,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
+  try {
+    await db.exec(`ALTER TABLE users ADD COLUMN teacher_id INTEGER`);
+    await db.exec(`UPDATE users SET teacher_id = (SELECT id FROM teachers WHERE teachers.user_id = users.id) WHERE EXISTS (SELECT 1 FROM teachers WHERE teachers.user_id = users.id)`);
+  } catch {}
+
   const subCnt = (await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any)?.cnt;
   if (!subCnt) {
     await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES ('القرآن','middle',3),('التوحيد','middle',2),('الفقه','middle',2),('الحديث','middle',2),('اللغة العربية','middle',5),('الرياضيات','middle',5),('العلوم','middle',4),('الاجتماعيات','middle',3),('اللغة الإنجليزية','middle',4),('الحاسب الآلي','middle',2),('التربية البدنية','middle',2),('التربية الفنية','middle',2)`);
