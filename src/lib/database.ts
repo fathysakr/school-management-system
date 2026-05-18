@@ -580,6 +580,35 @@ function applyMigrations(bsql: Database.Database) {
         return `ALTER TABLE subjects ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL;`;
       })()
     },
+    {
+      name: '017_classes_teacher_id_nullable',
+      sql: (() => {
+        const cols = bsql.prepare("PRAGMA table_info(classes)").all() as any[];
+        const teacherCol = cols.find((c: any) => c.name === 'teacher_id');
+        if (teacherCol && teacherCol.notnull === 0) return 'SELECT 1';
+        return `
+          PRAGMA foreign_keys=OFF;
+          CREATE TABLE IF NOT EXISTS classes_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            class_name TEXT NOT NULL,
+            grade TEXT NOT NULL,
+            section TEXT,
+            teacher_id INTEGER,
+            room_number TEXT,
+            capacity INTEGER DEFAULT 30,
+            status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(class_name, grade, section),
+            FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
+          );
+          INSERT INTO classes_new SELECT * FROM classes;
+          DROP TABLE classes;
+          ALTER TABLE classes_new RENAME TO classes;
+          PRAGMA foreign_keys=ON;
+        `;
+      })()
+    },
   ];
 
   for (const migration of migrations) {
@@ -627,6 +656,33 @@ async function ensureTursoReady() {
 
     try { await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`); } catch {}
     try { await db.exec(`ALTER TABLE subjects ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL`); } catch {}
+
+    try {
+      const cols = await db.prepare("PRAGMA table_info(classes)").all() as any[];
+      const teacherCol = cols.find((c: any) => c.name === 'teacher_id');
+      if (!teacherCol || teacherCol.notnull !== 0) {
+        await db.exec(`DROP TABLE IF EXISTS classes_new`);
+        await db.exec(`PRAGMA foreign_keys=OFF`);
+        await db.exec(`CREATE TABLE classes_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          class_name TEXT NOT NULL,
+          grade TEXT NOT NULL,
+          section TEXT,
+          teacher_id INTEGER,
+          room_number TEXT,
+          capacity INTEGER DEFAULT 30,
+          status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(class_name, grade, section),
+          FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
+        )`);
+        await db.exec(`INSERT OR IGNORE INTO classes_new SELECT * FROM classes`);
+        await db.exec(`DROP TABLE IF EXISTS classes`);
+        await db.exec(`ALTER TABLE classes_new RENAME TO classes`);
+        await db.exec(`PRAGMA foreign_keys=ON`);
+      }
+    } catch {}
 
     const subCnt = (await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any)?.cnt;
     if (!subCnt) {
