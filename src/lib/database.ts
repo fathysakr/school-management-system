@@ -575,65 +575,65 @@ let db: DbAdapter;
 let tursoReady = false;
 
 async function ensureTursoReady() {
-  if (tursoReady) return;
-  if (!process.env.TURSO_DB_URL || !process.env.TURSO_DB_TOKEN) return;
-  await db.exec(`CREATE TABLE IF NOT EXISTS notifications (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
-    title TEXT NOT NULL, message TEXT NOT NULL,
-    type TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('urgent','info','warning')),
-    link TEXT, is_read INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-  await db.exec(`CREATE TABLE IF NOT EXISTS substitutions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, date DATE NOT NULL,
-    absent_teacher_id INTEGER NOT NULL, substitute_teacher_id INTEGER,
-    schedule_id INTEGER NOT NULL, subject TEXT NOT NULL,
-    class_id INTEGER NOT NULL, day_of_week TEXT NOT NULL,
-    start_time TEXT NOT NULL, end_time TEXT NOT NULL, reason TEXT,
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','cancelled')),
-    created_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-  await db.exec(`CREATE TABLE IF NOT EXISTS subjects (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
-    school TEXT NOT NULL CHECK (school IN ('middle', 'high')),
-    sessions_per_week INTEGER NOT NULL DEFAULT 3,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
   try {
+    if (tursoReady) return;
+    if (!process.env.TURSO_DB_URL || !process.env.TURSO_DB_TOKEN) return;
+    await db.exec(`CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      title TEXT NOT NULL, message TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('urgent','info','warning')),
+      link TEXT, is_read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS substitutions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, date DATE NOT NULL,
+      absent_teacher_id INTEGER NOT NULL, substitute_teacher_id INTEGER,
+      schedule_id INTEGER NOT NULL, subject TEXT NOT NULL,
+      class_id INTEGER NOT NULL, day_of_week TEXT NOT NULL,
+      start_time TEXT NOT NULL, end_time TEXT NOT NULL, reason TEXT,
+      status TEXT DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','cancelled')),
+      created_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS subjects (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+      school TEXT NOT NULL CHECK (school IN ('middle', 'high')),
+      sessions_per_week INTEGER NOT NULL DEFAULT 3,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     await db.exec(`ALTER TABLE users ADD COLUMN teacher_id INTEGER`);
     await db.exec(`UPDATE users SET teacher_id = (SELECT id FROM teachers WHERE teachers.user_id = users.id) WHERE EXISTS (SELECT 1 FROM teachers WHERE teachers.user_id = users.id)`);
-  } catch {}
 
-  const subCnt = (await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any)?.cnt;
-  if (!subCnt) {
-    await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES ('القرآن','middle',3),('التوحيد','middle',2),('الفقه','middle',2),('الحديث','middle',2),('اللغة العربية','middle',5),('الرياضيات','middle',5),('العلوم','middle',4),('الاجتماعيات','middle',3),('اللغة الإنجليزية','middle',4),('الحاسب الآلي','middle',2),('التربية البدنية','middle',2),('التربية الفنية','middle',2)`);
-    await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES ('القرآن','high',2),('التوحيد','high',2),('الفقه','high',2),('الحديث','high',1),('اللغة العربية','high',5),('الرياضيات','high',5),('الفيزياء','high',3),('الكيمياء','high',3),('الأحياء','high',3),('اللغة الإنجليزية','high',4),('الحاسب الآلي','high',2),('التربية البدنية','high',2),('التربية الفنية','high',1),('الاجتماعيات','high',2)`);
-  }
-  const h = { admin:'$2a$04$QpWlATKSbm.yJD5MRt7FquL2XIrvb0foaijQRZGJvEDpCyYlWLfsm', sup:'$2a$04$r/QVAk.Y1yaztIsEeKReaeXCofMmrRhQp74TAl6BsANhU6C8oQL9G', teacher:'$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u', counselor:'$2a$04$PPYZbxrtd2evEZVcCkE9suySMeMBTa9HLU3XyBWjrFSao4axlRpLy', principal:'$2a$04$2Iju6MqiTgXFRTo6D5hiXe6KGAQCD5r2zRz3hrraJMe7ilB7O7wdC' };
-  const users: [string, string, string][] = [
-    ['admin@school.com', h.admin, 'admin'],
-    ['middle.sup@school.com', h.sup, 'middle_supervisor'],
-    ['high.sup@school.com', h.sup, 'high_supervisor'],
-    ['middle.teacher@school.com', h.teacher, 'middle_teacher'],
-    ['high.teacher@school.com', h.teacher, 'high_teacher'],
-    ['middle.counselor@school.com', h.counselor, 'middle_counselor'],
-    ['high.counselor@school.com', h.counselor, 'high_counselor'],
-    ['middle.principal@school.com', h.principal, 'middle_principal'],
-    ['high.principal@school.com', h.principal, 'high_principal'],
-  ];
-  for (const [email, hash, role] of users) {
-    const existing = await db.prepare("SELECT COUNT(*) as cnt FROM users WHERE email = ?").get(email) as any;
-    if (!existing?.cnt) {
-      await db.prepare("INSERT INTO users (email, password, role) VALUES (?,?,?)").run(email, hash, role);
+    const subCnt = (await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any)?.cnt;
+    if (!subCnt) {
+      await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES ('القرآن','middle',3),('التوحيد','middle',2),('الفقه','middle',2),('الحديث','middle',2),('اللغة العربية','middle',5),('الرياضيات','middle',5),('العلوم','middle',4),('الاجتماعيات','middle',3),('اللغة الإنجليزية','middle',4),('الحاسب الآلي','middle',2),('التربية البدنية','middle',2),('التربية الفنية','middle',2)`);
+      await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES ('القرآن','high',2),('التوحيد','high',2),('الفقه','high',2),('الحديث','high',1),('اللغة العربية','high',5),('الرياضيات','high',5),('الفيزياء','high',3),('الكيمياء','high',3),('الأحياء','high',3),('اللغة الإنجليزية','high',4),('الحاسب الآلي','high',2),('التربية البدنية','high',2),('التربية الفنية','high',1),('الاجتماعيات','high',2)`);
     }
-  }
-  tursoReady = true;
+    const h = { admin:'$2a$04$QpWlATKSbm.yJD5MRt7FquL2XIrvb0foaijQRZGJvEDpCyYlWLfsm', sup:'$2a$04$r/QVAk.Y1yaztIsEeKReaeXCofMmrRhQp74TAl6BsANhU6C8oQL9G', teacher:'$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u', counselor:'$2a$04$PPYZbxrtd2evEZVcCkE9suySMeMBTa9HLU3XyBWjrFSao4axlRpLy', principal:'$2a$04$2Iju6MqiTgXFRTo6D5hiXe6KGAQCD5r2zRz3hrraJMe7ilB7O7wdC' };
+    const users: [string, string, string][] = [
+      ['admin@school.com', h.admin, 'admin'],
+      ['middle.sup@school.com', h.sup, 'middle_supervisor'],
+      ['high.sup@school.com', h.sup, 'high_supervisor'],
+      ['middle.teacher@school.com', h.teacher, 'middle_teacher'],
+      ['high.teacher@school.com', h.teacher, 'high_teacher'],
+      ['middle.counselor@school.com', h.counselor, 'middle_counselor'],
+      ['high.counselor@school.com', h.counselor, 'high_counselor'],
+      ['middle.principal@school.com', h.principal, 'middle_principal'],
+      ['high.principal@school.com', h.principal, 'high_principal'],
+    ];
+    for (const [email, hash, role] of users) {
+      const existing = await db.prepare("SELECT COUNT(*) as cnt FROM users WHERE email = ?").get(email) as any;
+      if (!existing?.cnt) {
+        await db.prepare("INSERT INTO users (email, password, role) VALUES (?,?,?)").run(email, hash, role);
+      }
+    }
+    tursoReady = true;
+  } catch {}
 }
 
 if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
   db = createTursoAdapter();
-  ensureTursoReady().catch(() => {});
 } else {
   const dbPath = findDbPath();
   const bsql = new Database(dbPath);
