@@ -3,7 +3,7 @@ import db from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
 import { hasPermission, getSchoolFilter } from '@/lib/permissions';
-import { sendReportNotification, isConfigured } from '@/lib/whatsapp';
+
 import { notifyUsers } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
@@ -101,17 +101,6 @@ export async function POST(request: NextRequest) {
       const teacher = await db.prepare('SELECT first_name, last_name FROM teachers WHERE id = ?').get(parseInt(teacher_id || '0')) as any;
       const studentName = student ? `${student.first_name} ${student.last_name}` : '';
       const teacherName = teacher ? `${teacher.first_name} ${teacher.last_name}` : '';
-      const reportTitle = title || 'تقرير سلوكي';
-
-      for (const u of targetUsers) {
-        if (isConfigured() && u.phone) {
-          sendReportNotification(u.phone, {
-            student_name: studentName, report_type: 'behavioral',
-            title: reportTitle, content: sanitizeString(content),
-            teacher_name: teacherName,
-          }).catch(() => {});
-        }
-      }
 
       const emails = targetUsers.map((u: any) => u.email).filter(Boolean);
       if (emails.length > 0) {

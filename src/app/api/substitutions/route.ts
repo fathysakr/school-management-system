@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import db from '@/lib/database';
 import { authenticate, unauthorized, forbidden, badRequest, serverError, success } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
-import { sendSubstitutionNotification, isConfigured } from '@/lib/whatsapp';
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,18 +72,6 @@ export async function POST(request: NextRequest) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?)
     `).run(date, absent_teacher_id, substitute_teacher_id || null, schedule_id, subject, class_id, day_of_week, start_time, end_time, reason || null, user.id);
 
-    if (substitute_teacher_id && isConfigured()) {
-      const absTeacher = await db.prepare('SELECT first_name, last_name FROM teachers WHERE id = ?').get(absent_teacher_id) as any;
-      const subTeacher = await db.prepare('SELECT first_name, last_name, phone FROM teachers WHERE id = ?').get(substitute_teacher_id) as any;
-      const cls = await db.prepare('SELECT class_name FROM classes WHERE id = ?').get(class_id) as any;
-      if (subTeacher?.phone) {
-        sendSubstitutionNotification(subTeacher.phone, {
-          subject, class_name: cls?.class_name || '', date,
-          time: `${start_time} - ${end_time}`,
-          absent_teacher: absTeacher ? `${absTeacher.first_name} ${absTeacher.last_name}` : '',
-        }).catch(() => {});
-      }
-    }
 
     return success({ message: 'تم تسجيل البديل', id: result.lastInsertRowid }, 201);
   } catch (error) {
