@@ -572,8 +572,10 @@ function applyMigrations(bsql: Database.Database) {
 }
 
 let db: DbAdapter;
+let tursoReady = false;
 
 async function ensureTursoReady() {
+  if (tursoReady) return;
   if (!process.env.TURSO_DB_URL || !process.env.TURSO_DB_TOKEN) return;
   await db.exec(`CREATE TABLE IF NOT EXISTS notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
@@ -626,10 +628,12 @@ async function ensureTursoReady() {
       await db.prepare("INSERT INTO users (email, password, role) VALUES (?,?,?)").run(email, hash, role);
     }
   }
+  tursoReady = true;
 }
 
 if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
   db = createTursoAdapter();
+  ensureTursoReady().catch(() => {});
 } else {
   const dbPath = findDbPath();
   const bsql = new Database(dbPath);
