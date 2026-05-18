@@ -3,15 +3,15 @@ import db from '@/lib/database';
 import { authenticate, unauthorized } from '@/lib/auth';
 
 const HIGH_CLASSES = [
-  { grade: 'أول ثانوي', sections: ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ'], roomStart: 101 },
-  { grade: 'ثاني ثانوي', sections: ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ'], roomStart: 201 },
-  { grade: 'ثالث ثانوي', sections: ['أ', 'ب', 'ت', 'ث', 'ج', 'ح'], roomStart: 301 },
+  { grade: 'الصف الأول الثانوي', sections: ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ'], roomStart: 101 },
+  { grade: 'الصف الثاني الثانوي', sections: ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ'], roomStart: 201 },
+  { grade: 'الصف الثالث الثانوي', sections: ['أ', 'ب', 'ت', 'ث', 'ج', 'ح'], roomStart: 301 },
 ];
 
 const GRADE_SUBJECTS: Record<string, string[]> = {
-  'أول ثانوي': ['رياضيات', 'انجليزي', 'كفايات لغوية', 'علم بيئة', 'فيزياء', 'بدنية', 'نفسية', 'تقنية رقمية'],
-  'ثاني ثانوي': ['رياضيات', 'حديث', 'توحيد', 'كيمياء', 'أحياء', 'انجليزي', 'تقنية رقمية'],
-  'ثالث ثانوي': ['رياضيات', 'انجليزي', 'فيزياء', 'علم الأرض', 'المهارات الحياتية', 'الدراسات الادبية', 'الدراسات النفسية', 'فقه', 'جغرافيا', 'بدنية'],
+  'الصف الأول الثانوي': ['رياضيات', 'انجليزي', 'كفايات لغوية', 'علم بيئة', 'فيزياء', 'بدنية', 'نفسية', 'تقنية رقمية'],
+  'الصف الثاني الثانوي': ['رياضيات', 'حديث', 'توحيد', 'كيمياء', 'أحياء', 'انجليزي', 'تقنية رقمية'],
+  'الصف الثالث الثانوي': ['رياضيات', 'انجليزي', 'فيزياء', 'علم الأرض', 'المهارات الحياتية', 'الدراسات الادبية', 'الدراسات النفسية', 'فقه', 'جغرافيا', 'بدنية'],
 };
 
 export async function POST(request: NextRequest) {
@@ -24,6 +24,8 @@ export async function POST(request: NextRequest) {
     try { await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`); results.push('تم إضافة عمود grade'); } catch { results.push('عمود grade موجود'); }
 
     let totalSubjects = 0;
+    // حذف المواد القديمة الخاصة بالصفوف
+    await db.exec("DELETE FROM subjects WHERE grade IS NOT NULL");
     for (const [grade, subjects] of Object.entries(GRADE_SUBJECTS)) {
       for (const name of subjects) {
         const existing = await db.prepare('SELECT id FROM subjects WHERE name = ? AND school = ? AND grade = ?').get(name, 'high', grade) as any;
@@ -34,6 +36,10 @@ export async function POST(request: NextRequest) {
       }
     }
     results.push(`تمت إضافة ${totalSubjects} مادة دراسية`);
+
+    // حذف الفصول الحالية أولاً
+    await db.exec("DELETE FROM classes WHERE grade LIKE '%ثانوي%'");
+    results.push('تم حذف الفصول القديمة');
 
     let teacher = await db.prepare("SELECT id FROM teachers WHERE school = 'high' AND status = 'active' LIMIT 1").get() as any;
     if (!teacher) {
@@ -46,7 +52,8 @@ export async function POST(request: NextRequest) {
     for (const { grade, sections, roomStart } of HIGH_CLASSES) {
       for (let i = 0; i < sections.length; i++) {
         const section = sections[i];
-        const fullName = `${grade === 'أول ثانوي' ? '1' : grade === 'ثاني ثانوي' ? '2' : '3'}/${section}`;
+        const prefix = grade === 'الصف الأول الثانوي' ? '1' : grade === 'الصف الثاني الثانوي' ? '2' : '3';
+        const fullName = `${prefix}/${section}`;
         const existing = await db.prepare('SELECT id FROM classes WHERE class_name = ? AND grade = ?').get(fullName, grade) as any;
         if (!existing) {
           await db.prepare(
