@@ -17,6 +17,7 @@ export default function TeacherAssignments() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
   const [subjectSessions, setSubjectSessions] = useState<Record<number, number>>({});
+  const [subjectClasses, setSubjectClasses] = useState<Record<number, number[]>>({});
   const [homeRoom, setHomeRoom] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -38,26 +39,28 @@ export default function TeacherAssignments() {
     }).finally(() => setLoading(false));
   }, [schoolFilter]);
 
-  const parseSpec = (spec: string): { ids: number[]; sessions: Record<number, number> } => {
-    if (!spec) return { ids: [], sessions: {} };
+  const parseSpec = (spec: string): { ids: number[]; sessions: Record<number, number>; classes: Record<number, number[]> } => {
+    if (!spec) return { ids: [], sessions: {}, classes: {} };
     if (spec.startsWith('[')) {
       try {
         const arr = JSON.parse(spec);
         const ids: number[] = [];
         const sessions: Record<number, number> = {};
+        const classes: Record<number, number[]> = {};
         for (const item of arr) {
           const sub = subjects.find((s: any) => s.name === item.n);
           if (sub) {
             ids.push(sub.id);
             if (item.s) sessions[sub.id] = item.s;
+            if (item.classes) classes[sub.id] = item.classes;
           }
         }
-        return { ids, sessions };
-      } catch { return { ids: [], sessions: {} }; }
+        return { ids, sessions, classes };
+      } catch { return { ids: [], sessions: {}, classes: {} }; }
     }
     const names = spec.split(',').map((s: string) => s.trim());
     const ids = subjects.filter((s: any) => names.includes(s.name)).map((s: any) => s.id);
-    return { ids, sessions: {} };
+    return { ids, sessions: {}, classes: {} };
   };
 
   const buildSpec = (): string => {
@@ -67,6 +70,8 @@ export default function TeacherAssignments() {
         const entry: any = { n: sub?.name || '' };
         const s = subjectSessions[id];
         if (s && sub && s !== sub.sessions_per_week) entry.s = s;
+        const c = subjectClasses[id];
+        if (c && c.length > 0) entry.classes = c;
         return entry;
       })
     );
@@ -74,9 +79,10 @@ export default function TeacherAssignments() {
 
   const openAssignment = (teacher: any) => {
     setSelectedTeacher(teacher);
-    const { ids, sessions } = parseSpec(teacher.specialization || '');
+    const { ids, sessions, classes: subjClasses } = parseSpec(teacher.specialization || '');
     setSelectedSubjectIds(ids);
     setSubjectSessions(sessions);
+    setSubjectClasses(subjClasses);
     const assigned = classes.filter((c: any) => c.teacher_id === teacher.id);
     setHomeRoom(assigned.length > 0 ? String(assigned[0].id) : '');
     setDialogOpen(true);
@@ -114,14 +120,14 @@ export default function TeacherAssignments() {
     setSaving(false);
   };
 
-  const formatSpec = (spec: string): { name: string; sessions: number }[] => {
+  const formatSpec = (spec: string): { name: string; sessions: number; classes: number[] }[] => {
     if (!spec) return [];
     if (spec.startsWith('[')) {
       try {
-        return JSON.parse(spec).map((item: any) => ({ name: item.n, sessions: item.s || 0 }));
+        return JSON.parse(spec).map((item: any) => ({ name: item.n, sessions: item.s || 0, classes: item.classes || [] }));
       } catch { return []; }
     }
-    return spec.split(',').map((s: string) => ({ name: s.trim(), sessions: 0 }));
+    return spec.split(',').map((s: string) => ({ name: s.trim(), sessions: 0, classes: [] }));
   };
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
@@ -214,20 +220,49 @@ export default function TeacherAssignments() {
             {selectedSubjectIds.length > 0 && (
               <Paper variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>عدد الحصص الأسبوعية لكل مادة:</Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {selectedSubjectIds.map((id) => {
                     const sub = subjects.find((s: any) => s.id === id);
                     if (!sub) return null;
+                    const filteredClasses = classes.filter((c: any) => c.grade?.includes(schoolFilter === 'high' ? 'ثانوي' : 'متوسط'));
                     return (
-                      <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Chip label={`${sub.name}${sub.grade ? ` (${sub.grade})` : ''}`} size="small" color="primary" variant="outlined" sx={{ minWidth: 140 }} />
-                        <TextField
-                          type="number" size="small" sx={{ width: 80 }}
-                          value={subjectSessions[id] ?? sub.sessions_per_week ?? 3}
-                          onChange={(e) => setSubjectSessions(prev => ({ ...prev, [id]: parseInt(e.target.value) || 0 }))}
-                          inputProps={{ min: 0, max: 10 }}
-                        />
-                        <Typography variant="caption" color="text.secondary">حصص/أسبوع</Typography>
+                      <Box key={id} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Chip label={`${sub.name}${sub.grade ? ` (${sub.grade})` : ''}`} size="small" color="primary" variant="outlined" sx={{ minWidth: 140 }} />
+                          <TextField
+                            type="number" size="small" sx={{ width: 80 }}
+                            value={subjectSessions[id] ?? sub.sessions_per_week ?? 3}
+                            onChange={(e) => setSubjectSessions(prev => ({ ...prev, [id]: parseInt(e.target.value) || 0 }))}
+                            inputProps={{ min: 0, max: 10 }}
+                          />
+                          <Typography variant="caption" color="text.secondary">حصص/أسبوع</Typography>
+                        </Box>
+                        <FormControl fullWidth size="small">
+                          <Select
+                            multiple
+                            displayEmpty
+                            value={subjectClasses[id] || []}
+                            onChange={(e) => setSubjectClasses(prev => ({ ...prev, [id]: e.target.value as number[] }))}
+                            renderValue={(selected) => {
+                              if (selected.length === 0) return <Typography variant="body2" color="text.secondary">جميع الفصول</Typography>;
+                              return (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
+                                  {selected.map((cid) => {
+                                    const cl = classes.find((c: any) => c.id === cid);
+                                    return cl ? <Chip key={cid} label={`${cl.class_name} - ${cl.grade}`} size="small" sx={{ bgcolor: gradeColors[cl.grade] || '#666', color: 'white', height: 22, '& .MuiChip-label': { fontSize: 11 } }} /> : null;
+                                  })}
+                                </Box>
+                              );
+                            }}
+                          >
+                            {filteredClasses.map((c: any) => (
+                              <MenuItem key={c.id} value={c.id}>
+                                <Checkbox checked={(subjectClasses[id] || []).includes(c.id)} size="small" />
+                                <ListItemText primary={`${c.class_name} - ${c.grade}`} />
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
                       </Box>
                     );
                   })}

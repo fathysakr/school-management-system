@@ -2,7 +2,7 @@
 > school-management-system@0.1.0 build
 > next build
 
-(node:7136) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/fathy/OneDrive/Desktop/lapo/school/school-management-system/next.config.js is not specified and it doesn't parse as CommonJS.
+(node:14908) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/fathy/OneDrive/Desktop/lapo/school/school-management-system/next.config.js is not specified and it doesn't parse as CommonJS.
 Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
 To eliminate this warning, add "type": "module" to C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\package.json.
 (Use `node --trace-warnings ...` to show where the warning was created)
@@ -83,7 +83,7 @@ Route (app)                              Size     First Load JS
 ├ λ /api/teachers/[id]                   0 B                0 B
 ├ ○ /auth/login                          138 B          87.7 kB
 ├ ○ /dashboard                           11.1 kB         144 kB
-├ ○ /dashboard/admin                     22.9 kB         348 kB
+├ ○ /dashboard/admin                     23.1 kB         348 kB
 ├ ○ /dashboard/announcements             5.17 kB         324 kB
 ├ ○ /dashboard/attendance                5.57 kB         321 kB
 ├ ○ /dashboard/classes                   5.38 kB         321 kB
