@@ -23,10 +23,11 @@ export default function TeacherAssignments() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
     Promise.all([
-      api.get('/teachers?limit=500'),
-      api.get('/classes?limit=500'),
-      api.get('/subjects?school=high'),
+      api.get('/teachers?limit=500', token),
+      api.get('/classes?limit=500', token),
+      api.get('/subjects?school=high', token),
     ]).then(([t, c, s]: any[]) => {
       setTeachers(t.teachers || []);
       setClasses(c.classes || []);
@@ -52,13 +53,19 @@ export default function TeacherAssignments() {
       const token = localStorage.getItem('token');
       await api.put(`/teachers/${selectedTeacher.id}`, { specialization: selectedSubjects.join(', ') }, token);
       for (const cls of classes) {
-        if (selectedClasses.includes(cls.id)) {
-          await api.put(`/classes/${cls.id}`, { teacher_id: cls.id === parseInt(homeRoom) ? selectedTeacher.id : 0 }, token);
+        const isSelected = selectedClasses.includes(cls.id);
+        const wasAssigned = cls.teacher_id === selectedTeacher.id;
+        if (isSelected && cls.id === parseInt(homeRoom)) {
+          await api.put(`/classes/${cls.id}`, { teacher_id: selectedTeacher.id }, token);
+        } else if (isSelected || wasAssigned) {
+          await api.put(`/classes/${cls.id}`, { teacher_id: 0 }, token);
         }
       }
       setMessage('تم حفظ التعيينات بنجاح');
-      const t = await api.get('/teachers?limit=500');
+      const t = await api.get('/teachers?limit=500', token);
+      const c = await api.get('/classes?limit=500', token);
       setTeachers(t.teachers || []);
+      setClasses(c.classes || []);
     } catch (e: any) {
       setMessage(e?.message || 'فشل الحفظ');
     }
