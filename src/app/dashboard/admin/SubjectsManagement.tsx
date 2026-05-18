@@ -139,15 +139,15 @@ export default function SubjectsManagement() {
                 <MenuItem value="">بدون (جميع الصفوف)</MenuItem>
                 {form.school === 'high' ? (
                   <>
-                    <MenuItem value="أول ثانوي">أول ثانوي</MenuItem>
-                    <MenuItem value="ثاني ثانوي">ثاني ثانوي</MenuItem>
-                    <MenuItem value="ثالث ثانوي">ثالث ثانوي</MenuItem>
+                    <MenuItem value="الصف الأول الثانوي">الصف الأول الثانوي</MenuItem>
+                    <MenuItem value="الصف الثاني الثانوي">الصف الثاني الثانوي</MenuItem>
+                    <MenuItem value="الصف الثالث الثانوي">الصف الثالث الثانوي</MenuItem>
                   </>
                 ) : (
                   <>
-                    <MenuItem value="أول متوسط">أول متوسط</MenuItem>
-                    <MenuItem value="ثاني متوسط">ثاني متوسط</MenuItem>
-                    <MenuItem value="ثالث متوسط">ثالث متوسط</MenuItem>
+                    <MenuItem value="الصف الأول المتوسط">الصف الأول المتوسط</MenuItem>
+                    <MenuItem value="الصف الثاني المتوسط">الصف الثاني المتوسط</MenuItem>
+                    <MenuItem value="الصف الثالث المتوسط">الصف الثالث المتوسط</MenuItem>
                   </>
                 )}
               </Select>
