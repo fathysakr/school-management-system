@@ -622,11 +622,11 @@ async function ensureTursoReady() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await db.exec(`ALTER TABLE users ADD COLUMN teacher_id INTEGER`);
-    await db.exec(`UPDATE users SET teacher_id = (SELECT id FROM teachers WHERE teachers.user_id = users.id) WHERE EXISTS (SELECT 1 FROM teachers WHERE teachers.user_id = users.id)`);
+    try { await db.exec(`ALTER TABLE users ADD COLUMN teacher_id INTEGER`); } catch {}
+    try { await db.exec(`UPDATE users SET teacher_id = (SELECT id FROM teachers WHERE teachers.user_id = users.id) WHERE EXISTS (SELECT 1 FROM teachers WHERE teachers.user_id = users.id)`); } catch {}
 
-    await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`);
-    await db.exec(`ALTER TABLE subjects ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL`);
+    try { await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`); } catch {}
+    try { await db.exec(`ALTER TABLE subjects ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL`); } catch {}
 
     const subCnt = (await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any)?.cnt;
     if (!subCnt) {
