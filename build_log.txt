@@ -2,7 +2,7 @@
 > school-management-system@0.1.0 build
 > next build
 
-(node:560) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/fathy/OneDrive/Desktop/lapo/school/school-management-system/next.config.js is not specified and it doesn't parse as CommonJS.
+(node:18600) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/fathy/OneDrive/Desktop/lapo/school/school-management-system/next.config.js is not specified and it doesn't parse as CommonJS.
 Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
 To eliminate this warning, add "type": "module" to C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\package.json.
 (Use `node --trace-warnings ...` to show where the warning was created)
@@ -13,97 +13,18 @@ To eliminate this warning, add "type": "module" to C:\Users\fathy\OneDrive\Deskt
  ✓ Compiled successfully
    Linting and checking validity of types ...
    Collecting page data ...
-   Generating static pages (0/45) ...
-Backup export error: ex [Error]: Dynamic server usage: Page couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at eP (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:27402)
-    at Module.eT (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:27738)
-    at i (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:32161)
-    at Object.get (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:32363)
-    at extractToken (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\chunks\8546.js:1:717)
-    at authenticate (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\chunks\8546.js:1:831)
-    at GET (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\app\api\backup\export\route.js:1:1663)
-    at C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:39529
-    at C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\server\lib\trace\tracer.js:121:36
-    at NoopContextManager.with (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7057) {
-  digest: 'DYNAMIC_SERVER_USAGE'
+Error: EBUSY: resource busy or locked, open 'C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\chunks\9175.js'
+    at async open (node:internal/fs/promises:640:25)
+    at async Object.readFile (node:internal/fs/promises:1287:14)
+    at async Job.readFile (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\build\collect-build-traces.js:304:32)
+    at async Job.emitDependency (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\@vercel\nft\index.js:1:39432)
+    at async Promise.all (index 82)
+    at async nodeFileTrace (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\@vercel\nft\index.js:1:35430)
+    at async C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\build\collect-build-traces.js:298:28
+    at async Span.traceAsyncFn (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\trace\trace.js:105:20)
+    at async collectBuildTraces (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\build\collect-build-traces.js:153:5) {
+  errno: -4082,
+  code: 'EBUSY',
+  syscall: 'open',
+  path: 'C:\\Users\\fathy\\OneDrive\\Desktop\\lapo\\school\\school-management-system\\.next\\server\\chunks\\9175.js'
 }
-Dashboard stats error: ex [Error]: Dynamic server usage: Page couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at eP (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:27402)
-    at Module.eT (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:27738)
-    at i (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:32161)
-    at Object.get (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:32363)
-    at extractToken (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\chunks\8546.js:1:717)
-    at authenticate (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\chunks\8546.js:1:831)
-    at GET (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\app\api\dashboard\stats\route.js:1:1452)
-    at C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:39529
-    at C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\server\lib\trace\tracer.js:121:36
-    at NoopContextManager.with (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7057) {
-  digest: 'DYNAMIC_SERVER_USAGE'
-}
-   Generating static pages (11/45) 
-   Generating static pages (22/45) 
-   Generating static pages (33/45) 
- ✓ Generating static pages (45/45) 
-   Finalizing page optimization ...
-   Collecting build traces ...
-
-Route (app)                              Size     First Load JS
-┌ ○ /                                    4.31 kB         128 kB
-├ ○ /_not-found                          875 B          88.5 kB
-├ λ /api/admin/bulk-delete               0 B                0 B
-├ λ /api/admin/migrate                   0 B                0 B
-├ λ /api/admin/permissions               0 B                0 B
-├ λ /api/admin/users                     0 B                0 B
-├ λ /api/announcements                   0 B                0 B
-├ λ /api/attendance                      0 B                0 B
-├ λ /api/attendance/[id]                 0 B                0 B
-├ λ /api/auth/login                      0 B                0 B
-├ λ /api/auth/profile                    0 B                0 B
-├ λ /api/auth/register                   0 B                0 B
-├ λ /api/backup/export                   0 B                0 B
-├ λ /api/backup/import                   0 B                0 B
-├ λ /api/classes                         0 B                0 B
-├ λ /api/classes/[id]                    0 B                0 B
-├ λ /api/classes/enrollment              0 B                0 B
-├ λ /api/dashboard/stats                 0 B                0 B
-├ λ /api/grades                          0 B                0 B
-├ λ /api/grades/[id]                     0 B                0 B
-├ λ /api/notifications                   0 B                0 B
-├ λ /api/schedules                       0 B                0 B
-├ λ /api/schedules/generate              0 B                0 B
-├ λ /api/seed                            0 B                0 B
-├ λ /api/students                        0 B                0 B
-├ λ /api/students/[id]                   0 B                0 B
-├ λ /api/subjects                        0 B                0 B
-├ λ /api/substitutions                   0 B                0 B
-├ λ /api/substitutions/[id]              0 B                0 B
-├ λ /api/substitutions/suggest           0 B                0 B
-├ λ /api/teacher-reports                 0 B                0 B
-├ λ /api/teachers                        0 B                0 B
-├ λ /api/teachers/[id]                   0 B                0 B
-├ ○ /auth/login                          138 B          87.7 kB
-├ ○ /dashboard                           11.1 kB         144 kB
-├ ○ /dashboard/admin                     23.1 kB         348 kB
-├ ○ /dashboard/announcements             5.17 kB         324 kB
-├ ○ /dashboard/attendance                5.57 kB         321 kB
-├ ○ /dashboard/classes                   5.38 kB         321 kB
-├ ○ /dashboard/grades                    6.19 kB         322 kB
-├ ○ /dashboard/principal                 3.04 kB         136 kB
-├ ○ /dashboard/profile                   6.29 kB         163 kB
-├ ○ /dashboard/reports                   12.7 kB         326 kB
-├ ○ /dashboard/schedules                 6.9 kB          323 kB
-├ ○ /dashboard/students                  5.44 kB         334 kB
-├ ○ /dashboard/substitutions             5.8 kB          186 kB
-├ ○ /dashboard/teachers                  5.58 kB         334 kB
-├ ○ /login                               4.16 kB         157 kB
-└ ○ /register                            4.16 kB         157 kB
-+ First Load JS shared by all            87.6 kB
-  ├ chunks/472-127bf656cccd565d.js       32.4 kB
-  ├ chunks/fd9d1056-fb4a5c58f8fbf2a4.js  53.3 kB
-  ├ chunks/main-app-6628ff03cce73e79.js  230 B
-  └ chunks/webpack-a8ba63f2417b26c7.js   1.7 kB
-
-
-○  (Static)   prerendered as static HTML
-λ  (Dynamic)  server-rendered on demand using Node.js
-
