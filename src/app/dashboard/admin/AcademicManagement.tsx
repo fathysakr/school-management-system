@@ -4,8 +4,8 @@ import { Box, Tabs, Tab } from '@mui/material';
 import { Assignment, Book, CalendarToday, SwapHoriz } from '@mui/icons-material';
 import TeacherAssignments from './TeacherAssignments';
 import SubjectsManagement from './SubjectsManagement';
-import SchedulesPage from '../schedules/page';
-import SubstitutionsPage from '../substitutions/page';
+import SchedulePanel from './SchedulePanel';
+import SubstitutionPanel from './SubstitutionPanel';
 
 export default function AcademicManagement() {
   const [subTab, setSubTab] = useState(0);
@@ -20,8 +20,8 @@ export default function AcademicManagement() {
       </Tabs>
       {subTab === 0 && <TeacherAssignments />}
       {subTab === 1 && <SubjectsManagement />}
-      {subTab === 2 && <SchedulesPage />}
-      {subTab === 3 && <SubstitutionsPage />}
+      {subTab === 2 && <SchedulePanel />}
+      {subTab === 3 && <SubstitutionPanel />}
     </Box>
   );
 }
