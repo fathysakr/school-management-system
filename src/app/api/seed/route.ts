@@ -31,6 +31,13 @@ export async function POST() {
     }
     results.push(`تمت إضافة ${totalSubjects} مادة دراسية جديدة حسب الصف`);
 
+    let teacher = await db.prepare("SELECT id FROM teachers WHERE school = 'high' AND status = 'active' LIMIT 1").get() as any;
+    if (!teacher) {
+      const tr = await db.prepare("INSERT INTO teachers (teacher_id, first_name, last_name, email, school, status) VALUES (?, ?, ?, ?, ?, ?)").run('T-HIGH-001', 'مشرف', 'المرحلة الثانوية', 'high.sup@school.com', 'high', 'active');
+      teacher = { id: tr.lastInsertRowid };
+      results.push('تم إنشاء معلم للمرحلة الثانوية');
+    }
+
     let totalClasses = 0;
     for (const { grade, sections, roomStart } of HIGH_CLASSES) {
       for (let i = 0; i < sections.length; i++) {
@@ -40,8 +47,8 @@ export async function POST() {
         const existing = await db.prepare('SELECT id FROM classes WHERE class_name = ? AND grade = ? AND section = ?').get(fullName, grade, section) as any;
         if (!existing) {
           await db.prepare(
-            'INSERT INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES (?, ?, ?, NULL, ?, 30, ?)'
-          ).run(fullName, grade, section, String(roomStart + i), 'active');
+            'INSERT INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES (?, ?, ?, ?, ?, 30, ?)'
+          ).run(fullName, grade, section, teacher.id, String(roomStart + i), 'active');
           totalClasses++;
         }
       }
