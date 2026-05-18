@@ -461,49 +461,6 @@ function applyMigrations(bsql: Database.Database) {
       })()
     },
     {
-      name: '012_substitutions',
-      sql: `
-        CREATE TABLE IF NOT EXISTS substitutions (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          date DATE NOT NULL,
-          absent_teacher_id INTEGER NOT NULL,
-          substitute_teacher_id INTEGER,
-          schedule_id INTEGER NOT NULL,
-          subject TEXT NOT NULL,
-          class_id INTEGER NOT NULL,
-          day_of_week TEXT NOT NULL,
-          start_time TEXT NOT NULL,
-          end_time TEXT NOT NULL,
-          reason TEXT,
-          status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
-          created_by INTEGER,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (absent_teacher_id) REFERENCES teachers(id) ON DELETE CASCADE,
-          FOREIGN KEY (substitute_teacher_id) REFERENCES teachers(id) ON DELETE SET NULL,
-          FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE,
-          FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
-          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-        );
-      `
-    },
-    {
-      name: '013_notifications',
-      sql: `
-        CREATE TABLE IF NOT EXISTS notifications (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id INTEGER NOT NULL,
-          title TEXT NOT NULL,
-          message TEXT NOT NULL,
-          type TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('urgent', 'info', 'warning')),
-          link TEXT,
-          is_read INTEGER DEFAULT 0,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );
-      `
-    },
-    {
       name: '011_subjects',
       sql: (() => {
         try {
@@ -549,6 +506,49 @@ function applyMigrations(bsql: Database.Database) {
           `;
         }
       })()
+    },
+    {
+      name: '012_substitutions',
+      sql: `
+        CREATE TABLE IF NOT EXISTS substitutions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date DATE NOT NULL,
+          absent_teacher_id INTEGER NOT NULL,
+          substitute_teacher_id INTEGER,
+          schedule_id INTEGER NOT NULL,
+          subject TEXT NOT NULL,
+          class_id INTEGER NOT NULL,
+          day_of_week TEXT NOT NULL,
+          start_time TEXT NOT NULL,
+          end_time TEXT NOT NULL,
+          reason TEXT,
+          status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
+          created_by INTEGER,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (absent_teacher_id) REFERENCES teachers(id) ON DELETE CASCADE,
+          FOREIGN KEY (substitute_teacher_id) REFERENCES teachers(id) ON DELETE SET NULL,
+          FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE,
+          FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+        );
+      `
+    },
+    {
+      name: '013_notifications',
+      sql: `
+        CREATE TABLE IF NOT EXISTS notifications (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          message TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('urgent', 'info', 'warning')),
+          link TEXT,
+          is_read INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `
     },
   ];
 

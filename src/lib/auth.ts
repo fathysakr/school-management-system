@@ -11,7 +11,7 @@ const JWT_EXPIRY = '7d';
 export interface TokenPayload {
   id: number;
   email: string;
-  role: 'admin' | 'middle_supervisor' | 'high_supervisor' | 'middle_teacher' | 'high_teacher' | 'middle_counselor' | 'high_counselor';
+  role: 'admin' | 'middle_supervisor' | 'high_supervisor' | 'middle_teacher' | 'high_teacher' | 'middle_counselor' | 'high_counselor' | 'middle_principal' | 'high_principal';
 }
 
 // Hash password

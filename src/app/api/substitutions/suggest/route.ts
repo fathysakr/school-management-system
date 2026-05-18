@@ -83,7 +83,6 @@ export async function POST(request: NextRequest) {
       const scored = available.map((t: any) => {
         let score = 0;
         if (t.specialization && schedule.subject.includes(t.specialization)) score += 3;
-        else if (t.specialization && schedule.subject.includes(t.specialization.replace(/^[\s\u0600-\u06FF]+/, ''))) score += 2;
         if (t.school === schedule.school) score += 1;
         return { ...t, score };
       });

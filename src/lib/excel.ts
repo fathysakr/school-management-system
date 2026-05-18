@@ -6,3 +6,10 @@ export function exportToExcel(headers: string[], rows: any[][], sheetName: strin
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
   XLSX.writeFile(wb, filename);
 }
+
+export function exportToExcelBuffer(headers: string[], rows: any[][], sheetName: string): Buffer {
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  return Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }));
+}

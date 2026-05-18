@@ -3,7 +3,7 @@ import db from '@/lib/database';
 import { authenticate, hashPassword, forbidden, unauthorized, badRequest, notFound, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
 
-const ALLOWED_ROLES = ['middle_supervisor', 'high_supervisor', 'middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor'];
+const ALLOWED_ROLES = ['middle_supervisor', 'high_supervisor', 'middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal'];
 
 export async function GET(request: NextRequest) {
   try {

@@ -23,6 +23,7 @@ export async function notifyUsers(
   type: 'urgent' | 'info' | 'warning' = 'info',
   link?: string
 ) {
+  if (!userEmails.length) return;
   for (const email of userEmails) {
     const user = await db.prepare('SELECT id FROM users WHERE email = ?').get(email) as any;
     if (user) {
