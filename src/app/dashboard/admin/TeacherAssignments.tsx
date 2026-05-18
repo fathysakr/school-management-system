@@ -126,7 +126,7 @@ export default function TeacherAssignments() {
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
 
-  const gradeColors: Record<string, string> = { 'أول ثانوي': '#1565c0', 'ثاني ثانوي': '#2e7d32', 'ثالث ثانوي': '#e65100' };
+  const gradeColors: Record<string, string> = { 'الصف الأول الثانوي': '#1565c0', 'الصف الثاني الثانوي': '#2e7d32', 'الصف الثالث الثانوي': '#e65100', 'أول ثانوي': '#1565c0', 'ثاني ثانوي': '#2e7d32', 'ثالث ثانوي': '#e65100' };
 
   return (
     <Box>
