@@ -133,7 +133,25 @@ export default function SubjectsManagement() {
                 <MenuItem value="middle">متوسط</MenuItem>
               </Select>
             </FormControl>
-            <TextField label="الصف (اختياري)" fullWidth value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })} placeholder="مثال: أول ثانوي" />
+            <FormControl fullWidth>
+              <InputLabel>الصف</InputLabel>
+              <Select value={form.grade} label="الصف" onChange={(e) => setForm({ ...form, grade: e.target.value })}>
+                <MenuItem value="">بدون (جميع الصفوف)</MenuItem>
+                {form.school === 'high' ? (
+                  <>
+                    <MenuItem value="أول ثانوي">أول ثانوي</MenuItem>
+                    <MenuItem value="ثاني ثانوي">ثاني ثانوي</MenuItem>
+                    <MenuItem value="ثالث ثانوي">ثالث ثانوي</MenuItem>
+                  </>
+                ) : (
+                  <>
+                    <MenuItem value="أول متوسط">أول متوسط</MenuItem>
+                    <MenuItem value="ثاني متوسط">ثاني متوسط</MenuItem>
+                    <MenuItem value="ثالث متوسط">ثالث متوسط</MenuItem>
+                  </>
+                )}
+              </Select>
+            </FormControl>
             <TextField label="عدد الحصص الأسبوعية" type="number" fullWidth value={form.sessions_per_week}
               onChange={(e) => setForm({ ...form, sessions_per_week: parseInt(e.target.value) || 0 })}
               inputProps={{ min: 0, max: 10 }} />
