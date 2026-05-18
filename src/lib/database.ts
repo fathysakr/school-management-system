@@ -573,6 +573,13 @@ function applyMigrations(bsql: Database.Database) {
         `;
       })()
     },
+    {
+      name: '016_subject_teacher_id',
+      sql: (() => {
+        if (colExists('subjects', 'teacher_id')) return 'SELECT 1';
+        return `ALTER TABLE subjects ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL;`;
+      })()
+    },
   ];
 
   for (const migration of migrations) {
@@ -619,6 +626,7 @@ async function ensureTursoReady() {
     await db.exec(`UPDATE users SET teacher_id = (SELECT id FROM teachers WHERE teachers.user_id = users.id) WHERE EXISTS (SELECT 1 FROM teachers WHERE teachers.user_id = users.id)`);
 
     await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`);
+    await db.exec(`ALTER TABLE subjects ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL`);
 
     const subCnt = (await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any)?.cnt;
     if (!subCnt) {
