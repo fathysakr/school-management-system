@@ -15,8 +15,7 @@ export default function TeacherAssignments() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [selectedClasses, setSelectedClasses] = useState<number[]>([]);
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
   const [homeRoom, setHomeRoom] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -40,9 +39,10 @@ export default function TeacherAssignments() {
 
   const openAssignment = (teacher: any) => {
     setSelectedTeacher(teacher);
-    setSelectedSubjects(teacher.specialization ? teacher.specialization.split(',').map((s: string) => s.trim()) : []);
+    const specNames = teacher.specialization ? teacher.specialization.split(',').map((s: string) => s.trim()) : [];
+    const matchedIds = subjects.filter((s: any) => specNames.includes(s.name)).map((s: any) => s.id);
+    setSelectedSubjectIds(matchedIds);
     const assigned = classes.filter((c: any) => c.teacher_id === teacher.id);
-    setSelectedClasses(assigned.map((c: any) => c.id));
     setHomeRoom(assigned.length > 0 ? String(assigned[0].id) : '');
     setDialogOpen(true);
     setMessage('');
@@ -54,14 +54,19 @@ export default function TeacherAssignments() {
     setMessage('');
     try {
       const token = localStorage.getItem('token');
-      await api.put(`/teachers/${selectedTeacher.id}`, { specialization: selectedSubjects.join(', ') }, token);
-      for (const cls of classes) {
-        const isSelected = selectedClasses.includes(cls.id);
-        const wasAssigned = cls.teacher_id === selectedTeacher.id;
-        if (isSelected && cls.id === parseInt(homeRoom)) {
-          await api.put(`/classes/${cls.id}`, { teacher_id: selectedTeacher.id }, token);
-        } else if (isSelected || wasAssigned) {
-          await api.put(`/classes/${cls.id}`, { teacher_id: 0 }, token);
+      const subjectNames = selectedSubjectIds.map(id => {
+        const sub = subjects.find((s: any) => s.id === id);
+        return sub ? sub.name : '';
+      }).filter(Boolean).join(', ');
+      await api.put(`/teachers/${selectedTeacher.id}`, { specialization: subjectNames }, token);
+      const prevHomeRoom = classes.find((c: any) => c.teacher_id === selectedTeacher.id);
+      if (homeRoom) {
+        await api.put(`/classes/${homeRoom}`, { teacher_id: selectedTeacher.id }, token);
+      }
+      if (prevHomeRoom && String(prevHomeRoom.id) !== homeRoom) {
+        const fallback = teachers.find((t: any) => t.school === selectedTeacher.school && t.id !== selectedTeacher.id) || teachers.find((t: any) => t.school === selectedTeacher.school);
+        if (fallback) {
+          await api.put(`/classes/${prevHomeRoom.id}`, { teacher_id: fallback.id }, token);
         }
       }
       setMessage('تم حفظ التعيينات بنجاح');
@@ -146,36 +151,19 @@ export default function TeacherAssignments() {
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <FormControl fullWidth>
               <InputLabel>المواد الدراسية</InputLabel>
-              <Select multiple value={selectedSubjects} onChange={(e) => setSelectedSubjects(e.target.value as string[])}
+              <Select multiple value={selectedSubjectIds} onChange={(e) => setSelectedSubjectIds(e.target.value as number[])}
                 input={<OutlinedInput label="المواد الدراسية" />} renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((v) => <Chip key={v} label={v} size="small" />)}
-                  </Box>
-                )}>
-                {subjects.map((s: any) => (
-                  <MenuItem key={s.id} value={s.name}>
-                    <Checkbox checked={selectedSubjects.includes(s.name)} />
-                    <ListItemText primary={`${s.name} (${s.grade || s.school})`} />
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>الفصول الدراسية</InputLabel>
-              <Select multiple value={selectedClasses.map((id: number) => String(id))} onChange={(e) => setSelectedClasses((e.target.value as string[]).map(Number))}
-                input={<OutlinedInput label="الفصول الدراسية" />} renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((v) => {
-                      const cls = classes.find((c: any) => c.id === parseInt(v));
-                      return cls ? <Chip key={v} label={`${cls.class_name} (${cls.grade})`} size="small"
-                        sx={{ bgcolor: gradeColors[cls.grade] || '#666', color: 'white' }} /> : null;
+                    {selected.map((id) => {
+                      const sub = subjects.find((s: any) => s.id === id);
+                      return sub ? <Chip key={id} label={`${sub.name} (${sub.grade})`} size="small" /> : null;
                     })}
                   </Box>
                 )}>
-                {classes.filter((c: any) => c.grade?.includes(schoolFilter === 'high' ? 'ثانوي' : 'متوسط')).map((c: any) => (
-                  <MenuItem key={c.id} value={String(c.id)}>
-                    <Checkbox checked={selectedClasses.includes(c.id)} />
-                    <ListItemText primary={`${c.class_name} - ${c.grade}`} />
+                {subjects.map((s: any) => (
+                  <MenuItem key={s.id} value={s.id}>
+                    <Checkbox checked={selectedSubjectIds.includes(s.id)} />
+                    <ListItemText primary={`${s.name} - ${s.grade || s.school}`} />
                   </MenuItem>
                 ))}
               </Select>
@@ -184,7 +172,7 @@ export default function TeacherAssignments() {
               <InputLabel>رائد الفصل</InputLabel>
               <Select value={homeRoom} onChange={(e) => setHomeRoom(e.target.value)} label="رائد الفصل">
                 <MenuItem value="">بدون</MenuItem>
-                {classes.filter((c: any) => selectedClasses.includes(c.id)).map((c: any) => (
+                {classes.filter((c: any) => c.grade?.includes(schoolFilter === 'high' ? 'ثانوي' : 'متوسط')).map((c: any) => (
                   <MenuItem key={c.id} value={String(c.id)}>{c.class_name} - {c.grade}</MenuItem>
                 ))}
               </Select>
