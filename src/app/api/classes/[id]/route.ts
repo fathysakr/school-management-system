@@ -68,7 +68,7 @@ export async function PUT(
     const existing = await db.prepare('SELECT id FROM classes WHERE id = ?').get(id);
     if (!existing) return notFound('Class not found');
 
-    const allowedFields = ['class_name', 'grade', 'section', 'room_number', 'capacity', 'status'];
+    const allowedFields = ['class_name', 'grade', 'section', 'room_number', 'capacity', 'status', 'teacher_id'];
 
     const updates: string[] = [];
     const values: any[] = [];

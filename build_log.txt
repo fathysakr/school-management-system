@@ -2,7 +2,7 @@
 > school-management-system@0.1.0 build
 > next build
 
-(node:10304) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/fathy/OneDrive/Desktop/lapo/school/school-management-system/next.config.js is not specified and it doesn't parse as CommonJS.
+(node:18240) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/fathy/OneDrive/Desktop/lapo/school/school-management-system/next.config.js is not specified and it doesn't parse as CommonJS.
 Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
 To eliminate this warning, add "type": "module" to C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\package.json.
 (Use `node --trace-warnings ...` to show where the warning was created)
@@ -14,19 +14,6 @@ To eliminate this warning, add "type": "module" to C:\Users\fathy\OneDrive\Deskt
    Linting and checking validity of types ...
    Collecting page data ...
    Generating static pages (0/45) ...
-Dashboard stats error: ex [Error]: Dynamic server usage: Page couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at eP (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:27402)
-    at Module.eT (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:27738)
-    at i (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:32161)
-    at Object.get (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:32363)
-    at extractToken (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\chunks\8546.js:1:717)
-    at authenticate (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\chunks\8546.js:1:831)
-    at GET (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\app\api\dashboard\stats\route.js:1:1452)
-    at C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:39529
-    at C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\server\lib\trace\tracer.js:121:36
-    at NoopContextManager.with (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7057) {
-  digest: 'DYNAMIC_SERVER_USAGE'
-}
 Backup export error: ex [Error]: Dynamic server usage: Page couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
     at eP (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:27402)
     at Module.eT (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:27738)
@@ -41,6 +28,19 @@ Backup export error: ex [Error]: Dynamic server usage: Page couldn't be rendered
   digest: 'DYNAMIC_SERVER_USAGE'
 }
    Generating static pages (11/45) 
+Dashboard stats error: ex [Error]: Dynamic server usage: Page couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at eP (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:27402)
+    at Module.eT (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:27738)
+    at i (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:32161)
+    at Object.get (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:32363)
+    at extractToken (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\chunks\8546.js:1:717)
+    at authenticate (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\chunks\8546.js:1:831)
+    at GET (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\.next\server\app\api\dashboard\stats\route.js:1:1452)
+    at C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:14:39529
+    at C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\server\lib\trace\tracer.js:121:36
+    at NoopContextManager.with (C:\Users\fathy\OneDrive\Desktop\lapo\school\school-management-system\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7057) {
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
    Generating static pages (22/45) 
    Generating static pages (33/45) 
  ✓ Generating static pages (45/45) 
