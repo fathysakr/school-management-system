@@ -5,7 +5,7 @@ import { getSchoolStage } from '@/lib/permissions';
 
 export async function POST(request: NextRequest) {
   try {
-    await ensureTursoReady();
+    await ensureTursoReady().catch(() => {});
     const body = await request.json();
     const { email, password, school } = body;
 
