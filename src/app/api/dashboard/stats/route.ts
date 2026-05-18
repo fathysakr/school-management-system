@@ -14,9 +14,9 @@ export async function GET(request: NextRequest) {
     const stage = getSchoolStage(user.role);
     const effectiveStage = stage === 'both' && schoolOverride ? schoolOverride : stage;
     const isMiddle = effectiveStage === 'middle';
-    const stageFilter = effectiveStage === 'both' ? '' : isMiddle ? "AND c.grade = 'المتوسطة'" : "AND c.grade = 'الثانوية'";
-    const teacherStageFilter = effectiveStage === 'both' ? '' : isMiddle ? "AND c.grade = 'المتوسطة'" : "AND c.grade = 'الثانوية'";
-    const classStageFilter = effectiveStage === 'both' ? '' : "AND grade = '" + (isMiddle ? 'المتوسطة' : 'الثانوية') + "'";
+    const stageFilter = effectiveStage === 'both' ? '' : isMiddle ? "AND c.grade LIKE '%متوسط%'" : "AND c.grade LIKE '%ثانوي%'";
+    const teacherStageFilter = effectiveStage === 'both' ? '' : isMiddle ? "AND c.grade LIKE '%متوسط%'" : "AND c.grade LIKE '%ثانوي%'";
+    const classStageFilter = effectiveStage === 'both' ? '' : "AND grade LIKE '%" + (isMiddle ? 'متوسط' : 'ثانوي') + "%'";
 
     const teacherCount = await db.prepare(`
       SELECT COUNT(DISTINCT t.id) as c FROM teachers t
