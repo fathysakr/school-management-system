@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
-import { comparePassword, generateToken, badRequest, serverError, success, notFound, forbidden } from '@/lib/auth';
+import { comparePassword, generateToken, badRequest, success, notFound, forbidden } from '@/lib/auth';
 import { getSchoolStage } from '@/lib/permissions';
 
 export async function POST(request: NextRequest) {
