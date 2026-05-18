@@ -1,19 +1,24 @@
-const DEFAULT_API = 'https://graph.facebook.com/v22.0';
+type Provider = 'meta' | 'evolution';
+type SendResult = { success: boolean; error?: string };
+
+function getProvider(): Provider {
+  return (process.env.WHATSAPP_PROVIDER as Provider) || 'meta';
+}
 
 function getApiUrl(): string {
-  return process.env.WHATSAPP_API_URL || DEFAULT_API;
+  return process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v22.0';
 }
 
-function getPhoneId(): string | null {
-  return process.env.WHATSAPP_PHONE_ID || null;
+function getPhoneId(): string {
+  return process.env.WHATSAPP_PHONE_ID || '';
 }
 
-function getToken(): string | null {
-  return process.env.WHATSAPP_TOKEN || null;
+function getToken(): string {
+  return process.env.WHATSAPP_TOKEN || '';
 }
 
 function isConfigured(): boolean {
-  return !!(getToken());
+  return !!getToken();
 }
 
 function formatPhone(phone: string): string {
@@ -23,73 +28,53 @@ function formatPhone(phone: string): string {
   } else if (cleaned.startsWith('+')) {
     cleaned = cleaned.slice(1);
   }
+  if (cleaned.startsWith('00')) cleaned = cleaned.slice(2);
   return cleaned.replace(/\D/g, '');
 }
 
-type SendResult = { success: boolean; error?: string };
-
 async function sendMessage(to: string, body: string): Promise<SendResult> {
-  if (!isConfigured()) return { success: false, error: 'WHATSAPP_TOKEN not configured' };
+  if (!isConfigured()) return { success: false, error: 'WHATSAPP_TOKEN غير مضبوط' };
   const phone = formatPhone(to);
   if (!phone) return { success: false, error: 'رقم الهاتف غير صالح' };
   try {
-    const apiUrl = getApiUrl();
-    const phoneId = getPhoneId();
+    const provider = getProvider();
 
-    // Meta Cloud API
-    if (apiUrl.includes('graph.facebook.com')) {
-      if (!phoneId) return { success: false, error: 'WHATSAPP_PHONE_ID مطلوب' };
-      const resp = await fetch(`${apiUrl}/${phoneId}/messages`, {
+    if (provider === 'evolution') {
+      const instanceName = process.env.WHATSAPP_INSTANCE || 'default';
+      const apiUrl = `${getApiUrl()}/message/sendText/${instanceName}`;
+      const resp = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: phone,
-          type: 'text',
-          text: { preview_url: false, body },
-        }),
+        headers: { 'apiKey': getToken(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: phone, text: body }),
       });
-      if (!resp.ok) {
-        const text = await resp.text();
-        return { success: false, error: `WhatsApp API error: ${resp.status} ${text}` };
-      }
+      if (!resp.ok) return { success: false, error: `Evolution API error: ${resp.status}` };
       return { success: true };
     }
 
-    // Generic provider - sends POST with JSON body
-    const resp = await fetch(apiUrl, {
+    // Default: Meta Cloud API
+    const phoneId = getPhoneId();
+    if (!phoneId) return { success: false, error: 'WHATSAPP_PHONE_ID مطلوب' };
+    const resp = await fetch(`${getApiUrl()}/${phoneId}/messages`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ to: phone, message: body, phone: phoneId }),
+      headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp', recipient_type: 'individual', to: phone,
+        type: 'text', text: { preview_url: false, body },
+      }),
     });
-    if (!resp.ok) {
-      const text = await resp.text();
-      return { success: false, error: `Provider error: ${resp.status} ${text}` };
-    }
+    if (!resp.ok) return { success: false, error: `WhatsApp API error: ${resp.status}` };
     return { success: true };
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : 'Network error' };
   }
 }
 
-const reportTypes: Record<string, string> = {
-  behavioral: '🗂 تقرير سلوكي',
-  positive: '⭐ تقرير إيجابي',
-  activity: '📋 تقرير نشاط',
-  academic_deficiency: '📚 تقرير ضعف أكاديمي',
+const reportTypeLabels: Record<string, string> = {
+  behavioral: '🗂 تقرير سلوكي', positive: '⭐ تقرير إيجابي',
+  activity: '📋 تقرير نشاط', academic_deficiency: '📚 تقرير ضعف أكاديمي',
 };
 
-export async function sendSubstitutionNotification(
-  teacherPhone: string,
-  data: { subject: string; class_name: string; date: string; time: string; absent_teacher: string }
-): Promise<SendResult> {
+export async function sendSubstitutionNotification(teacherPhone: string, data: { subject: string; class_name: string; date: string; time: string; absent_teacher: string }): Promise<SendResult> {
   return sendMessage(teacherPhone,
     `🔔 تنبيه حصة انتظار
 تم تكليفك بحصة بديلة:
@@ -102,11 +87,8 @@ export async function sendSubstitutionNotification(
 مدرسة صفوة الرواد الأهلية`);
 }
 
-export async function sendReportNotification(
-  phone: string,
-  data: { student_name: string; report_type: string; title?: string; content: string; teacher_name: string }
-): Promise<SendResult> {
-  const header = reportTypes[data.report_type] || '📋 تقرير';
+export async function sendReportNotification(phone: string, data: { student_name: string; report_type: string; title?: string; content: string; teacher_name: string }): Promise<SendResult> {
+  const header = reportTypeLabels[data.report_type] || '📋 تقرير';
   const titleLine = data.title ? `\n• العنوان: ${data.title}` : '';
   return sendMessage(phone,
     `${header}
