@@ -14,7 +14,7 @@ import {
   DeleteSweep, Warning, School, Grade, Assessment, People,
   Schedule, Campaign, AutoStories, RestartAlt, ManageAccounts,
   Add, Edit, Delete, Refresh, Search, FileDownload, Security,
-  LockReset, Visibility, VisibilityOff, ContentCopy
+  LockReset, Visibility, VisibilityOff, ContentCopy, CloudDownload, CloudUpload
 } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { permissionGroups, permissionLabels, allPermissions } from '@/lib/permissions';
@@ -90,6 +90,12 @@ export default function AdminPage() {
   const [permLoading, setPermLoading] = useState(false);
   const [permError, setPermError] = useState('');
   const [permSuccess, setPermSuccess] = useState('');
+
+  // Backup state
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupError, setBackupError] = useState('');
+  const [backupSuccess, setBackupSuccess] = useState('');
+  const [backupStats, setBackupStats] = useState<Record<string, number> | null>(null);
 
   if (!user) return null;
   if (user.role !== 'admin') {
@@ -344,6 +350,7 @@ export default function AdminPage() {
         <Tab icon={<DeleteSweep />} label="إجراءات جماعية" iconPosition="start" />
         <Tab icon={<ManageAccounts />} label="إدارة الحسابات" iconPosition="start" />
         <Tab icon={<Security />} label="الصلاحيات" iconPosition="start" />
+        <Tab icon={<CloudDownload />} label="النسخ الاحتياطي" iconPosition="start" />
       </Tabs>
 
       {tab === 0 && (
@@ -700,6 +707,109 @@ export default function AdminPage() {
             <Paper sx={{ p: 6, textAlign: 'center' }}>
               <Security sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
               <Typography color="text.secondary">اختر مستخدمًا من القائمة أعلاه لإدارة صلاحياته</Typography>
+            </Paper>
+          )}
+        </>
+      )}
+      {tab === 3 && (
+        <>
+          {backupError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setBackupError('')}>{backupError}</Alert>}
+          {backupSuccess && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setBackupSuccess('')}>{backupSuccess}</Alert>}
+
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            {/* Export card */}
+            <Paper sx={{ flex: 1, minWidth: 280, p: 3, borderRadius: 3, borderTop: '4px solid #2e7d32' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <CloudDownload sx={{ fontSize: 40, color: '#2e7d32' }} />
+                <Box>
+                  <Typography variant="h6" fontWeight="bold">تصدير نسخة احتياطية</Typography>
+                  <Typography variant="body2" color="text.secondary">تحميل جميع بيانات النظام كملف JSON</Typography>
+                </Box>
+              </Box>
+              <Button
+                variant="contained" color="success" size="large" fullWidth
+                disabled={backupLoading}
+                onClick={async () => {
+                  if (!token) return;
+                  setBackupLoading(true);
+                  setBackupError('');
+                  setBackupSuccess('');
+                  try {
+                    const res = await fetch('/api/backup/export', { headers: { Authorization: `Bearer ${token}` } });
+                    if (!res.ok) { setBackupError('فشل التصدير'); return; }
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = `safwa-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                    setBackupSuccess('تم تصدير النسخة الاحتياطية بنجاح');
+                  } catch { setBackupError('فشل الاتصال بالخادم'); }
+                  finally { setBackupLoading(false); }
+                }}
+                startIcon={<CloudDownload />}
+              >
+                {backupLoading ? 'جاري التصدير...' : 'تصدير الآن'}
+              </Button>
+            </Paper>
+
+            {/* Import card */}
+            <Paper sx={{ flex: 1, minWidth: 280, p: 3, borderRadius: 3, borderTop: '4px solid #e65100' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <CloudUpload sx={{ fontSize: 40, color: '#e65100' }} />
+                <Box>
+                  <Typography variant="h6" fontWeight="bold">استيراد نسخة احتياطية</Typography>
+                  <Typography variant="body2" color="text.secondary">استعادة البيانات من ملف JSON</Typography>
+                </Box>
+              </Box>
+              <input
+                type="file" accept=".json"
+                id="backup-file-input"
+                style={{ display: 'none' }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || !token) return;
+                  setBackupLoading(true);
+                  setBackupError('');
+                  setBackupSuccess('');
+                  setBackupStats(null);
+                  try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+                    const res = await api.post('/backup/import', data, token);
+                    setBackupSuccess(res.message || 'تم الاستيراد بنجاح');
+                    setBackupStats(res.stats || null);
+                  } catch (err: unknown) {
+                    setBackupError(err instanceof Error ? err.message : 'فشل الاستيراد');
+                  }
+                  finally { setBackupLoading(false); }
+                }}
+              />
+              <Button
+                variant="contained" color="warning" size="large" fullWidth
+                disabled={backupLoading}
+                onClick={() => document.getElementById('backup-file-input')?.click()}
+                startIcon={<CloudUpload />}
+              >
+                {backupLoading ? 'جاري الاستيراد...' : 'اختيار ملف واستيراد'}
+              </Button>
+              <Alert severity="warning" sx={{ mt: 2 }} icon={<Warning />}>
+                <Typography variant="caption">
+                  الاستيراد سيحل محل جميع البيانات الموجودة. يُنصح بعمل نسخة احتياطية أولاً.
+                </Typography>
+              </Alert>
+            </Paper>
+          </Box>
+
+          {backupStats && (
+            <Paper sx={{ mt: 3, p: 3, borderRadius: 3 }}>
+              <Typography variant="h6" fontWeight="bold" mb={2}>إحصائيات الاستيراد</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 1 }}>
+                {Object.entries(backupStats).map(([table, count]) => (
+                  <Box key={table} sx={{ display: 'flex', justifyContent: 'space-between', p: 1, bgcolor: (count || 0) > 0 ? 'success.50' : 'grey.50', borderRadius: 1 }}>
+                    <Typography variant="body2" fontWeight={500}>{table}</Typography>
+                    <Typography variant="body2" color={count > 0 ? 'success.main' : 'text.secondary'}>{count} سجل</Typography>
+                  </Box>
+                ))}
+              </Box>
             </Paper>
           )}
         </>
