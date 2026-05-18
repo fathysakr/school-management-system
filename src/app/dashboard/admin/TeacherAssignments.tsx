@@ -32,6 +32,8 @@ export default function TeacherAssignments() {
       setTeachers(t.teachers || []);
       setClasses(c.classes || []);
       setSubjects(s.subjects || []);
+    }).catch(() => {
+      setMessage('فشل تحميل البيانات - تحقق من اتصالك');
     }).finally(() => setLoading(false));
   }, []);
 
@@ -67,7 +69,10 @@ export default function TeacherAssignments() {
       setTeachers(t.teachers || []);
       setClasses(c.classes || []);
     } catch (e: any) {
-      setMessage(e?.message || 'فشل الحفظ');
+      const msg = e?.message || '';
+      if (msg.includes('unauthorized') || msg.includes('Unauthorized')) setMessage('صلاحية الوصول منتهية - سجل الدخول مرة أخرى');
+      else if (msg.includes('fetch')) setMessage('فشل الاتصال بالخادم');
+      else setMessage('فشل الحفظ');
     }
     setSaving(false);
   };
