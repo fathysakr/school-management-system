@@ -1,15 +1,15 @@
-const ULTRAMSG_API = 'https://api.ultramsg.com';
+const GRAPH_API = 'https://graph.facebook.com/v22.0';
 
-function getInstanceId(): string | null {
-  return process.env.ULTRAMSG_INSTANCE_ID || null;
+function getPhoneId(): string | null {
+  return process.env.WHATSAPP_PHONE_ID || null;
 }
 
 function getToken(): string | null {
-  return process.env.ULTRAMSG_TOKEN || null;
+  return process.env.WHATSAPP_TOKEN || null;
 }
 
 function isConfigured(): boolean {
-  return !!(getInstanceId() && getToken());
+  return !!(getPhoneId() && getToken());
 }
 
 function formatPhone(phone: string): string {
@@ -25,18 +25,27 @@ function formatPhone(phone: string): string {
 type SendResult = { success: boolean; error?: string };
 
 async function sendMessage(to: string, body: string): Promise<SendResult> {
-  if (!isConfigured()) return { success: false, error: 'ULTRAMSG not configured' };
+  if (!isConfigured()) return { success: false, error: 'WHATSAPP not configured' };
   const phone = formatPhone(to);
   if (!phone) return { success: false, error: 'رقم الهاتف غير صالح' };
   try {
-    const resp = await fetch(`${ULTRAMSG_API}/${getInstanceId()}/messages/chat`, {
+    const resp = await fetch(`${GRAPH_API}/${getPhoneId()}/messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getToken(), to: phone, body }),
+      headers: {
+        'Authorization': `Bearer ${getToken()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: phone,
+        type: 'text',
+        text: { preview_url: false, body },
+      }),
     });
     if (!resp.ok) {
       const text = await resp.text();
-      return { success: false, error: `UltraMsg API error: ${resp.status} ${text}` };
+      return { success: false, error: `WhatsApp API error: ${resp.status} ${text}` };
     }
     return { success: true };
   } catch (err: unknown) {
@@ -48,7 +57,7 @@ export async function sendSubstitutionNotification(
   teacherPhone: string,
   data: { subject: string; class_name: string; date: string; time: string; absent_teacher: string }
 ): Promise<SendResult> {
-  const msg = `🔔 *تنبيه حصة انتظار*
+  const msg = `🔔 تنبيه حصة انتظار
 تم تكليفك بحصة بديلة:
 • المادة: ${data.subject}
 • الفصل: ${data.class_name}
@@ -65,12 +74,12 @@ export async function sendReportNotification(
   data: { student_name: string; report_type: string; title?: string; content: string; teacher_name: string }
 ): Promise<SendResult> {
   const typeLabels: Record<string, string> = {
-    behavioral: '🗂 *تقرير سلوكي*',
-    positive: '⭐ *تقرير إيجابي*',
-    activity: '📋 *تقرير نشاط*',
-    academic_deficiency: '📚 *تقرير ضعف أكاديمي*',
+    behavioral: '🗂 تقرير سلوكي',
+    positive: '⭐ تقرير إيجابي',
+    activity: '📋 تقرير نشاط',
+    academic_deficiency: '📚 تقرير ضعف أكاديمي',
   };
-  const header = typeLabels[data.report_type] || '📋 *تقرير*';
+  const header = typeLabels[data.report_type] || '📋 تقرير';
   const titleLine = data.title ? `\n• العنوان: ${data.title}` : '';
   const msg = `${header}
 الطالب: ${data.student_name}${titleLine}
@@ -85,7 +94,7 @@ export async function sendCustomNotification(
   phone: string,
   message: string
 ): Promise<SendResult> {
-  return sendMessage(phone, `📢 *تنبيه*\n${message}\n\nمدرسة صفوة الرواد الأهلية`);
+  return sendMessage(phone, `📢 تنبيه\n${message}\n\nمدرسة صفوة الرواد الأهلية`);
 }
 
 export { isConfigured, formatPhone };
