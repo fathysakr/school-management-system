@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import db from '@/lib/database';
-import { authenticate, unauthorized, serverError } from '@/lib/auth';
-import { hasPermission } from '@/lib/permissions';
+import { authenticate, unauthorized } from '@/lib/auth';
 
 const HIGH_CLASSES = [
   { grade: 'أول ثانوي', sections: ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ'], roomStart: 101 },
@@ -19,7 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await authenticate(request);
     if (!user) return unauthorized();
-    if (!hasPermission(user.role, 'admin')) return unauthorized();
+    if (user.role !== 'admin') return unauthorized();
     const results: string[] = [];
 
     try { await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`); results.push('تم إضافة عمود grade'); } catch { results.push('عمود grade موجود'); }
