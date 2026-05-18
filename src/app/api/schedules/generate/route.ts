@@ -8,8 +8,8 @@ const START_TIMES = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:0
 const END_TIMES = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
 
 function schoolToGrade(school: string): string | null {
-  if (school === 'middle') return 'المتوسطة';
-  if (school === 'high') return 'الثانوية';
+  if (school === 'middle') return 'متوسط';
+  if (school === 'high') return 'ثانوي';
   return null;
 }
 
@@ -82,8 +82,8 @@ export async function POST(req: NextRequest) {
     const classes = await (await db.prepare(
       school === 'all'
         ? `SELECT c.*, c.grade as school_stage FROM classes c WHERE c.status = 'active'`
-        : `SELECT c.*, c.grade as school_stage FROM classes c WHERE c.status = 'active' AND c.grade = ?`
-    ).all(...(school === 'all' ? [] : [gradeFilter])));
+        : `SELECT c.*, c.grade as school_stage FROM classes c WHERE c.status = 'active' AND c.grade LIKE ?`
+    ).all(...(school === 'all' ? [] : [`%${gradeFilter}%`])));
 
     if (classes.length === 0) {
       return NextResponse.json({ error: 'لا توجد فصول متاحة' }, { status: 400 });
@@ -117,8 +117,8 @@ export async function POST(req: NextRequest) {
     const existingSchedules = await db.prepare(
       school === 'all'
         ? `SELECT * FROM schedules WHERE status = 'active'`
-        : `SELECT s.* FROM schedules s JOIN classes c ON c.id = s.class_id WHERE s.status = 'active' AND c.grade = ?`
-    ).all(...(school === 'all' ? [] : [gradeFilter]));
+        : `SELECT s.* FROM schedules s JOIN classes c ON c.id = s.class_id WHERE s.status = 'active' AND c.grade LIKE ?`
+    ).all(...(school === 'all' ? [] : [`%${gradeFilter}%`]));
 
     for (const s of existingSchedules as any[]) {
       const dayIdx = DAYS.indexOf(s.day_of_week);
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
     let totalGenerated = 0;
 
     for (const cls of classes) {
-      const schoolStage = cls.school_stage === 'المتوسطة' ? 'middle' : 'high';
+      const schoolStage = cls.school_stage?.includes('ثانوي') ? 'high' : 'middle';
       const classSubjects = subjects.filter((s: any) => s.school === schoolStage);
 
       const sessions: { subject: string; teacher_id: number | null }[] = [];

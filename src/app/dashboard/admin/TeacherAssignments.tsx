@@ -21,13 +21,14 @@ export default function TeacherAssignments() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [schoolFilter, setSchoolFilter] = useState('high');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     Promise.all([
       api.get('/teachers?limit=500', token),
       api.get('/classes?limit=500', token),
-      api.get('/subjects?school=high', token),
+      api.get(`/subjects?school=${schoolFilter}`, token),
     ]).then(([t, c, s]: any[]) => {
       setTeachers(t.teachers || []);
       setClasses(c.classes || []);
@@ -35,7 +36,7 @@ export default function TeacherAssignments() {
     }).catch(() => {
       setMessage('فشل تحميل البيانات - تحقق من اتصالك');
     }).finally(() => setLoading(false));
-  }, []);
+  }, [schoolFilter]);
 
   const openAssignment = (teacher: any) => {
     setSelectedTeacher(teacher);
@@ -86,6 +87,10 @@ export default function TeacherAssignments() {
       <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
         <Assignment /> تعيين المواد والفصول للمعلمين
       </Typography>
+      <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+        <Chip label="ثانوي" color={schoolFilter === 'high' ? 'primary' : 'default'} onClick={() => setSchoolFilter('high')} />
+        <Chip label="متوسط" color={schoolFilter === 'middle' ? 'primary' : 'default'} onClick={() => setSchoolFilter('middle')} />
+      </Box>
       {message && <Alert severity={message.includes('نجاح') ? 'success' : 'error'} sx={{ mb: 2 }}>{message}</Alert>}
       <TableContainer component={Paper}>
         <Table dir="rtl">
@@ -99,7 +104,7 @@ export default function TeacherAssignments() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {teachers.filter((t: any) => t.school === 'high').map((t: any) => {
+            {teachers.filter((t: any) => t.school === schoolFilter).map((t: any) => {
               const tClasses = classes.filter((c: any) => c.teacher_id === t.id);
               const subjects = t.specialization ? t.specialization.split(',').map((s: string) => s.trim()) : [];
               return (
@@ -167,7 +172,7 @@ export default function TeacherAssignments() {
                     })}
                   </Box>
                 )}>
-                {classes.filter((c: any) => c.grade !== 'المتوسطة').map((c: any) => (
+                {classes.filter((c: any) => c.grade?.includes(schoolFilter === 'high' ? 'ثانوي' : 'متوسط')).map((c: any) => (
                   <MenuItem key={c.id} value={String(c.id)}>
                     <Checkbox checked={selectedClasses.includes(c.id)} />
                     <ListItemText primary={`${c.class_name} - ${c.grade}`} />
