@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
+
+ensureTursoReady().catch(() => {});
 import { comparePassword, generateToken, badRequest, serverError, success, notFound, forbidden } from '@/lib/auth';
 import { getSchoolStage } from '@/lib/permissions';
 
