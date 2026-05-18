@@ -560,6 +560,19 @@ function applyMigrations(bsql: Database.Database) {
         `;
       })()
     },
+    {
+      name: '015_subject_grade',
+      sql: (() => {
+        if (colExists('subjects', 'grade')) return 'SELECT 1';
+        return `
+          ALTER TABLE subjects ADD COLUMN grade TEXT;
+          INSERT OR IGNORE INTO subjects (name, school, sessions_per_week, grade) VALUES
+            ('رياضيات','high',5,'أول ثانوي'),('انجليزي','high',4,'أول ثانوي'),('كفايات لغوية','high',3,'أول ثانوي'),('علم بيئة','high',2,'أول ثانوي'),('فيزياء','high',3,'أول ثانوي'),('بدنية','high',2,'أول ثانوي'),('نفسية','high',2,'أول ثانوي'),('تقنية رقمية','high',2,'أول ثانوي'),
+            ('رياضيات','high',5,'ثاني ثانوي'),('حديث','high',2,'ثاني ثانوي'),('توحيد','high',2,'ثاني ثانوي'),('كيمياء','high',3,'ثاني ثانوي'),('أحياء','high',3,'ثاني ثانوي'),('انجليزي','high',4,'ثاني ثانوي'),('تقنية رقمية','high',2,'ثاني ثانوي'),
+            ('رياضيات','high',5,'ثالث ثانوي'),('انجليزي','high',4,'ثالث ثانوي'),('فيزياء','high',3,'ثالث ثانوي'),('علم الأرض','high',2,'ثالث ثانوي'),('المهارات الحياتية','high',2,'ثالث ثانوي'),('الدراسات الادبية','high',2,'ثالث ثانوي'),('الدراسات النفسية','high',2,'ثالث ثانوي'),('فقه','high',2,'ثالث ثانوي'),('جغرافيا','high',2,'ثالث ثانوي'),('بدنية','high',2,'ثالث ثانوي');
+        `;
+      })()
+    },
   ];
 
   for (const migration of migrations) {
@@ -605,11 +618,22 @@ async function ensureTursoReady() {
     await db.exec(`ALTER TABLE users ADD COLUMN teacher_id INTEGER`);
     await db.exec(`UPDATE users SET teacher_id = (SELECT id FROM teachers WHERE teachers.user_id = users.id) WHERE EXISTS (SELECT 1 FROM teachers WHERE teachers.user_id = users.id)`);
 
+    await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`);
+
     const subCnt = (await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get() as any)?.cnt;
     if (!subCnt) {
       await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES ('القرآن','middle',3),('التوحيد','middle',2),('الفقه','middle',2),('الحديث','middle',2),('اللغة العربية','middle',5),('الرياضيات','middle',5),('العلوم','middle',4),('الاجتماعيات','middle',3),('اللغة الإنجليزية','middle',4),('الحاسب الآلي','middle',2),('التربية البدنية','middle',2),('التربية الفنية','middle',2)`);
       await db.exec(`INSERT INTO subjects (name, school, sessions_per_week) VALUES ('القرآن','high',2),('التوحيد','high',2),('الفقه','high',2),('الحديث','high',1),('اللغة العربية','high',5),('الرياضيات','high',5),('الفيزياء','high',3),('الكيمياء','high',3),('الأحياء','high',3),('اللغة الإنجليزية','high',4),('الحاسب الآلي','high',2),('التربية البدنية','high',2),('التربية الفنية','high',1),('الاجتماعيات','high',2)`);
     }
+
+    await db.exec(`INSERT OR IGNORE INTO subjects (name, school, sessions_per_week, grade) VALUES ('رياضيات','high',5,'أول ثانوي'),('انجليزي','high',4,'أول ثانوي'),('كفايات لغوية','high',3,'أول ثانوي'),('علم بيئة','high',2,'أول ثانوي'),('فيزياء','high',3,'أول ثانوي'),('بدنية','high',2,'أول ثانوي'),('نفسية','high',2,'أول ثانوي'),('تقنية رقمية','high',2,'أول ثانوي')`);
+    await db.exec(`INSERT OR IGNORE INTO subjects (name, school, sessions_per_week, grade) VALUES ('رياضيات','high',5,'ثاني ثانوي'),('حديث','high',2,'ثاني ثانوي'),('توحيد','high',2,'ثاني ثانوي'),('كيمياء','high',3,'ثاني ثانوي'),('أحياء','high',3,'ثاني ثانوي'),('انجليزي','high',4,'ثاني ثانوي'),('تقنية رقمية','high',2,'ثاني ثانوي')`);
+    await db.exec(`INSERT OR IGNORE INTO subjects (name, school, sessions_per_week, grade) VALUES ('رياضيات','high',5,'ثالث ثانوي'),('انجليزي','high',4,'ثالث ثانوي'),('فيزياء','high',3,'ثالث ثانوي'),('علم الأرض','high',2,'ثالث ثانوي'),('المهارات الحياتية','high',2,'ثالث ثانوي'),('الدراسات الادبية','high',2,'ثالث ثانوي'),('الدراسات النفسية','high',2,'ثالث ثانوي'),('فقه','high',2,'ثالث ثانوي'),('جغرافيا','high',2,'ثالث ثانوي'),('بدنية','high',2,'ثالث ثانوي')`);
+
+    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, room_number, capacity, status) VALUES ('1/أ','أول ثانوي','أ','101',30,'active'),('1/ب','أول ثانوي','ب','102',30,'active'),('1/ت','أول ثانوي','ت','103',30,'active'),('1/ث','أول ثانوي','ث','104',30,'active'),('1/ج','أول ثانوي','ج','105',30,'active'),('1/ح','أول ثانوي','ح','106',30,'active'),('1/خ','أول ثانوي','خ','107',30,'active')`);
+    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, room_number, capacity, status) VALUES ('2/أ','ثاني ثانوي','أ','201',30,'active'),('2/ب','ثاني ثانوي','ب','202',30,'active'),('2/ت','ثاني ثانوي','ت','203',30,'active'),('2/ث','ثاني ثانوي','ث','204',30,'active'),('2/ج','ثاني ثانوي','ج','205',30,'active'),('2/ح','ثاني ثانوي','ح','206',30,'active'),('2/خ','ثاني ثانوي','خ','207',30,'active')`);
+    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, room_number, capacity, status) VALUES ('3/أ','ثالث ثانوي','أ','301',30,'active'),('3/ب','ثالث ثانوي','ب','302',30,'active'),('3/ت','ثالث ثانوي','ت','303',30,'active'),('3/ث','ثالث ثانوي','ث','304',30,'active'),('3/ج','ثالث ثانوي','ج','305',30,'active'),('3/ح','ثالث ثانوي','ح','306',30,'active')`);
+
     const h = { admin:'$2a$04$QpWlATKSbm.yJD5MRt7FquL2XIrvb0foaijQRZGJvEDpCyYlWLfsm', sup:'$2a$04$r/QVAk.Y1yaztIsEeKReaeXCofMmrRhQp74TAl6BsANhU6C8oQL9G', teacher:'$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u', counselor:'$2a$04$PPYZbxrtd2evEZVcCkE9suySMeMBTa9HLU3XyBWjrFSao4axlRpLy', principal:'$2a$04$2Iju6MqiTgXFRTo6D5hiXe6KGAQCD5r2zRz3hrraJMe7ilB7O7wdC' };
     const users: [string, string, string][] = [
       ['admin@school.com', h.admin, 'admin'],
