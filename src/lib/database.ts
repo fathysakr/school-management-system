@@ -718,6 +718,18 @@ function applyMigrations(bsql: Database.Database) {
     bsql.prepare("INSERT INTO management_positions (title, school) VALUES (?,?)").run('وكيل المرحلة', 'high');
   }
 
+  // Auto-assign وكيل المرحلة to management staff if no assignments exist
+  const assignCnt = (bsql.prepare("SELECT COUNT(*) as cnt FROM management_position_assignments").get() as any)?.cnt;
+  if (!assignCnt) {
+    const midPos = bsql.prepare("SELECT id FROM management_positions WHERE title = 'وكيل المرحلة' AND school = 'middle'").get() as any;
+    const hiPos = bsql.prepare("SELECT id FROM management_positions WHERE title = 'وكيل المرحلة' AND school = 'high'").get() as any;
+    const mgmtUsers = bsql.prepare("SELECT id, role FROM users WHERE role NOT IN ('admin', 'middle_teacher', 'high_teacher')").all() as any[];
+    for (const u of mgmtUsers) {
+      const pos = u.role.includes('high') ? hiPos : midPos;
+      if (pos) bsql.prepare("INSERT OR IGNORE INTO management_position_assignments (position_id, user_id) VALUES (?,?)").run(pos.id, u.id);
+    }
+  }
+
   // Performance indexes
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)',
@@ -951,6 +963,18 @@ async function _ensureTursoReady() {
     if (!posCnt) {
       await db.prepare("INSERT INTO management_positions (title, school) VALUES (?,?)").run('وكيل المرحلة', 'middle');
       await db.prepare("INSERT INTO management_positions (title, school) VALUES (?,?)").run('وكيل المرحلة', 'high');
+    }
+
+    // Auto-assign وكيل المرحلة to management staff if no assignments exist
+    const assignCnt = (await db.prepare("SELECT COUNT(*) as cnt FROM management_position_assignments").get() as any)?.cnt;
+    if (!assignCnt) {
+      const midPos = await db.prepare("SELECT id FROM management_positions WHERE title = 'وكيل المرحلة' AND school = 'middle'").get() as any;
+      const hiPos = await db.prepare("SELECT id FROM management_positions WHERE title = 'وكيل المرحلة' AND school = 'high'").get() as any;
+      const mgmtUsers = await db.prepare("SELECT id, role FROM users WHERE role NOT IN ('admin', 'middle_teacher', 'high_teacher')").all() as any[];
+      for (const u of mgmtUsers) {
+        const pos = u.role.includes('high') ? hiPos : midPos;
+        if (pos) await db.prepare("INSERT OR IGNORE INTO management_position_assignments (position_id, user_id) VALUES (?,?)").run(pos.id, u.id);
+      }
     }
 
     // Performance indexes for Turso
