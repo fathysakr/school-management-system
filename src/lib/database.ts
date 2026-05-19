@@ -665,6 +665,34 @@ function applyMigrations(bsql: Database.Database) {
     bsql.prepare('INSERT OR IGNORE INTO _migrations (name) VALUES (?)').run(migration.name);
   }
 
+  // Ensure seed teacher records and user accounts exist
+  if (!bsql.prepare("SELECT id FROM teachers WHERE email = 'middle.teacher@school.com'").get()) {
+    bsql.prepare("INSERT INTO teachers (teacher_id, first_name, last_name, email, school, status) VALUES (?,?,?,?,?,?)").run('T-MID-SEED', 'أحمد', 'المعلم', 'middle.teacher@school.com', 'middle', 'active');
+  }
+  if (!bsql.prepare("SELECT id FROM teachers WHERE email = 'high.teacher@school.com'").get()) {
+    bsql.prepare("INSERT INTO teachers (teacher_id, first_name, last_name, email, school, status) VALUES (?,?,?,?,?,?)").run('T-HIGH-SEED', 'محمد', 'المعلم', 'high.teacher@school.com', 'high', 'active');
+  }
+  // Pre-hashed teacher123 so applyMigrations stays sync
+  const seedTeacherPass = '$2a$10$UZGKNrF.yoZ9WFCtmKBcIuG57hHQFwhd1WX2HUWeB3lH3qxVlO2b6';
+  const seedTeacherAccounts: { email: string; role: string }[] = [
+    { email: 'middle.teacher@school.com', role: 'middle_teacher' },
+    { email: 'high.teacher@school.com', role: 'high_teacher' },
+  ];
+  for (const { email, role } of seedTeacherAccounts) {
+    const t = bsql.prepare("SELECT id FROM teachers WHERE email = ?").get(email) as any;
+    if (!t) continue;
+    const existing = bsql.prepare("SELECT id FROM users WHERE email = ?").get(email) as any;
+    let uid: number;
+    if (!existing) {
+      const r = bsql.prepare("INSERT INTO users (email, password, role, teacher_id) VALUES (?,?,?,?)").run(email, seedTeacherPass, role, t.id);
+      uid = r.lastInsertRowid as number;
+    } else {
+      uid = existing.id;
+    }
+    bsql.prepare("UPDATE teachers SET user_id = ? WHERE id = ?").run(uid, t.id);
+    bsql.prepare("UPDATE users SET teacher_id = ? WHERE id = ?").run(t.id, uid);
+  }
+
   // Seed classes if empty
   const classCnt = (bsql.prepare("SELECT COUNT(*) as cnt FROM classes WHERE status = 'active'").get() as any)?.cnt;
   bsql.pragma('foreign_keys = OFF');
@@ -846,6 +874,16 @@ async function _ensureTursoReady() {
       await db.exec(`INSERT OR IGNORE INTO subjects (name, school, sessions_per_week, grade) VALUES ('رياضيات','middle',5,'الصف الثالث المتوسط'),('علوم','middle',4,'الصف الثالث المتوسط'),('انجليزي','middle',4,'الصف الثالث المتوسط'),('لغة عربية','middle',5,'الصف الثالث المتوسط'),('اجتماعيات','middle',3,'الصف الثالث المتوسط'),('قرآن','middle',3,'الصف الثالث المتوسط'),('توحيد','middle',2,'الصف الثالث المتوسط'),('فقه','middle',2,'الصف الثالث المتوسط'),('حديث','middle',2,'الصف الثالث المتوسط'),('حاسب آلي','middle',2,'الصف الثالث المتوسط'),('بدنية','middle',2,'الصف الثالث المتوسط'),('فنية','middle',2,'الصف الثالث المتوسط')`);
     }
 
+    // Ensure seed teacher records exist before class seed
+    const midSeedTeacher = await db.prepare("SELECT id FROM teachers WHERE email = 'middle.teacher@school.com'").get() as any;
+    if (!midSeedTeacher) {
+      await db.prepare("INSERT INTO teachers (teacher_id, first_name, last_name, email, school, status) VALUES (?,?,?,?,?,?)").run('T-MID-SEED', 'أحمد', 'المعلم', 'middle.teacher@school.com', 'middle', 'active');
+    }
+    const highSeedTeacher = await db.prepare("SELECT id FROM teachers WHERE email = 'high.teacher@school.com'").get() as any;
+    if (!highSeedTeacher) {
+      await db.prepare("INSERT INTO teachers (teacher_id, first_name, last_name, email, school, status) VALUES (?,?,?,?,?,?)").run('T-HIGH-SEED', 'محمد', 'المعلم', 'high.teacher@school.com', 'high', 'active');
+    }
+
     let hsTid = 1, msTid = 1;
     const hsTeacher = await db.prepare("SELECT id FROM teachers WHERE school = 'high' AND status = 'active' LIMIT 1").get() as any;
     if (hsTeacher) { hsTid = hsTeacher.id; } else { const t = await db.prepare("SELECT id FROM teachers LIMIT 1").get() as any; if (t) hsTid = t.id; }
@@ -893,6 +931,18 @@ async function _ensureTursoReady() {
       const existing = await db.prepare("SELECT COUNT(*) as cnt FROM users WHERE email = ?").get(email) as any;
       if (!existing?.cnt) {
         await db.prepare("INSERT INTO users (email, password, role) VALUES (?,?,?)").run(email, hash, role);
+      }
+    }
+
+    // Link seed teacher user accounts to their teacher records
+    for (const email of ['middle.teacher@school.com', 'high.teacher@school.com']) {
+      const u = await db.prepare("SELECT id FROM users WHERE email = ? AND teacher_id IS NULL").get(email) as any;
+      if (u) {
+        const t = await db.prepare("SELECT id FROM teachers WHERE email = ?").get(email) as any;
+        if (t) {
+          await db.prepare("UPDATE teachers SET user_id = ? WHERE id = ?").run(u.id, t.id);
+          await db.prepare("UPDATE users SET teacher_id = ? WHERE id = ?").run(t.id, u.id);
+        }
       }
     }
 
