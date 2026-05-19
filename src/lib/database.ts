@@ -683,6 +683,13 @@ function applyMigrations(bsql: Database.Database) {
     bsql.pragma('foreign_keys = ON');
   }
 
+  // Seed management positions
+  const posCnt = (bsql.prepare("SELECT COUNT(*) as cnt FROM management_positions").get() as any)?.cnt;
+  if (!posCnt) {
+    bsql.prepare("INSERT INTO management_positions (title, school) VALUES (?,?)").run('وكيل المرحلة', 'middle');
+    bsql.prepare("INSERT INTO management_positions (title, school) VALUES (?,?)").run('وكيل المرحلة', 'high');
+  }
+
   // Performance indexes
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)',
@@ -887,6 +894,13 @@ async function _ensureTursoReady() {
       if (!existing?.cnt) {
         await db.prepare("INSERT INTO users (email, password, role) VALUES (?,?,?)").run(email, hash, role);
       }
+    }
+
+    // Seed management positions
+    const posCnt = (await db.prepare("SELECT COUNT(*) as cnt FROM management_positions").get() as any)?.cnt;
+    if (!posCnt) {
+      await db.prepare("INSERT INTO management_positions (title, school) VALUES (?,?)").run('وكيل المرحلة', 'middle');
+      await db.prepare("INSERT INTO management_positions (title, school) VALUES (?,?)").run('وكيل المرحلة', 'high');
     }
 
     // Performance indexes for Turso
