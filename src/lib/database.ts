@@ -790,6 +790,29 @@ async function ensureTursoReady() {
       ['middle.principal@school.com', h.principal, 'middle_principal'],
       ['high.principal@school.com', h.principal, 'high_principal'],
     ];
+    try {
+      await db.prepare("INSERT INTO users (email, password, role) VALUES ('__test_monitor__', '__test__', 'middle_monitor')").run();
+      await db.prepare("DELETE FROM users WHERE email = '__test_monitor__'").run();
+    } catch {
+      await db.exec(`DROP TABLE IF EXISTS users_new`);
+      await db.exec(`PRAGMA foreign_keys=OFF`);
+      await db.exec(`CREATE TABLE users_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('admin', 'middle_supervisor', 'high_supervisor', 'middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal', 'middle_monitor', 'high_monitor', 'middle_admin_staff', 'high_admin_staff')),
+        status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+        custom_permissions TEXT,
+        teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      await db.exec(`INSERT OR IGNORE INTO users_new SELECT * FROM users`);
+      await db.exec(`DROP TABLE IF EXISTS users`);
+      await db.exec(`ALTER TABLE users_new RENAME TO users`);
+      await db.exec(`PRAGMA foreign_keys=ON`);
+    }
+
     for (const [email, hash, role] of users) {
       const existing = await db.prepare("SELECT COUNT(*) as cnt FROM users WHERE email = ?").get(email) as any;
       if (!existing?.cnt) {
