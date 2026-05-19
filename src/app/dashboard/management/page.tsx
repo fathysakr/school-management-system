@@ -197,8 +197,26 @@ export default function ManagementPage() {
   const fetchAllUsers = async () => {
     if (!token) return;
     try {
-      const res = await api.get('/management', token);
-      setAllUsers(res.staff || []);
+      const [mgmtRes, teacherRes] = await Promise.all([
+        api.get('/management', token),
+        api.get('/teachers?limit=500', token),
+      ]);
+      const mgmtUsers = (mgmtRes.staff || []).map((u: any) => ({ ...u, _label: u.first_name ? `${u.first_name} ${u.last_name}` : u.email }));
+      const teacherUsers = (teacherRes.teachers || [])
+        .filter((t: any) => t.user_id)
+        .map((t: any) => ({
+          user_id: t.user_id,
+          first_name: t.first_name,
+          last_name: t.last_name,
+          email: t.email || '',
+          role: t.user_role || t.role || 'teacher',
+          employee_id: t.teacher_id,
+          school: t.school,
+          _label: `${t.first_name} ${t.last_name}`,
+        }));
+      const combined = [...mgmtUsers, ...teacherUsers];
+      const seen = new Set<number>();
+      setAllUsers(combined.filter((u: any) => { const dup = seen.has(u.user_id); seen.add(u.user_id); return !dup; }));
     } catch { /* ignore */ }
   };
 
@@ -565,9 +583,10 @@ export default function ManagementPage() {
               {allUsers
                 .filter(u => !(assignDialog?.position?.assignments || []).some((a: any) => a.user_id === u.user_id))
                 .map(u => (
-                  <Button key={u.user_id} variant="outlined" sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                  <Button key={u.user_id} variant="outlined" sx={{ justifyContent: 'flex-start', textTransform: 'none', textAlign: 'left', flexDirection: 'column', alignItems: 'flex-start', py: 1 }}
                     onClick={() => handleAssignUser(assignDialog!.position.id, u.user_id)}>
-                    {u.first_name ? `${u.first_name} ${u.last_name}` : u.email} - {u.role}
+                    <Typography variant="body2" fontWeight="medium">{u._label || (u.first_name ? `${u.first_name} ${u.last_name}` : u.email)}</Typography>
+                    <Typography variant="caption" color="text.secondary">{u.school === 'middle' ? 'متوسطة' : u.school === 'high' ? 'ثانوية' : ''} - {u.role}</Typography>
                   </Button>
                 ))}
             </Box>
