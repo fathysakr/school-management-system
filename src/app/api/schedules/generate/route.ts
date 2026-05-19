@@ -97,8 +97,8 @@ export async function POST(req: NextRequest) {
 
     const teachers = await db.prepare(
       school === 'all'
-        ? `SELECT * FROM teachers WHERE status = 'active'`
-        : `SELECT * FROM teachers WHERE status = 'active' AND school = ?`
+        ? `SELECT t.* FROM teachers t LEFT JOIN users u ON u.teacher_id = t.id WHERE t.status = 'active' AND (u.id IS NULL OR u.role LIKE '%teacher%')`
+        : `SELECT t.* FROM teachers t LEFT JOIN users u ON u.teacher_id = t.id WHERE t.status = 'active' AND t.school = ? AND (u.id IS NULL OR u.role LIKE '%teacher%')`
     ).all(...(school === 'all' ? [] : [school])) as any[];
 
     const subjects = await db.prepare(

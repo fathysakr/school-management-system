@@ -30,6 +30,7 @@ export default function SchedulesPage() {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
+  const teachingTeachers = teachers.filter(t => !t.user_role || t.user_role.includes('teacher'));
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -442,7 +443,7 @@ api.get(`/schedules${selectedClass ? `?class_id=${selectedClass}${schoolParam}` 
               <FormControl fullWidth>
                 <InputLabel>المعلم</InputLabel>
                 <Select value={formData.teacher_id} label="المعلم" onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}>
-                  {teachers.map((t) => <MenuItem key={t.id} value={t.id}>{t.first_name} {t.last_name} - {t.specialization || ''}</MenuItem>)}
+                  {teachingTeachers.length === 0 ? <MenuItem disabled>لا يوجد معلمون غير إداريين</MenuItem> : teachingTeachers.map((t) => <MenuItem key={t.id} value={t.id}>{t.first_name} {t.last_name} - {t.specialization || ''}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>

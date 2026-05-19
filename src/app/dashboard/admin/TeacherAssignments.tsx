@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 
 export default function TeacherAssignments() {
   const [teachers, setTeachers] = useState<any[]>([]);
+  const teachingTeachers = teachers.filter((t: any) => !t.user_role || t.user_role.includes('teacher'));
   const [classes, setClasses] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
@@ -156,7 +157,7 @@ export default function TeacherAssignments() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {teachers.filter((t: any) => t.school === schoolFilter).map((t: any) => {
+            {teachingTeachers.filter((t: any) => t.school === schoolFilter).map((t: any) => {
               const tClasses = classes.filter((c: any) => c.teacher_id === t.id);
               const specItems = formatSpec(t.specialization || '');
               return (

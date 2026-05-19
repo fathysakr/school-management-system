@@ -19,6 +19,7 @@ export default function ClassesPage() {
   const schoolParam = selectedSchool && selectedSchool !== 'all' ? `&school=${selectedSchool}` : '';
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
+  const teachingTeachers = teachers.filter(t => !t.user_role || t.user_role.includes('teacher'));
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -268,7 +269,7 @@ export default function ClassesPage() {
             <Grid item xs={12} sm={6}><FormControl fullWidth><InputLabel>المرحلة</InputLabel><Select value={formData.grade} label="المرحلة" onChange={(e) => setFormData({ ...formData, grade: e.target.value })}><MenuItem value="المتوسطة">المدرسة المتوسطة</MenuItem><MenuItem value="الثانوية">المدرسة الثانوية</MenuItem></Select></FormControl></Grid>
             <Grid item xs={12} sm={6}><TextField fullWidth label="القسم" value={formData.section} onChange={(e) => setFormData({ ...formData, section: e.target.value })} /></Grid>
             <Grid item xs={12} sm={6}><TextField fullWidth label="رقم القاعة" value={formData.room_number} onChange={(e) => setFormData({ ...formData, room_number: e.target.value })} /></Grid>
-            <Grid item xs={12}><FormControl fullWidth><InputLabel>المعلم</InputLabel><Select value={formData.teacher_id} label="المعلم" onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}>{teachers.map((t) => (<MenuItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</MenuItem>))}</Select></FormControl></Grid>
+            <Grid item xs={12}><FormControl fullWidth><InputLabel>المعلم</InputLabel><Select value={formData.teacher_id} label="المعلم" onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}>{teachingTeachers.length === 0 ? <MenuItem disabled>لا يوجد معلمون غير إداريين</MenuItem> : teachingTeachers.map((t) => (<MenuItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</MenuItem>))}</Select></FormControl></Grid>
             <Grid item xs={12}><TextField fullWidth label="السعة" type="number" value={formData.capacity} onChange={(e) => setFormData({ ...formData, capacity: e.target.value })} /></Grid>
           </Grid>
         </DialogContent>

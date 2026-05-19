@@ -21,6 +21,7 @@ export default function SubstitutionsPage() {
   const [tab, setTab] = useState(0);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [teachers, setTeachers] = useState<any[]>([]);
+  const teachingTeachers = teachers.filter(t => !t.user_role || t.user_role.includes('teacher'));
   const [selectedAbsent, setSelectedAbsent] = useState<number[]>([]);
   const [suggesting, setSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -175,7 +176,7 @@ export default function SubstitutionsPage() {
             <Box sx={{ mt: 2, maxHeight: 200, overflow: 'auto' }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>اختر المعلمين الغائبين:</Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {teachers.map((t) => (
+                {teachingTeachers.map((t) => (
                   <Chip
                     key={t.id}
                     label={`${t.first_name} ${t.last_name}`}
@@ -185,7 +186,7 @@ export default function SubstitutionsPage() {
                     sx={{ cursor: 'pointer' }}
                   />
                 ))}
-                {teachers.length === 0 && <Typography variant="body2" color="text.disabled">لا يوجد معلمون</Typography>}
+                {teachingTeachers.length === 0 && <Typography variant="body2" color="text.disabled">لا يوجد معلمون</Typography>}
               </Box>
             </Box>
           </Paper>

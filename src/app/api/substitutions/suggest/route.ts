@@ -52,7 +52,11 @@ export async function POST(request: NextRequest) {
     }
 
     const allTeachers = await db.prepare(
-      `SELECT id, first_name, last_name, specialization, school FROM teachers WHERE status = 'active'`
+      `SELECT t.id, t.first_name, t.last_name, t.specialization, t.school
+       FROM teachers t
+       LEFT JOIN users u ON u.teacher_id = t.id
+       WHERE t.status = 'active'
+         AND (u.id IS NULL OR u.role LIKE '%teacher%')`
     ).all() as any[];
     const absentSet = new Set(absent_teacher_ids.map(Number));
 

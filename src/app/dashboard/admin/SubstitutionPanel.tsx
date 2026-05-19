@@ -15,6 +15,7 @@ export default function SubstitutionPanel() {
   const [tab, setTab] = useState(0);
   const [allSubs, setAllSubs] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
+  const teachingTeachers = teachers.filter((t: any) => !t.user_role || t.user_role.includes('teacher'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -119,7 +120,7 @@ export default function SubstitutionPanel() {
           <TextField label="التاريخ" type="date" fullWidth value={date} onChange={e => { setDate(e.target.value); setSuggestions([]); }} InputLabelProps={{ shrink: true }} sx={{ mb: 2 }} />
           <Typography variant="subtitle2" sx={{ mb: 1 }}>اختر المعلمين الغائبين:</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-            {teachers.map(t => (
+            {teachingTeachers.map(t => (
               <Chip key={t.id} label={`${t.first_name} ${t.last_name}`}
                 variant={absentIds.includes(t.id) ? 'filled' : 'outlined'}
                 color={absentIds.includes(t.id) ? 'error' : 'default'}

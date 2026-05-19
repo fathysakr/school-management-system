@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 export default function SubjectsManagement() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
+  const teachingTeachers = teachers.filter((t: any) => !t.user_role || t.user_role.includes('teacher'));
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -159,7 +160,7 @@ export default function SubjectsManagement() {
               <InputLabel>المعلم المكلف (اختياري)</InputLabel>
               <Select value={form.teacher_id} label="المعلم المكلف (اختياري)" onChange={(e) => setForm({ ...form, teacher_id: e.target.value })}>
                 <MenuItem value="">بدون</MenuItem>
-                {teachers.filter((t: any) => t.school === form.school).map((t: any) => (
+                {teachingTeachers.filter((t: any) => t.school === form.school).length === 0 ? <MenuItem disabled>لا يوجد معلمون غير إداريين</MenuItem> : teachingTeachers.filter((t: any) => t.school === form.school).map((t: any) => (
                   <MenuItem key={t.id} value={String(t.id)}>{t.first_name} {t.last_name}</MenuItem>
                 ))}
               </Select>

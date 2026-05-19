@@ -34,6 +34,7 @@ export default function SchedulePanel() {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
+  const teachingTeachers = teachers.filter((t: any) => !t.user_role || t.user_role.includes('teacher'));
   const [loading, setLoading] = useState(true);
   const [viewTab, setViewTab] = useState(0);
   const [selectedClass, setSelectedClass] = useState('');
@@ -299,7 +300,7 @@ export default function SchedulePanel() {
           {conflictWarn && <Alert severity="warning" sx={{ mb: 2 }}>{conflictWarn}</Alert>}
           <Grid container spacing={2} sx={{ pt: 1 }}>
             <Grid item xs={12}><FormControl fullWidth><InputLabel>الفصل</InputLabel><Select value={formData.class_id} label="الفصل" onChange={e => handleFormChange('class_id', e.target.value)}>{classes.map(c => <MenuItem key={c.id} value={c.id}>{c.class_name}</MenuItem>)}</Select></FormControl></Grid>
-            <Grid item xs={12}><FormControl fullWidth><InputLabel>المعلم</InputLabel><Select value={formData.teacher_id} label="المعلم" onChange={e => handleFormChange('teacher_id', e.target.value)}>{teachers.map(t => <MenuItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</MenuItem>)}</Select></FormControl></Grid>
+            <Grid item xs={12}><FormControl fullWidth><InputLabel>المعلم</InputLabel><Select value={formData.teacher_id} label="المعلم" onChange={e => handleFormChange('teacher_id', e.target.value)}>{teachingTeachers.length === 0 ? <MenuItem disabled>لا يوجد معلمون غير إداريين</MenuItem> : teachingTeachers.map(t => <MenuItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</MenuItem>)}</Select></FormControl></Grid>
             <Grid item xs={12}><TextField fullWidth label="المادة" value={formData.subject} onChange={e => handleFormChange('subject', e.target.value)} /></Grid>
             <Grid item xs={6}><FormControl fullWidth><InputLabel>اليوم</InputLabel><Select value={formData.day_of_week} label="اليوم" onChange={e => handleFormChange('day_of_week', e.target.value)}>{days.map(d => <MenuItem key={d} value={d}>{dayLabels[d]}</MenuItem>)}</Select></FormControl></Grid>
             <Grid item xs={6}><TextField fullWidth label="القاعة" value={formData.room_number} onChange={e => handleFormChange('room_number', e.target.value)} /></Grid>
