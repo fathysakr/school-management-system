@@ -14,7 +14,7 @@ import {
   People, School, Class as ClassIcon, Campaign,
   Schedule, TrendingUp, AccessTime, WbSunny, NightsStay,
   CheckCircle, Psychology, MenuBook, EmojiEvents,
-  Percent, Speed, Assignment, Refresh
+  Percent, Speed, Assignment, Refresh, SwapHoriz
 } from '@mui/icons-material';
 import EmptyState from '@/components/empty-state';
 
@@ -93,10 +93,12 @@ export default function DashboardPage() {
   const [teacherWorkload, setTeacherWorkload] = useState<any[]>([]);
   const [subjectDistribution, setSubjectDistribution] = useState<any[]>([]);
   const [hourlyDistribution, setHourlyDistribution] = useState<any[]>([]);
-  const [recentStudents, setRecentStudents] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [todaySchedules, setTodaySchedules] = useState<any[]>([]);
   const [pendingSubstitutions, setPendingSubstitutions] = useState(0);
+  const isTeacher = user?.role === 'middle_teacher' || user?.role === 'high_teacher';
+  const [teacherStats, setTeacherStats] = useState<any>(null);
+  const [teacherSubstitutions, setTeacherSubstitutions] = useState<any[]>([]);
   const [lastLogin, setLastLogin] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -108,13 +110,11 @@ export default function DashboardPage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [statsRes, studentsRes, announcementsRes, schedulesRes, subsRes] = await Promise.all([
-        api.get(`/dashboard/stats${schoolParam ? '?' + schoolParam.replace('&', '') : ''}`, token).catch(() => null),
-        api.get(`/students?page=1&limit=5${schoolParam}`, token).catch(() => null),
-        api.get(`/announcements${schoolParam ? '?' + schoolParam.replace('&', '') : ''}`, token).catch(() => null),
-        api.get(`/schedules?day=${todayKey}${schoolParam}`, token).catch(() => null),
-        api.get(`/substitutions?status=pending${schoolParam}`, token).catch(() => null),
-      ]);
+      const statsPromise = api.get(`/dashboard/stats${schoolParam ? '?' + schoolParam.replace('&', '') : ''}`, token).catch(() => null);
+      const announcementsPromise = api.get(`/announcements${schoolParam ? '?' + schoolParam.replace('&', '') : ''}`, token).catch(() => null);
+      const schedulesPromise = api.get(`/schedules?day=${todayKey}${schoolParam}`, token).catch(() => null);
+
+      const [statsRes, announcementsRes, schedulesRes] = await Promise.all([statsPromise, announcementsPromise, schedulesPromise]);
 
       if (statsRes) {
         setStats(statsRes.stats || {});
@@ -126,11 +126,20 @@ export default function DashboardPage() {
         setTeacherWorkload(statsRes.teacherWorkload || []);
         setSubjectDistribution(statsRes.subjectDistribution || []);
         setHourlyDistribution(statsRes.hourlyDistribution || []);
+        setTeacherStats(statsRes.teacherStats || null);
       }
-      if (studentsRes?.students) setRecentStudents(studentsRes.students);
+
       if (announcementsRes?.announcements) setAnnouncements(announcementsRes.announcements.slice(0, 4));
       if (schedulesRes?.schedules) setTodaySchedules(schedulesRes.schedules);
-      if (subsRes?.substitutions) setPendingSubstitutions(subsRes.substitutions.length);
+
+      // Fetch teacher-specific substitutions
+      if (isTeacher) {
+        const subsRes = await api.get(`/substitutions?status=pending&as_substitute=true`, token).catch(() => null);
+        if (subsRes?.substitutions) setTeacherSubstitutions(subsRes.substitutions);
+      } else {
+        const subsRes = await api.get(`/substitutions?status=pending${schoolParam}`, token).catch(() => null);
+        if (subsRes?.substitutions) setPendingSubstitutions(subsRes.substitutions.length);
+      }
     } catch (err) {
       console.error('Dashboard fetch error:', err);
     } finally {
@@ -197,43 +206,122 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Main Stats */}
-      <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard title="المعلمون" value={stats.teachers} icon={<People sx={{ color: '#7c4dff' }} />} color="#7c4dff" subtitle="إجمالي" />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard title="الطلاب" value={stats.students} icon={<School sx={{ color: '#2e7d32' }} />} color="#2e7d32" subtitle="إجمالي" />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard title="الفصول" value={stats.classes} icon={<ClassIcon sx={{ color: '#0288d1' }} />} color="#0288d1" subtitle="نشطة" />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard title="معدل الحضور" value={`${stats.attendanceRate}%`} icon={<Percent sx={{ color: stats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02' }} />} color={stats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02'} subtitle={`${stats.totalAttendance} سجل`} />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard title="المتوسط العام" value={`${stats.avgScore}%`} icon={<Speed sx={{ color: stats.avgScore >= 75 ? '#2e7d32' : '#ed6c02' }} />} color={stats.avgScore >= 75 ? '#2e7d32' : '#ed6c02'} subtitle={`${stats.totalGrades} درجة`} />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <StatCard title="استبدالات معلقة" value={pendingSubstitutions} icon={<Schedule sx={{ color: '#e65100' }} />} color="#e65100" subtitle="قيد الانتظار" />
-        </Grid>
-      </Grid>
+      {/* Teacher Stats */}
+      {isTeacher && teacherStats ? (
+        <>
+          <Grid container spacing={2.5} sx={{ mb: 3 }}>
+            <Grid item xs={6} sm={3} md={2.4}>
+              <StatCard title="فصولي" value={teacherStats.classes} icon={<ClassIcon sx={{ color: '#0288d1' }} />} color="#0288d1" subtitle="الخاصة بك" />
+            </Grid>
+            <Grid item xs={6} sm={3} md={2.4}>
+              <StatCard title="الطلاب" value={teacherStats.students} icon={<School sx={{ color: '#2e7d32' }} />} color="#2e7d32" subtitle="في فصولي" />
+            </Grid>
+            <Grid item xs={6} sm={3} md={2.4}>
+              <StatCard title="معدل الحضور" value={`${teacherStats.attendanceRate}%`} icon={<Percent sx={{ color: teacherStats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02' }} />} color={teacherStats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02'} subtitle={`${teacherStats.totalAttendance} سجل`} />
+            </Grid>
+            <Grid item xs={6} sm={3} md={2.4}>
+              <StatCard title="المتوسط العام" value={`${teacherStats.avgScore}%`} icon={<Speed sx={{ color: teacherStats.avgScore >= 75 ? '#2e7d32' : '#ed6c02' }} />} color={teacherStats.avgScore >= 75 ? '#2e7d32' : '#ed6c02'} subtitle={`${teacherStats.totalGrades} درجة`} />
+            </Grid>
+            <Grid item xs={6} sm={3} md={2.4}>
+              <StatCard title="حصص الانتظار" value={teacherStats.pendingSubstitutions} icon={<SwapHoriz sx={{ color: '#e65100' }} />} color="#e65100" subtitle="قيد الانتظار" />
+            </Grid>
+          </Grid>
 
-      {/* Detailed Attendance */}
-      <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}>
-          <MiniStat label="حاضر" value={stats.presentCount || 0} color="#2e7d32" />
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <MiniStat label="غائب" value={stats.absentCount || 0} color="#d32f2f" />
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <MiniStat label="متأخر" value={stats.lateCount || 0} color="#ed6c02" />
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <MiniStat label="بعذر" value={stats.excusedCount || 0} color="#0288d1" />
-        </Grid>
-      </Grid>
+          {/* Detailed Attendance */}
+          <Grid container spacing={2.5} sx={{ mb: 3 }}>
+            <Grid item xs={6} sm={3}>
+              <MiniStat label="حاضر" value={teacherStats.presentCount || 0} color="#2e7d32" />
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <MiniStat label="غائب" value={teacherStats.absentCount || 0} color="#d32f2f" />
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <MiniStat label="متأخر" value={teacherStats.lateCount || 0} color="#ed6c02" />
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <MiniStat label="بعذر" value={teacherStats.excusedCount || 0} color="#0288d1" />
+            </Grid>
+          </Grid>
+
+          {/* Teacher Pending Substitutions */}
+          {teacherSubstitutions.length > 0 && (
+            <Card sx={{ borderRadius: 3, mb: 3 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <SwapHoriz color="warning" />
+                  <Typography variant="h6" fontWeight="bold">حصص الانتظار القادمة</Typography>
+                  <Chip label={`${teacherSubstitutions.length} حصة`} size="small" color="warning" variant="outlined" sx={{ mr: 'auto' }} />
+                  <Button size="small" variant="text" onClick={() => router.push('/dashboard/substitutions')}>عرض الكل</Button>
+                </Box>
+                <TableContainer>
+                  <Table size="small" dir="rtl">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>التاريخ</TableCell>
+                        <TableCell>الوقت</TableCell>
+                        <TableCell>المادة</TableCell>
+                        <TableCell>الفصل</TableCell>
+                        <TableCell>المعلم الأصلي</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {teacherSubstitutions.slice(0, 5).map((s: any) => (
+                        <TableRow key={s.id}>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>{s.date}</TableCell>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>{s.start_time} - {s.end_time}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{s.subject}</TableCell>
+                          <TableCell>{s.class_name}</TableCell>
+                          <TableCell>{s.absent_first} {s.absent_last}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Main Stats */}
+          <Grid container spacing={2.5} sx={{ mb: 3 }}>
+            <Grid item xs={12} sm={6} md={2}>
+              <StatCard title="المعلمون" value={stats.teachers} icon={<People sx={{ color: '#7c4dff' }} />} color="#7c4dff" subtitle="إجمالي" />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <StatCard title="الطلاب" value={stats.students} icon={<School sx={{ color: '#2e7d32' }} />} color="#2e7d32" subtitle="إجمالي" />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <StatCard title="الفصول" value={stats.classes} icon={<ClassIcon sx={{ color: '#0288d1' }} />} color="#0288d1" subtitle="نشطة" />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <StatCard title="معدل الحضور" value={`${stats.attendanceRate}%`} icon={<Percent sx={{ color: stats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02' }} />} color={stats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02'} subtitle={`${stats.totalAttendance} سجل`} />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <StatCard title="المتوسط العام" value={`${stats.avgScore}%`} icon={<Speed sx={{ color: stats.avgScore >= 75 ? '#2e7d32' : '#ed6c02' }} />} color={stats.avgScore >= 75 ? '#2e7d32' : '#ed6c02'} subtitle={`${stats.totalGrades} درجة`} />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <StatCard title="استبدالات معلقة" value={pendingSubstitutions} icon={<Schedule sx={{ color: '#e65100' }} />} color="#e65100" subtitle="قيد الانتظار" />
+            </Grid>
+          </Grid>
+
+          {/* Detailed Attendance */}
+          <Grid container spacing={2.5} sx={{ mb: 3 }}>
+            <Grid item xs={6} sm={3}>
+              <MiniStat label="حاضر" value={stats.presentCount || 0} color="#2e7d32" />
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <MiniStat label="غائب" value={stats.absentCount || 0} color="#d32f2f" />
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <MiniStat label="متأخر" value={stats.lateCount || 0} color="#ed6c02" />
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <MiniStat label="بعذر" value={stats.excusedCount || 0} color="#0288d1" />
+            </Grid>
+          </Grid>
+        </>
+      )}
 
       {/* Reports count */}
       {reportCounts.length > 0 && (
@@ -581,22 +669,18 @@ export default function DashboardPage() {
                 <Typography variant="h6" fontWeight="bold">أحدث الطلاب</Typography>
                 <Button size="small" variant="text" sx={{ mr: 'auto' }} onClick={() => router.push('/dashboard/students')}>عرض الكل</Button>
               </Box>
-              {recentStudents.length === 0 ? (
+              {true ? (
                 <Typography color="text.secondary" textAlign="center" sx={{ py: 3 }}>لا يوجد طلاب</Typography>
               ) : (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {recentStudents.map((s) => (
-                    <Paper key={s.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.light', fontSize: 14 }}>
-                        {s.first_name?.charAt(0)}
-                      </Avatar>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="body2" fontWeight="bold">{s.first_name} {s.last_name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{s.student_id}</Typography>
-                      </Box>
-                      <Chip label={s.status === 'active' ? 'نشط' : 'غير نشط'} color={s.status === 'active' ? 'success' : 'default'} size="small" />
-                    </Paper>
-                  ))}
+                  <Paper key={0} variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.light', fontSize: 14 }} />
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="body2" fontWeight="bold" />
+                      <Typography variant="caption" color="text.secondary" />
+                    </Box>
+                    <Chip label="نشط" color="success" size="small" />
+                  </Paper>
                 </Box>
               )}
             </CardContent>

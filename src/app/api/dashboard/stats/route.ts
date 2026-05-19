@@ -132,6 +132,39 @@ export async function GET(request: NextRequest) {
 
     const avgScore = gradeStats.avg_score ? Math.round(gradeStats.avg_score) : 0;
 
+    // Teacher-specific stats
+    let teacherStats = null;
+    const isTeacher = user.role === 'middle_teacher' || user.role === 'high_teacher';
+    if (isTeacher) {
+      const teacherRec = await db.prepare('SELECT t.id FROM teachers t JOIN users u ON u.teacher_id = t.id WHERE u.id = ?').get(user.id) as any;
+      if (teacherRec) {
+        const tid = teacherRec.id;
+        const [myClasses, myStudents, myAttendance, myGradeStats, myPendingSubs] = await Promise.all([
+          db.prepare("SELECT COUNT(*) as c FROM classes WHERE status = 'active' AND teacher_id = ?").get(tid),
+          db.prepare("SELECT COUNT(DISTINCT e.student_id) as c FROM enrollments e JOIN classes c ON e.class_id = c.id WHERE e.status = 'active' AND c.teacher_id = ?").get(tid),
+          db.prepare("SELECT COUNT(*) as total, SUM(CASE WHEN a.status='present' THEN 1 ELSE 0 END) as present, SUM(CASE WHEN a.status='absent' THEN 1 ELSE 0 END) as absent, SUM(CASE WHEN a.status='late' THEN 1 ELSE 0 END) as late, SUM(CASE WHEN a.status='excused' THEN 1 ELSE 0 END) as excused FROM attendance a JOIN classes c ON a.class_id = c.id WHERE c.teacher_id = ?").get(tid),
+          db.prepare("SELECT AVG(g.score*1.0/g.total_score*100) as avg_score, COUNT(*) as total FROM grades g JOIN classes c ON g.class_id = c.id WHERE c.teacher_id = ?").get(tid),
+          db.prepare("SELECT COUNT(*) as c FROM substitutions WHERE substitute_teacher_id = ? AND status = 'pending'").get(tid),
+        ]);
+        const myAttendanceRate = myAttendance.total > 0 ? Math.round((myAttendance.present / myAttendance.total) * 100) : 0;
+        const myAvgScore = myGradeStats.avg_score ? Math.round(myGradeStats.avg_score) : 0;
+        teacherStats = {
+          teacherId: tid,
+          classes: myClasses.c || 0,
+          students: myStudents.c || 0,
+          attendanceRate: myAttendanceRate,
+          presentCount: myAttendance.present || 0,
+          absentCount: myAttendance.absent || 0,
+          lateCount: myAttendance.late || 0,
+          excusedCount: myAttendance.excused || 0,
+          totalAttendance: myAttendance.total || 0,
+          avgScore: myAvgScore,
+          totalGrades: myGradeStats.total || 0,
+          pendingSubstitutions: myPendingSubs.c || 0,
+        };
+      }
+    }
+
     return success({
       stats: {
         teachers: teacherCount.c || 0,
@@ -146,6 +179,7 @@ export async function GET(request: NextRequest) {
         lateCount: attendanceStats.late || 0,
         excusedCount: attendanceStats.excused || 0,
       },
+      teacherStats,
       reportCounts,
       middleVsHigh,
       recentReports,

@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const date = searchParams.get('date');
     const status = searchParams.get('status');
+    const teacherId = searchParams.get('teacher_id');
+    const asSubstitute = searchParams.get('as_substitute') === 'true';
     const offset = (page - 1) * limit;
 
     let where = 'WHERE 1=1';
@@ -22,6 +24,10 @@ export async function GET(request: NextRequest) {
 
     if (date) { where += ' AND s.date = ?'; params.push(date); }
     if (status) { where += ' AND s.status = ?'; params.push(status); }
+    if (teacherId) {
+      where += asSubstitute ? ' AND s.substitute_teacher_id = ?' : ' AND s.absent_teacher_id = ?';
+      params.push(teacherId);
+    }
 
     const countResult = await db.prepare(`SELECT COUNT(*) as total FROM substitutions s ${where}`).get(...params) as any;
     const total = countResult.total;

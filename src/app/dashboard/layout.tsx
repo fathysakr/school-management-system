@@ -23,7 +23,7 @@ const DRAWER_CLOSED = 80;
 const allRoles = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal', 'middle_monitor', 'high_monitor', 'middle_admin_staff', 'high_admin_staff'];
 
 const managementViewRoles = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal', 'middle_monitor', 'high_monitor', 'middle_admin_staff', 'high_admin_staff'];
-const substitutionRoles = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_principal', 'high_principal', 'middle_admin_staff', 'high_admin_staff'];
+const substitutionRoles = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_teacher', 'high_teacher', 'middle_principal', 'high_principal', 'middle_admin_staff', 'high_admin_staff'];
 const announcementRoles = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal', 'middle_admin_staff', 'high_admin_staff'];
 
 const menuGroups = [
