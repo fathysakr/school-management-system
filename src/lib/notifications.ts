@@ -24,10 +24,9 @@ export async function notifyUsers(
   link?: string
 ) {
   if (!userEmails.length) return;
-  for (const email of userEmails) {
-    const user = await db.prepare('SELECT id FROM users WHERE email = ?').get(email) as any;
-    if (user) {
-      await createNotification(user.id, title, message, type, link);
-    }
+  const placeholders = userEmails.map(() => '?').join(',');
+  const users = await db.prepare(`SELECT id FROM users WHERE email IN (${placeholders})`).all(...userEmails) as any[];
+  for (const user of users) {
+    await createNotification(user.id, title, message, type, link);
   }
 }

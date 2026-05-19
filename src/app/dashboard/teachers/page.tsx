@@ -13,6 +13,18 @@ import { Add, Edit, Delete, Visibility, Close, FileUpload, FileDownload, CloudUp
 import * as XLSX from 'xlsx';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
+import EmptyState from '@/components/empty-state';
+
+const formatSpecialization = (spec: string): string => {
+  if (!spec) return '-';
+  try {
+    const parsed = JSON.parse(spec);
+    if (Array.isArray(parsed)) return parsed.map((s: any) => s.n || s).join('، ');
+    return spec;
+  } catch {
+    return spec;
+  }
+};
 
 export default function TeachersPage() {
   const { user, token, selectedSchool } = useAuth();
@@ -40,6 +52,7 @@ export default function TeachersPage() {
   const [isEdit, setIsEdit] = useState(false);
   const [passwordDialog, setPasswordDialog] = useState<{ teacher: any } | null>(null);
   const [passwordForm, setPasswordForm] = useState({ password: '', show: false });
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [importTab, setImportTab] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,7 +81,7 @@ export default function TeachersPage() {
         last_name: teacher.last_name,
         email: teacher.email || '',
         phone: teacher.phone || '',
-        specialization: teacher.specialization || '',
+        specialization: formatSpecialization(teacher.specialization),
         date_of_birth: teacher.date_of_birth || '',
         address: teacher.address || '',
         school: teacher.school || 'middle',
@@ -105,13 +118,20 @@ export default function TeachersPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!token || !confirm('هل أنت متأكد من حذف هذا المعلم؟')) return;
+    if (!token) return;
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!token || deleteConfirm === null) return;
     try {
-      await api.delete(`/teachers/${id}`, token);
+      await api.delete(`/teachers/${deleteConfirm}`, token);
       setSuccess('تم حذف المعلم');
+      setDeleteConfirm(null);
       fetchTeachers();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'حدث خطأ');
+      setDeleteConfirm(null);
     }
   };
 
@@ -268,7 +288,7 @@ export default function TeachersPage() {
 
       <Paper sx={{ overflow: 'auto' }}>
         <TableContainer>
-          <Table sx={{ minWidth: 650 }}>
+          <Table sx={{ minWidth: 1000 }} dir="rtl">
             <TableHead>
               <TableRow>
                 <TableCell>الرقم</TableCell>
@@ -278,23 +298,22 @@ export default function TeachersPage() {
                 <TableCell>الهاتف</TableCell>
                 <TableCell>المرحلة</TableCell>
                 <TableCell>الحالة</TableCell>
-                <TableCell>الحساب</TableCell>
                 <TableCell>الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={9} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} align="center"><CircularProgress /></TableCell></TableRow>
               ) : teachers.length === 0 ? (
-                <TableRow><TableCell colSpan={9} align="center">لا يوجد معلمون</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} align="center"><EmptyState message="لا يوجد معلمون" /></TableCell></TableRow>
               ) : (
                 teachers.map((t) => (
                   <TableRow key={t.id}>
-                    <TableCell>{t.teacher_id}</TableCell>
-                    <TableCell>{t.first_name} {t.last_name}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{t.teacher_id}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{t.first_name} {t.last_name}</TableCell>
                     <TableCell>{t.email || '-'}</TableCell>
-                    <TableCell>{t.specialization || '-'}</TableCell>
-                    <TableCell>{t.phone || '-'}</TableCell>
+                    <TableCell>{formatSpecialization(t.specialization)}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{t.phone || '-'}</TableCell>
                     <TableCell>
                       <Chip label={t.school === 'high' ? 'ثانوية' : 'متوسطة'} size="small"
                         color={t.school === 'high' ? 'warning' : 'info'} />
@@ -304,22 +323,15 @@ export default function TeachersPage() {
                         color={t.status === 'active' ? 'success' : 'default'} size="small" />
                     </TableCell>
                     <TableCell>
-                      {t.user_email ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Chip label={t.user_email} size="small" variant="outlined" color="primary" sx={{ maxWidth: 120, '& .MuiChip-label': { fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis' } }} />
-                          <IconButton size="small" sx={{ color: '#ed6c02' }} onClick={() => { setPasswordDialog({ teacher: t }); setPasswordForm({ password: '', show: false }); }}><LockReset fontSize="small" /></IconButton>
-                        </Box>
-                      ) : (
-                        <Typography variant="caption" color="text.disabled">—</Typography>
+                      <Button size="small" startIcon={<Visibility />} onClick={() => handleView(t.id)} sx={{ minWidth: 50 }}>عرض</Button>
+                      {t.user_email && (
+                        <IconButton size="small" sx={{ color: '#ed6c02' }} onClick={() => { setPasswordDialog({ teacher: t }); setPasswordForm({ password: '', show: false }); }} title="تغيير كلمة المرور"><LockReset fontSize="small" /></IconButton>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <Button size="small" startIcon={<Visibility />} onClick={() => handleView(t.id)} sx={{ minWidth: 50 }} />
                       {canEdit && (
                         <Button size="small" startIcon={<Edit />} onClick={() => handleOpenDialog(t)} sx={{ minWidth: 50, color: 'primary.main' }}>تعديل</Button>
                       )}
                       {canDelete && (
-                        <Button size="small" startIcon={<Delete />} color="error" onClick={() => handleDelete(t.id)} sx={{ minWidth: 50 }} />
+                        <Button size="small" startIcon={<Delete />} color="error" onClick={() => handleDelete(t.id)} sx={{ minWidth: 50 }}>حذف</Button>
                       )}
                     </TableCell>
                   </TableRow>
@@ -376,7 +388,7 @@ export default function TeachersPage() {
         <DialogContent>
           {selectedTeacher && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
-              {[['الرقم', selectedTeacher.teacher_id], ['الاسم', `${selectedTeacher.first_name} ${selectedTeacher.last_name}`], ['البريد', selectedTeacher.email || '-'], ['الهاتف', selectedTeacher.phone || '-'], ['التخصص', selectedTeacher.specialization || '-'], ['الحالة', selectedTeacher.status === 'active' ? 'نشط' : 'غير نشط']].map(([label, value]) => (
+              {[['الرقم', selectedTeacher.teacher_id], ['الاسم', `${selectedTeacher.first_name} ${selectedTeacher.last_name}`], ['البريد', selectedTeacher.email || '-'], ['الهاتف', selectedTeacher.phone || '-'], ['التخصص', formatSpecialization(selectedTeacher.specialization)], ['الحالة', selectedTeacher.status === 'active' ? 'نشط' : 'غير نشط']].map(([label, value]) => (
                 <Box key={label} sx={{ display: 'flex', borderBottom: 1, borderColor: 'divider', pb: 1 }}>
                   <Typography fontWeight="bold" sx={{ minWidth: 120 }}>{label}:</Typography>
                   <Typography>{value}</Typography>
@@ -459,6 +471,21 @@ export default function TeachersPage() {
           <Button variant="contained" onClick={handlePasswordReset} disabled={!passwordForm.password || passwordForm.password.length < 6}>
             حفظ كلمة المرور
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={deleteConfirm !== null} onClose={() => setDeleteConfirm(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Delete color="error" />
+          حذف المعلم
+        </DialogTitle>
+        <DialogContent>
+          <Typography>هل أنت متأكد من حذف هذا المعلم؟ هذا الإجراء لا يمكن التراجع عنه.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setDeleteConfirm(null)}>إلغاء</Button>
+          <Button variant="contained" color="error" onClick={confirmDelete} startIcon={<Delete />}>تأكيد الحذف</Button>
         </DialogActions>
       </Dialog>
     </Box>

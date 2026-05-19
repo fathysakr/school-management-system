@@ -65,7 +65,10 @@ export async function PUT(request: NextRequest) {
     const updates: string[] = [];
     const values: any[] = [];
     if (body.name) { updates.push('name = ?'); values.push(sanitizeString(body.name)); }
-    if (body.school) { updates.push('school = ?'); values.push(body.school); }
+    if (body.school) {
+      if (!['middle', 'high'].includes(body.school)) return badRequest('المرحلة غير صحيحة');
+      updates.push('school = ?'); values.push(body.school);
+    }
     if (body.sessions_per_week !== undefined) { updates.push('sessions_per_week = ?'); values.push(parseInt(body.sessions_per_week)); }
     if ('grade' in body) { updates.push('grade = ?'); values.push(body.grade || null); }
     if ('teacher_id' in body) { updates.push('teacher_id = ?'); values.push(body.teacher_id ? parseInt(body.teacher_id) : null); }

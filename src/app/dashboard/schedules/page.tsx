@@ -104,7 +104,8 @@ api.get(`/schedules${selectedClass ? `?class_id=${selectedClass}${schoolParam}` 
   });
 
   const getClassColor = (classId: string) => {
-    const idx = parseInt(classId) % classColors.length;
+    const num = parseInt(classId);
+    const idx = isNaN(num) ? 0 : num % classColors.length;
     return classColors[idx];
   };
 
@@ -183,7 +184,7 @@ api.get(`/schedules${selectedClass ? `?class_id=${selectedClass}${schoolParam}` 
           {className}
         </Typography>
         <Box sx={{ overflowX: 'auto', border: 1, borderColor: 'divider', borderRadius: 2 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }} dir="rtl">
             <thead>
               <tr style={{ background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)' }}>
                 <th style={{ padding: '12px 16px', color: 'white', fontWeight: 600, minWidth: 120, textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
@@ -279,7 +280,7 @@ api.get(`/schedules${selectedClass ? `?class_id=${selectedClass}${schoolParam}` 
 
     return (
       <Box sx={{ overflowX: 'auto', border: 1, borderColor: 'divider', borderRadius: 2 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }} dir="rtl">
           <thead>
             <tr style={{ background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)' }}>
               <th style={{ padding: '12px 16px', color: 'white', fontWeight: 600, minWidth: 100, textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>

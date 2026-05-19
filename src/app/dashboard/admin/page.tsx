@@ -443,7 +443,7 @@ export default function AdminPage() {
           </Box>
 
           <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
+            <Table size="small" dir="rtl">
               <TableHead>
                 <TableRow>
                   <TableCell>#</TableCell>

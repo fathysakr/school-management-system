@@ -7,12 +7,12 @@ import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, IconButton, Chip, Alert, CircularProgress,
-  TablePagination, Grid, Tabs, Tab, Link
-} from '@mui/material';
-import { Add, Edit, Delete, Visibility, Close, FileUpload, FileDownload, CloudUpload, Phone, RemoveCircleOutline, DeleteSweep } from '@mui/icons-material';
+  TablePagination, Grid, Tabs, Tab} from '@mui/material';
+import { Add, Edit, Delete, Visibility, Close, FileUpload, FileDownload, CloudUpload, Phone, RemoveCircleOutline, DeleteSweep, AutoAwesome } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
+import EmptyState from '@/components/empty-state';
 
 export default function StudentsPage() {
   const { user, token, selectedSchool } = useAuth();
@@ -30,6 +30,8 @@ export default function StudentsPage() {
   const [success, setSuccess] = useState('');
   const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     student_id: '', first_name: '', last_name: '', email: '',
     phone: '', date_of_birth: '', address: '',
@@ -117,13 +119,20 @@ export default function StudentsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!token || !confirm('هل أنت متأكد من حذف هذا الطالب؟')) return;
+    if (!token) return;
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!token || deleteConfirm === null) return;
     try {
-      await api.delete(`/students/${id}`, token);
+      await api.delete(`/students/${deleteConfirm}`, token);
       setSuccess('تم حذف الطالب');
+      setDeleteConfirm(null);
       fetchStudents();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'حدث خطأ');
+      setDeleteConfirm(null);
     }
   };
 
@@ -151,6 +160,19 @@ export default function StudentsPage() {
     } catch {
       setError('فشل في جلب بيانات الطالب');
     }
+  };
+
+  const handleGenerate = async () => {
+    if (!token) return;
+    setGenerating(true);
+    try {
+      const res = await api.post('/students/generate', { count: 50, school: selectedSchool === 'all' ? undefined : selectedSchool }, token);
+      setSuccess(`تم إنشاء ${res.created || 0} طالب تجريبي`);
+      fetchStudents();
+    } catch {
+      setError('فشل إنشاء الطلاب');
+    }
+    setGenerating(false);
   };
 
   const handleExport = async () => {
@@ -281,6 +303,11 @@ export default function StudentsPage() {
           {hasPermission(user?.role, 'students:create') && (
             <Button variant="outlined" startIcon={<FileUpload />} onClick={() => setImportDialog(true)}>استيراد Excel</Button>
           )}
+          {hasPermission(user?.role, 'students:create') && (
+            <Button variant="outlined" startIcon={<AutoAwesome />} onClick={handleGenerate} disabled={generating}>
+              {generating ? <CircularProgress size={18} /> : 'إنشاء عينة'}
+            </Button>
+          )}
           {user?.role === 'admin' && (
             <Button variant="outlined" color="error" startIcon={<DeleteSweep />} onClick={() => setDeleteAllConfirm(true)}>حذف الجميع</Button>
           )}
@@ -295,7 +322,7 @@ export default function StudentsPage() {
 
       <Paper sx={{ overflow: 'auto' }}>
         <TableContainer>
-          <Table sx={{ minWidth: 650 }}>
+          <Table sx={{ minWidth: 650 }} dir="rtl">
             <TableHead>
               <TableRow>
                 <TableCell>الرقم</TableCell>
@@ -311,7 +338,7 @@ export default function StudentsPage() {
               {loading ? (
                 <TableRow><TableCell colSpan={7} align="center"><CircularProgress /></TableCell></TableRow>
               ) : students.length === 0 ? (
-                <TableRow><TableCell colSpan={7} align="center">لا يوجد طلاب</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} align="center"><EmptyState message={loading ? '' : 'لا يوجد طلاب'} /></TableCell></TableRow>
               ) : (
                 students.map((s) => (
                   <TableRow key={s.id}>
@@ -474,9 +501,12 @@ export default function StudentsPage() {
               </Typography>
               <Button variant="contained" onClick={() => fileInputRef.current?.click()}>اختيار ملف</Button>
               <Box sx={{ mt: 3 }}>
-                <Link href="#" onClick={(e) => { e.preventDefault(); handleExport(); }} variant="body2">
-                  تحميل نموذج ملف فارغ
-                </Link>
+                <Button size="small" onClick={() => {
+                  exportToExcel(['رقم الطالب','الاسم الأول','الاسم الأخير','البريد الإلكتروني','الهاتف','تاريخ الميلاد','هواتف ولي الأمر','بريد ولي الأمر','العنوان','تاريخ القيد','المرحلة'],
+                    [['STU001','أحمد','محمد','ahmed@example.com','0555555555','2010-01-15','0555555551','parent@example.com','الرياض','2024-09-01','ثانوية'],
+                    ['STU002','خالد','عمر','khaled@example.com','0555555556','2011-03-20','0555555552','parent2@example.com','جدة','2024-09-01','متوسطة']],
+                    'نموذج_استيراد', 'import_template.xlsx');
+                }}>تحميل نموذج ملف</Button>
               </Box>
             </Box>
           )}
@@ -508,6 +538,21 @@ export default function StudentsPage() {
           <Button variant="contained" color="error" onClick={handleDeleteAll} disabled={deletingAll} startIcon={<DeleteSweep />}>
             {deletingAll ? 'جاري الحذف...' : 'تأكيد حذف الكل'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={deleteConfirm !== null} onClose={() => setDeleteConfirm(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Delete color="error" />
+          حذف الطالب
+        </DialogTitle>
+        <DialogContent>
+          <Typography>هل أنت متأكد من حذف هذا الطالب؟ هذا الإجراء لا يمكن التراجع عنه.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setDeleteConfirm(null)}>إلغاء</Button>
+          <Button variant="contained" color="error" onClick={confirmDelete} startIcon={<Delete />}>تأكيد الحذف</Button>
         </DialogActions>
       </Dialog>
     </Box>

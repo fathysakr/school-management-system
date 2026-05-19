@@ -96,6 +96,7 @@ export default function ReportsPage() {
   const [selectedTeacher, setSelectedTeacher] = useState('');
 
   const [mainTab, setMainTab] = useState('activity');
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   const handleExport = async () => {
     if (!token) return;
@@ -143,7 +144,7 @@ export default function ReportsPage() {
   const currentCfg = reportConfig[currentType as keyof typeof reportConfig];
   const isCounselor = user?.role === 'middle_counselor' || user?.role === 'high_counselor';
   const isSupervisor = user?.role === 'admin' || user?.role === 'middle_supervisor' || user?.role === 'high_supervisor' || isCounselor;
-  const canCreateReport = !isCounselor;
+  const canCreateReport = hasPermission(user?.role, 'reports:create');
   const canEditReport = hasPermission(user?.role, 'reports:edit');
   const canDeleteReport = hasPermission(user?.role, 'reports:delete');
 
@@ -159,7 +160,7 @@ export default function ReportsPage() {
         setClasses(cRes.classes || []);
         if (tRes?.teachers) setTeachers(tRes.teachers);
         if (sRes?.students) setAllStudents(sRes.students);
-      } catch { console.error('Failed to fetch meta'); }
+      } catch {}
     };
     fetchMeta();
   }, [token, canEditReport]);
@@ -236,13 +237,20 @@ export default function ReportsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!token || !confirm('هل أنت متأكد من حذف هذا التقرير؟')) return;
+    if (!token) return;
+    setDeleteConfirm(id);
+  };
+
+  const confirmDeleteReport = async () => {
+    if (!token || deleteConfirm === null) return;
     try {
-      await api.delete(`/teacher-reports?id=${id}`, token);
+      await api.delete(`/teacher-reports?id=${deleteConfirm}`, token);
       setSuccess('تم حذف التقرير');
+      setDeleteConfirm(null);
       fetchReports();
     } catch {
       setError('فشل الحذف');
+      setDeleteConfirm(null);
     }
   };
 
@@ -655,6 +663,21 @@ export default function ReportsPage() {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setStudentFileOpen(false)}>إغلاق</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={deleteConfirm !== null} onClose={() => setDeleteConfirm(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Delete color="error" />
+          حذف التقرير
+        </DialogTitle>
+        <DialogContent>
+          <Typography>هل أنت متأكد من حذف هذا التقرير؟</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setDeleteConfirm(null)}>إلغاء</Button>
+          <Button variant="contained" color="error" onClick={confirmDeleteReport} startIcon={<Delete />}>تأكيد الحذف</Button>
         </DialogActions>
       </Dialog>
     </Box>

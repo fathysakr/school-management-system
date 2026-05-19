@@ -98,7 +98,7 @@ export default function PrincipalPage() {
                 {pendingLeaves.length > 0 && <Chip label={pendingLeaves.length} size="small" color="warning" />}
               </Box>
               <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
+                <Table size="small" dir="rtl">
                   <TableHead>
                     <TableRow>
                       <TableCell>المستخدم</TableCell>

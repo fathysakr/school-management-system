@@ -201,12 +201,12 @@ export default function SubstitutionsPage() {
                 التاريخ: {date} - اليوم: {dayLabels[dayOfWeekFromDate(date)] || ''}
               </Typography>
               <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>الفصل</TableCell>
-                      <TableCell>المادة</TableCell>
-                      <TableCell>الوقت</TableCell>
+              <Table size="small" dir="rtl">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>الفصل</TableCell>
+                    <TableCell>المادة</TableCell>
+                    <TableCell>الوقت</TableCell>
                       <TableCell>المعلم الغائب</TableCell>
                       <TableCell>البديل المقترح</TableCell>
                       <TableCell>بدائل أخرى</TableCell>
@@ -277,7 +277,7 @@ export default function SubstitutionsPage() {
             <Typography color="text.secondary" textAlign="center" py={4}>لا توجد بدائل مسجلة</Typography>
           ) : (
             <TableContainer>
-              <Table size="small">
+              <Table size="small" dir="rtl">
                 <TableHead>
                   <TableRow>
                     <TableCell>التاريخ</TableCell>
@@ -329,10 +329,10 @@ export default function SubstitutionsPage() {
               <Typography><strong>المادة:</strong> {confirmDialog.suggestion.subject}</Typography>
               <Typography><strong>الوقت:</strong> {confirmDialog.suggestion.start_time} - {confirmDialog.suggestion.end_time}</Typography>
               <Typography><strong>المعلم الغائب:</strong> {confirmDialog.suggestion.absent_teacher.name}</Typography>
-              <Typography><strong>البديل:</strong> {
-                teachers.find((t: any) => t.id === confirmDialog.teacherId)?.first_name + ' ' +
-                teachers.find((t: any) => t.id === confirmDialog.teacherId)?.last_name
-              }</Typography>
+              <Typography><strong>البديل:</strong> {(() => {
+                const t = teachers.find((t: any) => t.id === confirmDialog.teacherId);
+                return t ? `${t.first_name} ${t.last_name}` : 'غير محدد';
+              })()}</Typography>
             </Box>
           )}
         </DialogContent>

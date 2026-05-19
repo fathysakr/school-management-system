@@ -7,6 +7,7 @@ interface User {
   email: string;
   role: 'admin' | 'middle_supervisor' | 'high_supervisor' | 'middle_teacher' | 'high_teacher' | 'middle_counselor' | 'high_counselor' | 'middle_principal' | 'high_principal';
   school?: 'middle' | 'high';
+  name?: string;
 }
 
 interface AuthContextType {
@@ -41,7 +42,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (storedToken && storedUser) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      try {
+        const parsed = JSON.parse(storedUser);
+        if (parsed && typeof parsed === 'object' && parsed.id && parsed.email && parsed.role) {
+          setUser(parsed);
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
 
     const saved = localStorage.getItem('selectedSchool') as 'middle' | 'high' | 'all' | null;

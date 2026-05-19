@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
     const class_id = searchParams.get('class_id');
     const report_type = searchParams.get('report_type');
     const status = searchParams.get('status') || 'active';
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1);
+    const limit = Math.min(500, Math.max(1, parseInt(searchParams.get('limit') || '50') || 50));
     const offset = (page - 1) * limit;
 
     let query = `
@@ -48,7 +48,19 @@ export async function GET(request: NextRequest) {
     params.push(limit, offset);
 
     const reports = await db.prepare(query).all(...params);
-    const count = await db.prepare(`SELECT COUNT(*) as c FROM teacher_reports WHERE status = ?`).get(status) as any;
+
+    let countQuery = `
+      SELECT COUNT(*) as c FROM teacher_reports r
+      JOIN classes c ON r.class_id = c.id
+      WHERE r.status = ?
+    `;
+    const countParams: any[] = [status];
+    if (schoolFilter.grade) { countQuery += ' AND c.grade = ?'; countParams.push(schoolFilter.grade); }
+    if (teacher_id) { countQuery += ' AND r.teacher_id = ?'; countParams.push(parseInt(teacher_id)); }
+    if (student_id) { countQuery += ' AND r.student_id = ?'; countParams.push(parseInt(student_id)); }
+    if (class_id) { countQuery += ' AND r.class_id = ?'; countParams.push(parseInt(class_id)); }
+    if (report_type) { countQuery += ' AND r.report_type = ?'; countParams.push(report_type); }
+    const count = await db.prepare(countQuery).get(...countParams) as any;
 
     return success({ reports, total: count.c });
   } catch (error) {
@@ -90,8 +102,8 @@ export async function POST(request: NextRequest) {
     );
 
     if (report_type === 'behavioral') {
-      const cls = await db.prepare('SELECT grade FROM classes WHERE id = ?').get(parseInt(class_id)) as any;
-      const schoolStage = cls?.grade === 'المتوسطة' ? 'middle' : 'high';
+      const cls = await db.prepare('SELECT class_name, grade FROM classes WHERE id = ?').get(parseInt(class_id)) as any;
+      const schoolStage = cls?.grade?.includes('متوسط') ? 'middle' : 'high';
       const targetRoles = [`${schoolStage}_supervisor`, `${schoolStage}_counselor`];
       const targetUsers = await db.prepare(
         `SELECT u.email, t.phone, t.first_name, t.last_name       FROM users u
@@ -106,10 +118,9 @@ export async function POST(request: NextRequest) {
 
       const emails = targetUsers.map((u: any) => u.email).filter(Boolean);
       if (emails.length > 0) {
-        const clsName = (await db.prepare('SELECT class_name FROM classes WHERE id = ?').get(parseInt(class_id)) as any)?.class_name || '';
         notifyUsers(emails,
           '🚨 تقرير سلوكي - تنبيه عاجل',
-          `الطالب: ${studentName}\nالفصل: ${clsName}\nالمعلم: ${teacherName}\nالمحتوى: ${sanitizeString(content).slice(0, 300)}`,
+          `الطالب: ${studentName}\nالفصل: ${cls?.class_name || ''}\nالمعلم: ${teacherName}\nالمحتوى: ${sanitizeString(content).slice(0, 300)}`,
           'urgent',
           '/dashboard/reports'
         ).catch(() => {});

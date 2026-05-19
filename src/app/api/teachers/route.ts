@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
     if (!hasPermission(user.role, 'teachers:view')) return forbidden();
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1);
+    const limit = Math.min(500, Math.max(1, parseInt(searchParams.get('limit') || '10') || 10));
     const search = sanitizeString(searchParams.get('search') || '');
     const status = searchParams.get('status') || 'active';
 
@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
     const query = `
       SELECT t.*, 
              COUNT(DISTINCT c.id) as classes_count,
-             u.email as user_email
+             u.email as user_email,
+             u.role as user_role
       FROM teachers t
       LEFT JOIN classes c ON t.id = c.teacher_id
       LEFT JOIN users u ON u.teacher_id = t.id

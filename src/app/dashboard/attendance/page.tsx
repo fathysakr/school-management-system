@@ -79,9 +79,7 @@ export default function AttendancePage() {
     try {
       const res = await api.get(`/classes?page=1&limit=100${schoolParam}`, token);
       setClasses(res.classes || []);
-    } catch {
-      console.error('Failed to fetch classes');
-    }
+    } catch {}
   };
 
   useEffect(() => { fetchAttendance(); fetchClasses(); }, [token, filters.class_id, filters.date]);
@@ -212,7 +210,7 @@ export default function AttendancePage() {
           {canCreateAttendance ? (
             <>
               <TableContainer>
-                <Table>
+                <Table dir="rtl">
                   <TableHead>
                     <TableRow>
                       <TableCell>#</TableCell>
@@ -282,7 +280,7 @@ export default function AttendancePage() {
             <Typography variant="h6" fontWeight="bold">سجل الحضور المسجل</Typography>
           </Box>
           <TableContainer>
-            <Table>
+            <Table dir="rtl">
               <TableHead>
                 <TableRow>
                   <TableCell>الطالب</TableCell>

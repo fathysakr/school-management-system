@@ -5,7 +5,7 @@ import { hashPassword, generateToken, badRequest, serverError, success } from '@
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, role = 'middle_teacher' } = body;
+    const { email, password, role: rawRole } = body;
 
     if (!email || !password) {
       return badRequest('اسم المستخدم وكلمة المرور مطلوبان');
@@ -14,6 +14,9 @@ export async function POST(request: NextRequest) {
     if (password.length < 6) {
       return badRequest('Password must be at least 6 characters');
     }
+
+    const ALLOWED_SELF_REGISTER_ROLES = ['middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor'];
+    const role = ALLOWED_SELF_REGISTER_ROLES.includes(rawRole) ? rawRole : 'middle_teacher';
 
     // Check if user exists
     const existingUser = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);

@@ -16,6 +16,7 @@ import {
   CheckCircle, Psychology, MenuBook, EmojiEvents,
   Percent, Speed, Assignment, Refresh
 } from '@mui/icons-material';
+import EmptyState from '@/components/empty-state';
 
 const roleLabels: Record<string, string> = {
   admin: 'مدير النظام',
@@ -88,9 +89,14 @@ export default function DashboardPage() {
   const [middleVsHigh, setMiddleVsHigh] = useState<any[]>([]);
   const [recentReports, setRecentReports] = useState<any[]>([]);
   const [gradeDistribution, setGradeDistribution] = useState<any[]>([]);
+  const [scheduleStats, setScheduleStats] = useState<any[]>([]);
+  const [teacherWorkload, setTeacherWorkload] = useState<any[]>([]);
+  const [subjectDistribution, setSubjectDistribution] = useState<any[]>([]);
+  const [hourlyDistribution, setHourlyDistribution] = useState<any[]>([]);
   const [recentStudents, setRecentStudents] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [todaySchedules, setTodaySchedules] = useState<any[]>([]);
+  const [pendingSubstitutions, setPendingSubstitutions] = useState(0);
   const [lastLogin, setLastLogin] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -102,11 +108,12 @@ export default function DashboardPage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [statsRes, studentsRes, announcementsRes, schedulesRes] = await Promise.all([
+      const [statsRes, studentsRes, announcementsRes, schedulesRes, subsRes] = await Promise.all([
         api.get(`/dashboard/stats${schoolParam ? '?' + schoolParam.replace('&', '') : ''}`, token).catch(() => null),
         api.get(`/students?page=1&limit=5${schoolParam}`, token).catch(() => null),
         api.get(`/announcements${schoolParam ? '?' + schoolParam.replace('&', '') : ''}`, token).catch(() => null),
         api.get(`/schedules?day=${todayKey}${schoolParam}`, token).catch(() => null),
+        api.get(`/substitutions?status=pending${schoolParam}`, token).catch(() => null),
       ]);
 
       if (statsRes) {
@@ -115,10 +122,15 @@ export default function DashboardPage() {
         setMiddleVsHigh(statsRes.middleVsHigh || []);
         setRecentReports(statsRes.recentReports || []);
         setGradeDistribution(statsRes.gradeDistribution || []);
+        setScheduleStats(statsRes.scheduleStats || []);
+        setTeacherWorkload(statsRes.teacherWorkload || []);
+        setSubjectDistribution(statsRes.subjectDistribution || []);
+        setHourlyDistribution(statsRes.hourlyDistribution || []);
       }
       if (studentsRes?.students) setRecentStudents(studentsRes.students);
       if (announcementsRes?.announcements) setAnnouncements(announcementsRes.announcements.slice(0, 4));
       if (schedulesRes?.schedules) setTodaySchedules(schedulesRes.schedules);
+      if (subsRes?.substitutions) setPendingSubstitutions(subsRes.substitutions.length);
     } catch (err) {
       console.error('Dashboard fetch error:', err);
     } finally {
@@ -168,7 +180,7 @@ export default function DashboardPage() {
       <Card sx={{ mb: 3, borderRadius: 3, background: 'linear-gradient(135deg, #1a237e 0%, #4a148c 100%)', color: 'white' }}>
         <CardContent sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
           <Box>
-            <Typography variant="h4" fontWeight="bold">{greet.text}، {user?.email}</Typography>
+            <Typography variant="h4" fontWeight="bold">{greet.text}، {user?.name || user?.email}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5, flexWrap: 'wrap' }}>
               <Typography variant="body2" sx={{ opacity: 0.85, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <AccessTime sx={{ fontSize: 16 }} />
@@ -187,20 +199,23 @@ export default function DashboardPage() {
 
       {/* Main Stats */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={12} sm={6} md={2}>
           <StatCard title="المعلمون" value={stats.teachers} icon={<People sx={{ color: '#7c4dff' }} />} color="#7c4dff" subtitle="إجمالي" />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={12} sm={6} md={2}>
           <StatCard title="الطلاب" value={stats.students} icon={<School sx={{ color: '#2e7d32' }} />} color="#2e7d32" subtitle="إجمالي" />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={12} sm={6} md={2}>
           <StatCard title="الفصول" value={stats.classes} icon={<ClassIcon sx={{ color: '#0288d1' }} />} color="#0288d1" subtitle="نشطة" />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={12} sm={6} md={2}>
           <StatCard title="معدل الحضور" value={`${stats.attendanceRate}%`} icon={<Percent sx={{ color: stats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02' }} />} color={stats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02'} subtitle={`${stats.totalAttendance} سجل`} />
         </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid item xs={12} sm={6} md={2}>
           <StatCard title="المتوسط العام" value={`${stats.avgScore}%`} icon={<Speed sx={{ color: stats.avgScore >= 75 ? '#2e7d32' : '#ed6c02' }} />} color={stats.avgScore >= 75 ? '#2e7d32' : '#ed6c02'} subtitle={`${stats.totalGrades} درجة`} />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <StatCard title="استبدالات معلقة" value={pendingSubstitutions} icon={<Schedule sx={{ color: '#e65100' }} />} color="#e65100" subtitle="قيد الانتظار" />
         </Grid>
       </Grid>
 
@@ -255,12 +270,12 @@ export default function DashboardPage() {
             </Box>
             <Grid container spacing={1.5}>
               {middleVsHigh.map((m: any) => (
-                <Grid item xs={6} key={m.grade}>
-                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, textAlign: 'center', bgcolor: m.grade === 'المتوسطة' ? '#e3f2fd' : '#fff3e0' }}>
-                    <Typography fontWeight="bold" sx={{ color: m.grade === 'المتوسطة' ? '#1565c0' : '#e65100' }}>
-                      {m.grade === 'المتوسطة' ? 'المدرسة المتوسطة' : 'المدرسة الثانوية'}
+                <Grid item xs={6} key={m.stage}>
+                  <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, textAlign: 'center', bgcolor: m.stage === 'المتوسطة' ? '#e3f2fd' : '#fff3e0' }}>
+                    <Typography fontWeight="bold" sx={{ color: m.stage === 'المتوسطة' ? '#1565c0' : '#e65100' }}>
+                      {m.stage === 'المتوسطة' ? 'المدرسة المتوسطة' : 'المدرسة الثانوية'}
                     </Typography>
-                    <Typography variant="h4" fontWeight="bold" sx={{ color: m.grade === 'المتوسطة' ? '#1565c0' : '#e65100' }}>
+                    <Typography variant="h4" fontWeight="bold" sx={{ color: m.stage === 'المتوسطة' ? '#1565c0' : '#e65100' }}>
                       {m.c}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">فصل</Typography>
@@ -285,7 +300,7 @@ export default function DashboardPage() {
                   <Button size="small" variant="text" sx={{ mr: 'auto' }} onClick={() => router.push('/dashboard/announcements')}>عرض الكل</Button>
                 </Box>
                 {announcements.length === 0 ? (
-                  <Typography color="text.secondary" textAlign="center" sx={{ py: 3 }}>لا توجد تنبيهات</Typography>
+                  <EmptyState message="لا توجد تنبيهات" icon={<Campaign sx={{ fontSize: 48, color: 'grey.300' }} />} />
                 ) : (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     {announcements.map((a) => (
@@ -318,10 +333,10 @@ export default function DashboardPage() {
                 <Button size="small" variant="text" onClick={() => router.push('/dashboard/schedules')}>عرض الكل</Button>
               </Box>
               {todaySchedules.length === 0 ? (
-                <Typography color="text.secondary" textAlign="center" sx={{ py: 3 }}>لا توجد حصص اليوم</Typography>
+                  <EmptyState message="لا توجد حصص اليوم" icon={<Schedule sx={{ fontSize: 48, color: 'grey.300' }} />} />
               ) : (
                 <TableContainer>
-                  <Table size="small">
+                  <Table size="small" dir="rtl">
                     <TableHead>
                       <TableRow>
                         <TableCell>الوقت</TableCell>
@@ -420,6 +435,35 @@ export default function DashboardPage() {
             </Card>
           )}
 
+          {/* Schedule Overview */}
+          {scheduleStats.length > 0 && (
+            <Card sx={{ borderRadius: 3, mb: 3 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Schedule color="primary" />
+                  <Typography variant="h6" fontWeight="bold">توزيع الحصص الأسبوعي</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'].map(day => {
+                    const stat = scheduleStats.find((s: any) => s.day_of_week === day);
+                    const count = stat?.c || 0;
+                    const maxCount = Math.max(...scheduleStats.map((s: any) => s.c), 1);
+                    const pct = (count / maxCount) * 100;
+                    return (
+                      <Paper key={day} variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Typography variant="body2" sx={{ minWidth: 70, fontWeight: 600 }}>{dayLabels[day]}</Typography>
+                        <Box sx={{ flexGrow: 1, height: 8, bgcolor: 'grey.100', borderRadius: 4, overflow: 'hidden' }}>
+                          <Box sx={{ height: '100%', width: `${pct}%`, bgcolor: '#1976d2', borderRadius: 4, transition: 'width 0.5s' }} />
+                        </Box>
+                        <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 30, textAlign: 'left' }}>{count}</Typography>
+                      </Paper>
+                    );
+                  })}
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Grade Distribution */}
           {gradeDistribution.length > 0 && (
             <Card sx={{ borderRadius: 3, mb: 3 }}>
@@ -436,6 +480,94 @@ export default function DashboardPage() {
                       <Chip label={g.c} size="small" sx={{ bgcolor: `${gradeColor(g.level)}15`, color: gradeColor(g.level), fontWeight: 600 }} />
                     </Paper>
                   ))}
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Teacher Workload */}
+          {teacherWorkload.length > 0 && (
+            <Card sx={{ borderRadius: 3, mb: 3 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <People color="primary" />
+                  <Typography variant="h6" fontWeight="bold">توزيع الحصص على المعلمين</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {teacherWorkload.map((t: any) => {
+                    const maxCount = Math.max(...teacherWorkload.map((x: any) => x.session_count), 1);
+                    const pct = (t.session_count / maxCount) * 100;
+                    return (
+                      <Paper key={t.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: '#7c4dff', fontSize: 12 }}>
+                          {t.first_name?.charAt(0)}
+                        </Avatar>
+                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                          <Typography variant="body2" fontWeight="bold" noWrap>{t.first_name} {t.last_name}</Typography>
+                          <Box sx={{ height: 6, bgcolor: 'grey.100', borderRadius: 3, overflow: 'hidden', mt: 0.5 }}>
+                            <Box sx={{ height: '100%', width: `${pct}%`, bgcolor: '#7c4dff', borderRadius: 3, transition: 'width 0.5s' }} />
+                          </Box>
+                        </Box>
+                        <Typography variant="body2" fontWeight="bold" sx={{ color: '#7c4dff', minWidth: 24, textAlign: 'center' }}>{t.session_count}</Typography>
+                      </Paper>
+                    );
+                  })}
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Subject Distribution */}
+          {subjectDistribution.length > 0 && (
+            <Card sx={{ borderRadius: 3, mb: 3 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <MenuBook color="primary" />
+                  <Typography variant="h6" fontWeight="bold">توزيع الحصص حسب المواد</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {subjectDistribution.map((sub: any, i: number) => {
+                    const maxCount = Math.max(...subjectDistribution.map((x: any) => x.session_count), 1);
+                    const pct = (sub.session_count / maxCount) * 100;
+                    const colors = ['#1976d2', '#2e7d32', '#ed6c02', '#d32f2f', '#7c4dff', '#00838f', '#4a148c', '#e65100'];
+                    return (
+                      <Paper key={sub.subject_name} variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: colors[i % colors.length], flexShrink: 0 }} />
+                        <Typography variant="body2" sx={{ flexGrow: 1, fontWeight: 500 }} noWrap>{sub.subject_name}</Typography>
+                        <Box sx={{ width: 80, height: 6, bgcolor: 'grey.100', borderRadius: 3, overflow: 'hidden' }}>
+                          <Box sx={{ height: '100%', width: `${pct}%`, bgcolor: colors[i % colors.length], borderRadius: 3, transition: 'width 0.5s' }} />
+                        </Box>
+                        <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 24, textAlign: 'center' }}>{sub.session_count}</Typography>
+                      </Paper>
+                    );
+                  })}
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Hourly Distribution */}
+          {hourlyDistribution.length > 0 && (
+            <Card sx={{ borderRadius: 3, mb: 3 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <AccessTime color="primary" />
+                  <Typography variant="h6" fontWeight="bold">توزيع الحصص حسب الوقت</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {hourlyDistribution.map((h: any) => {
+                    const maxCount = Math.max(...hourlyDistribution.map((x: any) => x.c), 1);
+                    const pct = (h.c / maxCount) * 100;
+                    return (
+                      <Paper key={h.hour} variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Typography variant="body2" sx={{ minWidth: 40, fontWeight: 600 }}>{h.hour}:00</Typography>
+                        <Box sx={{ flexGrow: 1, height: 8, bgcolor: 'grey.100', borderRadius: 4, overflow: 'hidden' }}>
+                          <Box sx={{ height: '100%', width: `${pct}%`, bgcolor: '#00838f', borderRadius: 4, transition: 'width 0.5s' }} />
+                        </Box>
+                        <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 24, textAlign: 'left' }}>{h.c}</Typography>
+                      </Paper>
+                    );
+                  })}
                 </Box>
               </CardContent>
             </Card>

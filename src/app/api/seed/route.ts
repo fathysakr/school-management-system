@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     results.push('تم تعيين التخصصات للمعلمين');
 
     return Response.json({ success: true, results });
-  } catch (error: any) {
-    return Response.json({ success: false, error: error?.message || String(error) }, { status: 500 });
+  } catch {
+    return Response.json({ success: false, error: 'Seed failed' }, { status: 500 });
   }
 }

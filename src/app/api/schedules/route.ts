@@ -67,8 +67,8 @@ export async function POST(request: NextRequest) {
     // Check for time conflicts
     const conflict = await db.prepare(`
       SELECT id FROM schedules WHERE class_id = ? AND day_of_week = ? AND status = 'active'
-      AND ((start_time < ? AND end_time > ?) OR (start_time < ? AND end_time > ?))
-    `).get(parseInt(class_id), day_of_week, start_time, start_time, end_time, end_time);
+      AND start_time < ? AND end_time > ?
+    `).get(parseInt(class_id), day_of_week, end_time, start_time);
 
     if (conflict) return badRequest('There is a schedule conflict at this time');
 

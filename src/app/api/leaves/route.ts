@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
     sql += ' ORDER BY lr.created_at DESC';
     const leaves = await db.prepare(sql).all(...params);
     return success({ leaves });
-  } catch (error: any) {
-    return serverError(error?.message);
+  } catch {
+    return serverError('Failed to fetch leaves');
   }
 }
 
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       'INSERT INTO leave_requests (user_id, leave_type, start_date, end_date, reason, status) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(user.id, leave_type, start_date, end_date, reason || null, 'pending');
     return success({ message: 'تم تقديم طلب الإجازة' });
-  } catch (error: any) {
-    return serverError(error?.message);
+  } catch {
+    return serverError('Failed to create leave request');
   }
 }

@@ -68,9 +68,7 @@ export default function GradesPage() {
     try {
       const res = await api.get(`/students?page=1&limit=100${schoolParam}`, token);
       setStudents(res.students || []);
-    } catch {
-      console.error('Failed to fetch students');
-    }
+    } catch {}
   };
 
   const fetchClasses = async () => {
@@ -78,9 +76,7 @@ export default function GradesPage() {
     try {
       const res = await api.get(`/classes?page=1&limit=100${schoolParam}`, token);
       setClasses(res.classes || []);
-    } catch {
-      console.error('Failed to fetch classes');
-    }
+    } catch {}
   };
 
   useEffect(() => { fetchGrades(); fetchStudents(); fetchClasses(); }, [token, filters.student_id, filters.class_id, filters.subject]);
@@ -273,7 +269,7 @@ export default function GradesPage() {
 
       <Paper sx={{ overflow: 'auto' }}>
         <TableContainer>
-          <Table sx={{ minWidth: 650 }}>
+          <Table sx={{ minWidth: 650 }} dir="rtl">
             <TableHead>
               <TableRow>
                 <TableCell>الطالب</TableCell>

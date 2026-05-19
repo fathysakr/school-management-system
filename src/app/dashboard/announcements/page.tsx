@@ -57,9 +57,7 @@ export default function AnnouncementsPage() {
     try {
       const res = await api.get(`/classes?page=1&limit=100${schoolParam}`, token);
       setClasses(res.classes || []);
-    } catch {
-      console.error('Failed to fetch classes');
-    }
+    } catch {}
   };
 
   useEffect(() => { fetchAnnouncements(); if (canCreateAnnouncement) fetchClasses(); }, [token]);
@@ -148,7 +146,7 @@ export default function AnnouncementsPage() {
 
       <Paper sx={{ overflow: 'auto' }}>
         <TableContainer>
-          <Table>
+          <Table dir="rtl">
             <TableHead>
               <TableRow>
                 <TableCell>العنوان</TableCell>
@@ -172,7 +170,7 @@ export default function AnnouncementsPage() {
                     <TableCell>
                       <Chip label={targetLabels[a.target_audience] || a.target_audience} size="small" color="primary" variant="outlined" />
                     </TableCell>
-                    <TableCell>{new Date(a.published_date).toLocaleDateString('ar-EG')}</TableCell>
+                    <TableCell>{a.published_date ? new Date(a.published_date).toLocaleDateString('ar-EG') : '—'}</TableCell>
                     <TableCell>
                       <Chip label={a.status === 'active' ? 'نشط' : 'مؤرشف'} size="small" color={a.status === 'active' ? 'success' : 'default'} />
                     </TableCell>

@@ -13,7 +13,7 @@ import {
 import {
   People, School, Class as ClassIcon, EventNote, Grade,
   Person, Logout, Menu as MenuIcon, ChevronRight, Notifications, Campaign,
-  Schedule, Assessment, AutoStories, Speed, Build, AdminPanelSettings, SwapHoriz, CalendarMonth
+  Schedule,   Assessment, AutoStories, Speed, Build, AdminPanelSettings, SwapHoriz, CalendarMonth, VerifiedUser
 } from '@mui/icons-material';
 import { ToggleButtonGroup, ToggleButton } from '@mui/material';
 
@@ -24,9 +24,10 @@ const allRoles = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_teach
 
 const menuGroups = [
   {
-    label: 'الإدارة',
+    label: 'الرئيسية',
     items: [
       { text: 'لوحة التحكم', icon: <Speed />, path: '/dashboard', roles: allRoles },
+      { text: 'الإدارة', icon: <VerifiedUser />, path: '/dashboard/management', roles: ['admin', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal'] },
       { text: 'المعلمون', icon: <People />, path: '/dashboard/teachers', roles: ['admin', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal'] },
       { text: 'إدارة النظام', icon: <Build />, path: '/dashboard/admin', roles: ['admin'] },
       { text: 'شؤون المدرسة', icon: <AdminPanelSettings />, path: '/dashboard/principal', roles: ['middle_principal', 'high_principal'] },

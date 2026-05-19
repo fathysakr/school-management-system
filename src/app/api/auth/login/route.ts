@@ -14,7 +14,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user
-    const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email) as any;
+    const user = await db.prepare(`
+      SELECT u.*, t.first_name || ' ' || t.last_name as name
+      FROM users u
+      LEFT JOIN teachers t ON t.user_id = u.id
+      WHERE u.email = ?
+    `).get(email) as any;
     if (!user) {
       return notFound('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
@@ -49,6 +54,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: user.email,
         role: user.role,
+        name: user.name || user.email,
         school: allowedSchool === 'both' ? school : allowedSchool
       },
       token

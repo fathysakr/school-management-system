@@ -6,18 +6,20 @@ import { api } from '@/lib/api';
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, IconButton, Alert, CircularProgress,
+  DialogActions, TextField, IconButton, Chip, Alert, CircularProgress,
   TablePagination, Select, MenuItem, InputLabel, FormControl, Grid
 } from '@mui/material';
 import { Add, Edit, Delete, People, Close, FileDownload } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
+import EmptyState from '@/components/empty-state';
 
 export default function ClassesPage() {
   const { user, token, selectedSchool } = useAuth();
   const schoolParam = selectedSchool && selectedSchool !== 'all' ? `&school=${selectedSchool}` : '';
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -31,6 +33,7 @@ export default function ClassesPage() {
   const [formData, setFormData] = useState({ class_name: '', grade: '', section: '', teacher_id: '', room_number: '', capacity: '30' });
   const [enrollData, setEnrollData] = useState({ student_id: '' });
   const [isEdit, setIsEdit] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   const fetchClasses = async () => {
     if (!token) return;
@@ -50,12 +53,18 @@ export default function ClassesPage() {
     try {
       const res = await api.get(`/teachers?page=1&limit=100${schoolParam}`, token);
       setTeachers(res.teachers || []);
-    } catch {
-      console.error('Failed to fetch teachers');
-    }
+    } catch {}
   };
 
   useEffect(() => { fetchClasses(); fetchTeachers(); }, [token, page, rowsPerPage]);
+
+  const fetchStudents = async () => {
+    if (!token) return;
+    try {
+      const res = await api.get(`/students?page=1&limit=500${schoolParam}`, token);
+      setStudents(res.students || []);
+    } catch {}
+  };
 
   const handleOpenDialog = (cls?: any) => {
     if (cls) {
@@ -91,13 +100,20 @@ export default function ClassesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!token || !confirm('هل أنت متأكد من حذف هذا الفصل؟')) return;
+    if (!token) return;
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!token || deleteConfirm === null) return;
     try {
-      await api.delete(`/classes/${id}`, token);
+      await api.delete(`/classes/${deleteConfirm}`, token);
       setSuccess('تم حذف الفصل');
+      setDeleteConfirm(null);
       fetchClasses();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'حدث خطأ');
+      setDeleteConfirm(null);
     }
   };
 
@@ -105,8 +121,11 @@ export default function ClassesPage() {
     setSelectedClass(cls);
     setEnrollData({ student_id: '' });
     try {
-      const res = await api.get(`/classes/${cls.id}`, token);
-      setClassStudents(res.students || []);
+      const [classRes] = await Promise.all([
+        api.get(`/classes/${cls.id}`, token),
+        fetchStudents(),
+      ]);
+      setClassStudents(classRes.students || []);
     } catch {
       setClassStudents([]);
     }
@@ -179,7 +198,7 @@ export default function ClassesPage() {
 
       <Paper sx={{ overflow: 'auto' }}>
         <TableContainer>
-          <Table sx={{ minWidth: 700 }}>
+          <Table sx={{ minWidth: 700 }} dir="rtl">
             <TableHead>
               <TableRow>
                 <TableCell>اسم الفصل</TableCell>
@@ -189,14 +208,15 @@ export default function ClassesPage() {
                 <TableCell>القاعة</TableCell>
                 <TableCell>السعة</TableCell>
                 <TableCell>الطلاب</TableCell>
+                <TableCell>الحالة</TableCell>
                 <TableCell>الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={8} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} align="center"><CircularProgress /></TableCell></TableRow>
               ) : classes.length === 0 ? (
-                <TableRow><TableCell colSpan={8} align="center">لا يوجد فصول</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} align="center"><EmptyState message="لا يوجد فصول" /></TableCell></TableRow>
               ) : (
                 classes.map((c) => (
                   <TableRow key={c.id}>
@@ -207,6 +227,10 @@ export default function ClassesPage() {
                     <TableCell>{c.room_number || '-'}</TableCell>
                     <TableCell>{c.capacity}</TableCell>
                     <TableCell>{c.student_count || 0}</TableCell>
+                    <TableCell>
+                      <Chip label={c.status === 'active' ? 'نشط' : 'غير نشط'}
+                        color={c.status === 'active' ? 'success' : 'default'} size="small" />
+                    </TableCell>
                     <TableCell>
                       {hasPermission(user?.role, 'classes:edit') && (
                         <IconButton size="small" onClick={() => handleOpenEnroll(c)} title="إدارة الطلاب"><People /></IconButton>
@@ -262,13 +286,16 @@ export default function ClassesPage() {
               <InputLabel>اختر طالب لتسجيله</InputLabel>
               <Select value={enrollData.student_id} label="اختر طالب لتسجيله" onChange={(e) => setEnrollData({ student_id: e.target.value })}>
                 <MenuItem value="">-- اختر طالب --</MenuItem>
+                {students.map((s: any) => (
+                  <MenuItem key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.student_id})</MenuItem>
+                ))}
               </Select>
             </FormControl>
             <Button variant="contained" onClick={handleEnroll}>تسجيل</Button>
           </Box>
           <Typography variant="subtitle2" gutterBottom>الطلاب المسجلون ({classStudents.length})</Typography>
           <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
+            <Table size="small" dir="rtl">
               <TableHead>
                 <TableRow>
                   <TableCell>الاسم</TableCell>
@@ -298,6 +325,21 @@ export default function ClassesPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEnrollDialog(false)}>إغلاق</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={deleteConfirm !== null} onClose={() => setDeleteConfirm(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Delete color="error" />
+          حذف الفصل
+        </DialogTitle>
+        <DialogContent>
+          <Typography>هل أنت متأكد من حذف هذا الفصل؟ هذا الإجراء لا يمكن التراجع عنه.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setDeleteConfirm(null)}>إلغاء</Button>
+          <Button variant="contained" color="error" onClick={confirmDelete} startIcon={<Delete />}>تأكيد الحذف</Button>
         </DialogActions>
       </Dialog>
     </Box>

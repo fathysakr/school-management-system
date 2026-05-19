@@ -199,15 +199,20 @@ export function hasPermission(role: UserRole | undefined, permission: Permission
 export function canAccessRole(currentRole: UserRole | undefined, targetRole: UserRole): boolean {
   if (!currentRole) return false;
   if (currentRole === 'admin') return true;
-  const middleRoles = ['middle_supervisor', 'middle_teacher', 'middle_counselor', 'middle_principal'];
-  const highRoles = ['high_supervisor', 'high_teacher', 'high_counselor', 'high_principal'];
-  const isMiddle = middleRoles.includes(currentRole);
-  const targetIsMiddle = middleRoles.includes(targetRole);
-  const isHigh = highRoles.includes(currentRole);
-  const targetIsHigh = highRoles.includes(targetRole);
-  if (isMiddle && targetIsMiddle) return true;
-  if (isHigh && targetIsHigh) return true;
-  return false;
+  const hierarchy: Record<string, number> = {
+    counselor: 0,
+    teacher: 1,
+    supervisor: 2,
+    principal: 3,
+  };
+  const currentBase = currentRole.split('_').slice(1).join('_');
+  const targetBase = targetRole.split('_').slice(1).join('_');
+  const currentSchool = currentRole.split('_')[0];
+  const targetSchool = targetRole.split('_')[0];
+  if (currentSchool !== 'admin' && currentSchool !== targetSchool) return false;
+  const currentLevel = hierarchy[currentBase] ?? -1;
+  const targetLevel = hierarchy[targetBase] ?? -1;
+  return currentLevel >= targetLevel;
 }
 
 export function getSchoolStage(role: UserRole): 'middle' | 'high' | 'both' {

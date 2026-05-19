@@ -8,6 +8,7 @@ import {
   TableHead, TableRow, TextField, FormControl, InputLabel, Select, MenuItem,
   CircularProgress, IconButton
 } from '@mui/material';
+import { hasPermission } from '@/lib/permissions';
 import { Add, Delete, CalendarMonth } from '@mui/icons-material';
 
 const leaveTypeLabels: Record<string, string> = {
@@ -44,6 +45,7 @@ export default function LeavesPage() {
   const [form, setForm] = useState({ leave_type: 'sick', start_date: '', end_date: '', reason: '' });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -74,11 +76,17 @@ export default function LeavesPage() {
   };
 
   const deleteLeave = async (id: number) => {
-    if (!confirm('تأكيد الحذف؟')) return;
+    if (!token) return;
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!token || deleteConfirm === null) return;
     try {
-      await api.delete(`/leaves/${id}`, token);
+      await api.delete(`/leaves/${deleteConfirm}`, token);
+      setDeleteConfirm(null);
       loadLeaves();
-    } catch { setMessage('فشل الحذف'); }
+    } catch { setMessage('فشل الحذف'); setDeleteConfirm(null); }
   };
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
@@ -89,7 +97,8 @@ export default function LeavesPage() {
         <CalendarMonth sx={{ fontSize: 32, color: 'primary.main' }} />
         <Typography variant="h4" fontWeight="bold">طلبات الإجازات</Typography>
         <Box sx={{ flexGrow: 1 }} />
-        <Button variant="contained" startIcon={<Add />} onClick={() => setDialogOpen(true)}>تقديم إجازة</Button>
+        {hasPermission(user?.role, 'settings:edit') && <Button variant="contained" startIcon={<Add />} onClick={() => setDialogOpen(true)}>تقديم إجازة</Button>}
+        {!hasPermission(user?.role, 'settings:edit') && <Button variant="contained" startIcon={<Add />} onClick={() => setDialogOpen(true)}>تقديم إجازة</Button>}
       </Box>
       {message && <Alert severity={message.includes('فشل') ? 'error' : 'success'} sx={{ mb: 2 }} onClose={() => setMessage('')}>{message}</Alert>}
       <TableContainer component={Paper} variant="outlined">
@@ -117,7 +126,7 @@ export default function LeavesPage() {
                 <TableCell><Chip label={statusLabels[l.status] || l.status} size="small" color={statusColors[l.status] || 'default'} /></TableCell>
                 <TableCell>{l.created_at ? new Date(l.created_at).toLocaleDateString('ar-EG') : '—'}</TableCell>
                 <TableCell>
-                  {l.user_id === user?.id && l.status === 'pending' && (
+                  {l.status === 'pending' && (l.user_id === user?.id || hasPermission(user?.role, 'settings:edit')) && (
                     <IconButton size="small" color="error" onClick={() => deleteLeave(l.id)}><Delete /></IconButton>
                   )}
                 </TableCell>
@@ -153,6 +162,21 @@ export default function LeavesPage() {
           <Button variant="contained" onClick={submitLeave} disabled={saving}>
             {saving ? <CircularProgress size={20} /> : 'تقديم'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={deleteConfirm !== null} onClose={() => setDeleteConfirm(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Delete color="error" />
+          حذف الإجازة
+        </DialogTitle>
+        <DialogContent>
+          <Typography>هل أنت متأكد من حذف هذه الإجازة؟</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setDeleteConfirm(null)}>إلغاء</Button>
+          <Button variant="contained" color="error" onClick={confirmDelete} startIcon={<Delete />}>تأكيد الحذف</Button>
         </DialogActions>
       </Dialog>
     </Box>

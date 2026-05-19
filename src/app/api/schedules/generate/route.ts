@@ -85,27 +85,27 @@ export async function POST(req: NextRequest) {
     }
 
     const gradeFilter = school === 'all' ? null : schoolToGrade(school);
-    const classes = await (await db.prepare(
+    const classes = await db.prepare(
       school === 'all'
         ? `SELECT c.*, c.grade as school_stage FROM classes c WHERE c.status = 'active'`
         : `SELECT c.*, c.grade as school_stage FROM classes c WHERE c.status = 'active' AND c.grade LIKE ?`
-    ).all(...(school === 'all' ? [] : [`%${gradeFilter}%`])));
+    ).all(...(school === 'all' ? [] : [`%${gradeFilter}%`])) as any[];
 
     if (classes.length === 0) {
       return NextResponse.json({ error: 'لا توجد فصول متاحة' }, { status: 400 });
     }
 
-    const teachers = await (await db.prepare(
+    const teachers = await db.prepare(
       school === 'all'
         ? `SELECT * FROM teachers WHERE status = 'active'`
         : `SELECT * FROM teachers WHERE status = 'active' AND school = ?`
-    ).all(...(school === 'all' ? [] : [school])));
+    ).all(...(school === 'all' ? [] : [school])) as any[];
 
-    const subjects = await (await db.prepare(
+    const subjects = await db.prepare(
       school === 'all'
         ? `SELECT * FROM subjects`
         : `SELECT * FROM subjects WHERE school = ?`
-    ).all(...(school === 'all' ? [] : [school])));
+    ).all(...(school === 'all' ? [] : [school])) as any[];
 
     if (subjects.length === 0) {
       return NextResponse.json({ error: 'لا توجد مواد دراسية. يرجى التأكد من تشغيل قاعدة البيانات' }, { status: 400 });
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       school === 'all'
         ? `SELECT * FROM schedules WHERE status = 'active'`
         : `SELECT s.* FROM schedules s JOIN classes c ON c.id = s.class_id WHERE s.status = 'active' AND c.grade LIKE ?`
-    ).all(...(school === 'all' ? [] : [`%${gradeFilter}%`]));
+    ).all(...(school === 'all' ? [] : [`%${gradeFilter}%`])) as any[];
 
     for (const s of existingSchedules as any[]) {
       const dayIdx = DAYS.indexOf(s.day_of_week);
@@ -189,15 +189,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (allEntries.length > 0) {
-      const insertStmt = db.prepare(
-        `INSERT INTO schedules (class_id, teacher_id, subject, day_of_week, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?)`
-      );
-      for (const entry of allEntries) {
-        await insertStmt.run(
-          entry.class_id, entry.teacher_id, entry.subject,
-          entry.day_of_week, entry.start_time, entry.end_time
-        );
-      }
+      const placeholders = allEntries.map(() => '(?, ?, ?, ?, ?, ?)').join(',');
+      const flatValues = allEntries.flatMap(e => [e.class_id, e.teacher_id, e.subject, e.day_of_week, e.start_time, e.end_time]);
+      await db.prepare(
+        `INSERT INTO schedules (class_id, teacher_id, subject, day_of_week, start_time, end_time) VALUES ${placeholders}`
+      ).run(...flatValues);
     }
 
     return NextResponse.json({

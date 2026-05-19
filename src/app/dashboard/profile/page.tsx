@@ -124,7 +124,7 @@ export default function ProfilePage() {
               </Avatar>
               <Typography variant="h5" gutterBottom fontWeight={600}>{nameDisplay}</Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                <Chip label={roleLabels[user.role] || user.role} sx={{ bgcolor: roleColors[user.role] + '20', color: roleColors[user.role], fontWeight: 600 }} />
+                <Chip label={roleLabels[user.role] || user.role} sx={{ bgcolor: (roleColors[user.role] || 'primary.main') + '20', color: roleColors[user.role] || 'primary.main', fontWeight: 600 }} />
                 <Chip label="نشط" color="success" size="small" />
               </Box>
               {profile?.specialization && (

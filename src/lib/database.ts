@@ -617,6 +617,42 @@ function applyMigrations(bsql: Database.Database) {
     bsql.prepare('INSERT OR IGNORE INTO _migrations (name) VALUES (?)').run(migration.name);
   }
 
+  // Performance indexes
+  const indexes = [
+    'CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)',
+    'CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)',
+    'CREATE INDEX IF NOT EXISTS idx_teachers_school ON teachers(school)',
+    'CREATE INDEX IF NOT EXISTS idx_teachers_status ON teachers(status)',
+    'CREATE INDEX IF NOT EXISTS idx_teachers_user_id ON teachers(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_students_status ON students(status)',
+    'CREATE INDEX IF NOT EXISTS idx_students_school ON students(school)',
+    'CREATE INDEX IF NOT EXISTS idx_classes_grade ON classes(grade)',
+    'CREATE INDEX IF NOT EXISTS idx_classes_status ON classes(status)',
+    'CREATE INDEX IF NOT EXISTS idx_classes_teacher_id ON classes(teacher_id)',
+    'CREATE INDEX IF NOT EXISTS idx_enrollments_class_id ON enrollments(class_id)',
+    'CREATE INDEX IF NOT EXISTS idx_enrollments_student_id ON enrollments(student_id)',
+    'CREATE INDEX IF NOT EXISTS idx_enrollments_status ON enrollments(status)',
+    'CREATE INDEX IF NOT EXISTS idx_attendance_class_id ON attendance(class_id)',
+    'CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(attendance_date)',
+    'CREATE INDEX IF NOT EXISTS idx_grades_student_id ON grades(student_id)',
+    'CREATE INDEX IF NOT EXISTS idx_grades_class_id ON grades(class_id)',
+    'CREATE INDEX IF NOT EXISTS idx_teacher_reports_teacher_id ON teacher_reports(teacher_id)',
+    'CREATE INDEX IF NOT EXISTS idx_teacher_reports_student_id ON teacher_reports(student_id)',
+    'CREATE INDEX IF NOT EXISTS idx_teacher_reports_class_id ON teacher_reports(class_id)',
+    'CREATE INDEX IF NOT EXISTS idx_schedules_class_id ON schedules(class_id)',
+    'CREATE INDEX IF NOT EXISTS idx_schedules_teacher_id ON schedules(teacher_id)',
+    'CREATE INDEX IF NOT EXISTS idx_schedules_day ON schedules(day_of_week)',
+    'CREATE INDEX IF NOT EXISTS idx_leave_requests_user_id ON leave_requests(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_leave_requests_status ON leave_requests(status)',
+    'CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)',
+    'CREATE INDEX IF NOT EXISTS idx_substitutions_date ON substitutions(date)',
+    'CREATE INDEX IF NOT EXISTS idx_substitutions_absent ON substitutions(absent_teacher_id)',
+  ];
+  for (const idx of indexes) {
+    try { bsql.exec(idx); } catch {}
+  }
+
   bsql.pragma('foreign_keys = ON');
 }
 
@@ -729,6 +765,26 @@ async function ensureTursoReady() {
       if (!existing?.cnt) {
         await db.prepare("INSERT INTO users (email, password, role) VALUES (?,?,?)").run(email, hash, role);
       }
+    }
+
+    // Performance indexes for Turso
+    const idxCmds = [
+      'CREATE INDEX IF NOT EXISTS idx_t_users_role ON users(role)',
+      'CREATE INDEX IF NOT EXISTS idx_t_teachers_school ON teachers(school)',
+      'CREATE INDEX IF NOT EXISTS idx_t_classes_grade ON classes(grade)',
+      'CREATE INDEX IF NOT EXISTS idx_t_classes_status ON classes(status)',
+      'CREATE INDEX IF NOT EXISTS idx_t_enrollments_class_id ON enrollments(class_id)',
+      'CREATE INDEX IF NOT EXISTS idx_t_enrollments_student_id ON enrollments(student_id)',
+      'CREATE INDEX IF NOT EXISTS idx_t_enrollments_status ON enrollments(status)',
+      'CREATE INDEX IF NOT EXISTS idx_t_attendance_class_id ON attendance(class_id)',
+      'CREATE INDEX IF NOT EXISTS idx_t_attendance_date ON attendance(attendance_date)',
+      'CREATE INDEX IF NOT EXISTS idx_t_grades_student_id ON grades(student_id)',
+      'CREATE INDEX IF NOT EXISTS idx_t_teacher_reports_teacher_id ON teacher_reports(teacher_id)',
+      'CREATE INDEX IF NOT EXISTS idx_t_schedules_class_id ON schedules(class_id)',
+      'CREATE INDEX IF NOT EXISTS idx_t_schedules_teacher_id ON schedules(teacher_id)',
+    ];
+    for (const cmd of idxCmds) {
+      try { await db.exec(cmd); } catch {}
     }
     tursoReady = true;
   } catch {}
