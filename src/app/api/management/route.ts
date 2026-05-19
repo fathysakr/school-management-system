@@ -26,7 +26,10 @@ export async function GET(request: NextRequest) {
     const query = `
       SELECT u.id as user_id, u.email, u.role as user_role, u.created_at as user_created_at,
              t.id as teacher_id, t.first_name, t.last_name, t.teacher_id as employee_id,
-             t.phone, t.school, t.specialization
+             t.phone, t.school, t.specialization,
+             (SELECT GROUP_CONCAT(DISTINCT mp.title, '، ') FROM management_position_assignments mpa
+              JOIN management_positions mp ON mp.id = mpa.position_id
+              WHERE mpa.user_id = u.id) as position_title
       FROM users u
       LEFT JOIN teachers t ON t.id = u.teacher_id
       ${whereClause}

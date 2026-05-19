@@ -131,6 +131,16 @@ export default function TeacherAssignments() {
     return spec.split(',').map((s: string) => ({ name: s.trim(), sessions: 0, classes: [] }));
   };
 
+  const getTeacherClassIds = (teacher: any): number[] => {
+    const ids = new Set<number>();
+    classes.filter((c: any) => c.teacher_id === teacher.id).forEach((c: any) => ids.add(c.id));
+    formatSpec(teacher.specialization || '').forEach((item: any) => {
+      (item.classes || []).forEach((cid: number) => ids.add(cid));
+    });
+    (teacher.schedule_class_ids || []).forEach((cid: number) => ids.add(cid));
+    return [...ids];
+  };
+
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
 
   const gradeColors: Record<string, string> = { 'الصف الأول الثانوي': '#1565c0', 'الصف الثاني الثانوي': '#2e7d32', 'الصف الثالث الثانوي': '#e65100', 'أول ثانوي': '#1565c0', 'ثاني ثانوي': '#2e7d32', 'ثالث ثانوي': '#e65100' };
@@ -158,7 +168,9 @@ export default function TeacherAssignments() {
           </TableHead>
           <TableBody>
             {teachingTeachers.filter((t: any) => t.school === schoolFilter).map((t: any) => {
-              const tClasses = classes.filter((c: any) => c.teacher_id === t.id);
+              const assignedClassIds = getTeacherClassIds(t);
+              const assignedClasses = classes.filter((c: any) => assignedClassIds.includes(c.id));
+              const homeroomClasses = classes.filter((c: any) => c.teacher_id === t.id);
               const specItems = formatSpec(t.specialization || '');
               return (
                 <TableRow key={t.id}>
@@ -172,14 +184,14 @@ export default function TeacherAssignments() {
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      {tClasses.map((c: any) => (
+                      {assignedClasses.map((c: any) => (
                         <Chip key={c.id} label={`${c.class_name} (${c.grade})`} size="small"
                           sx={{ bgcolor: gradeColors[c.grade] || '#666', color: 'white' }} />
                       ))}
                     </Box>
                   </TableCell>
                   <TableCell>
-                    {tClasses.filter((c: any) => c.teacher_id === t.id).map((c: any) => (
+                    {homeroomClasses.map((c: any) => (
                       <Chip key={c.id} icon={<Home />} label={c.class_name} size="small" color="secondary" />
                     ))}
                   </TableCell>

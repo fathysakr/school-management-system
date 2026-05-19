@@ -180,9 +180,10 @@ export default function ManagementPage() {
       s.email,
       getRoleLabel(s.user_role),
       getSchoolLabel(s.user_role),
+      s.position_title || '-',
       s.employee_id || '-',
     ]);
-    exportToExcel(['الاسم', 'البريد الإلكتروني', 'الدور', 'المرحلة', 'رقم الموظف'], rows, 'الإدارة', 'management_صفوة_الرواد.xlsx');
+    exportToExcel(['الاسم', 'البريد الإلكتروني', 'الدور', 'المرحلة', 'المسمى الإداري', 'رقم الموظف'], rows, 'الإدارة', 'management_صفوة_الرواد.xlsx');
     setSuccess('تم تصدير البيانات بنجاح');
   };
 
@@ -355,15 +356,16 @@ export default function ManagementPage() {
                 <TableCell>البريد الإلكتروني</TableCell>
                 <TableCell>الدور</TableCell>
                 <TableCell>المرحلة</TableCell>
+                <TableCell>المسمى الإداري</TableCell>
                 <TableCell>رقم الموظف</TableCell>
                 {isAdmin && <TableCell>الإجراءات</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={isAdmin ? 6 : 5} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={isAdmin ? 7 : 6} align="center"><CircularProgress /></TableCell></TableRow>
               ) : filteredStaff.length === 0 ? (
-                <TableRow><TableCell colSpan={isAdmin ? 6 : 5} align="center"><EmptyState message="لا يوجد أعضاء إدارة" icon={<AdminPanelSettings />} action={isAdmin ? 'إضافة عضو إدارة' : undefined} onAction={openAddDialog} /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={isAdmin ? 7 : 6} align="center"><EmptyState message="لا يوجد أعضاء إدارة" icon={<AdminPanelSettings />} action={isAdmin ? 'إضافة عضو إدارة' : undefined} onAction={openAddDialog} /></TableCell></TableRow>
               ) : (
                 filteredStaff.map((s) => (
                   <TableRow key={s.user_id}>
@@ -381,6 +383,11 @@ export default function ManagementPage() {
                         <Chip label={getSchoolLabel(s.user_role)} size="small"
                           color={s.user_role.includes('high') ? 'warning' : 'info'} />
                       )}
+                    </TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      {s.position_title ? (
+                        <Chip label={s.position_title} size="small" variant="outlined" color="secondary" />
+                      ) : '-'}
                     </TableCell>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>{s.employee_id || '-'}</TableCell>
                     {isAdmin && (

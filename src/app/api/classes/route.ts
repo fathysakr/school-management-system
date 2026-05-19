@@ -39,13 +39,15 @@ export async function GET(request: NextRequest) {
       params.push(grade);
     }
 
-    // Auto-filter by teacher for teacher roles
+    // Auto-filter by teacher for teacher roles — also include classes from schedules
     const isTeacher = user.role === 'middle_teacher' || user.role === 'high_teacher';
+    let teacherFilterId: number | null = null;
     if (isTeacher) {
       const teacher = await db.prepare('SELECT t.id FROM teachers t JOIN users u ON u.teacher_id = t.id WHERE u.id = ?').get(user.id) as any;
       if (teacher) {
-        whereClause += ' AND c.teacher_id = ?';
-        params.push(teacher.id);
+        teacherFilterId = teacher.id;
+        whereClause += ' AND (c.teacher_id = ? OR c.id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = \'active\'))';
+        params.push(teacher.id, teacher.id);
       }
     } else if (teacherId) {
       whereClause += ' AND c.teacher_id = ?';
@@ -56,11 +58,16 @@ export async function GET(request: NextRequest) {
     const countQuery = `SELECT COUNT(*) as total FROM classes c ${whereClause}`;
     const countResult = await db.prepare(countQuery).get(...params) as any;
 
+    const subjectsSubquery = teacherFilterId
+      ? `(SELECT GROUP_CONCAT(DISTINCT s.subject, '، ') FROM schedules s WHERE s.class_id = c.id AND s.status = 'active' AND s.teacher_id = ?)`
+      : `(SELECT GROUP_CONCAT(DISTINCT s.subject, '، ') FROM schedules s WHERE s.class_id = c.id AND s.status = 'active')`;
+
     // Data
     const query = `
       SELECT c.*, 
              t.first_name || ' ' || t.last_name as teacher_name,
-             COUNT(DISTINCT e.id) as student_count
+             COUNT(DISTINCT e.id) as student_count,
+             ${subjectsSubquery} as subjects
       FROM classes c
       LEFT JOIN teachers t ON c.teacher_id = t.id
       LEFT JOIN enrollments e ON c.id = e.class_id AND e.status = 'active'
@@ -70,7 +77,9 @@ export async function GET(request: NextRequest) {
       LIMIT ? OFFSET ?
     `;
 
-    const classes = await db.prepare(query).all(...params, limit, offset);
+    const queryParams = teacherFilterId ? [...params, teacherFilterId, limit, offset] : [...params, limit, offset];
+
+    const classes = await db.prepare(query).all(...queryParams);
 
     return success({
       classes,

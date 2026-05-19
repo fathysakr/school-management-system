@@ -210,19 +210,22 @@ export default function DashboardPage() {
       {isTeacher && teacherStats ? (
         <>
           <Grid container spacing={2.5} sx={{ mb: 3 }}>
-            <Grid item xs={6} sm={3} md={2.4}>
+            <Grid item xs={6} sm={3} md={2}>
               <StatCard title="فصولي" value={teacherStats.classes} icon={<ClassIcon sx={{ color: '#0288d1' }} />} color="#0288d1" subtitle="الخاصة بك" />
             </Grid>
-            <Grid item xs={6} sm={3} md={2.4}>
+            <Grid item xs={6} sm={3} md={2}>
+              <StatCard title="المواد" value={teacherStats.subjects} icon={<MenuBook sx={{ color: '#7c4dff' }} />} color="#7c4dff" subtitle="التي تدرسها" />
+            </Grid>
+            <Grid item xs={6} sm={3} md={2}>
               <StatCard title="الطلاب" value={teacherStats.students} icon={<School sx={{ color: '#2e7d32' }} />} color="#2e7d32" subtitle="في فصولي" />
             </Grid>
-            <Grid item xs={6} sm={3} md={2.4}>
+            <Grid item xs={6} sm={3} md={2}>
               <StatCard title="معدل الحضور" value={`${teacherStats.attendanceRate}%`} icon={<Percent sx={{ color: teacherStats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02' }} />} color={teacherStats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02'} subtitle={`${teacherStats.totalAttendance} سجل`} />
             </Grid>
-            <Grid item xs={6} sm={3} md={2.4}>
+            <Grid item xs={6} sm={3} md={2}>
               <StatCard title="المتوسط العام" value={`${teacherStats.avgScore}%`} icon={<Speed sx={{ color: teacherStats.avgScore >= 75 ? '#2e7d32' : '#ed6c02' }} />} color={teacherStats.avgScore >= 75 ? '#2e7d32' : '#ed6c02'} subtitle={`${teacherStats.totalGrades} درجة`} />
             </Grid>
-            <Grid item xs={6} sm={3} md={2.4}>
+            <Grid item xs={6} sm={3} md={2}>
               <StatCard title="حصص الانتظار" value={teacherStats.pendingSubstitutions} icon={<SwapHoriz sx={{ color: '#e65100' }} />} color="#e65100" subtitle="قيد الانتظار" />
             </Grid>
           </Grid>

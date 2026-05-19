@@ -54,7 +54,24 @@ export async function GET(request: NextRequest) {
       LIMIT ? OFFSET ?
     `;
 
-    const teachers = await db.prepare(query).all(...params, limit, offset);
+    // Also fetch teacher-to-class mapping from schedules for the تعيين page
+    const scheduleClassMap = await db.prepare(`
+      SELECT teacher_id, GROUP_CONCAT(DISTINCT class_id) as class_ids
+      FROM schedules
+      WHERE status = 'active'
+      GROUP BY teacher_id
+    `).all() as any[];
+    const scheduleClassById: Record<number, number[]> = {};
+    for (const row of scheduleClassMap) {
+      scheduleClassById[row.teacher_id] = (row.class_ids || '').split(',').map(Number);
+    }
+
+    const teachers = await db.prepare(query).all(...params, limit, offset) as any[];
+
+    // Attach schedule class IDs to each teacher for the تعيين page
+    for (const t of teachers) {
+      t.schedule_class_ids = scheduleClassById[t.id] || [];
+    }
 
     return success({
       teachers,

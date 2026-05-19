@@ -161,12 +161,13 @@ export default function ClassesPage() {
         c.grade,
         c.section || '',
         c.teacher_name || '',
+        c.subjects || '',
         c.room_number || '',
         c.capacity || '',
         c.student_count || 0,
         c.status === 'active' ? 'نشط' : 'غير نشط',
       ]);
-      exportToExcel(['اسم الفصل','المرحلة','القسم','المعلم','القاعة','السعة','عدد الطلاب','الحالة'], rows, 'الفصول', 'classes_صفوة_الرواد.xlsx');
+      exportToExcel(['اسم الفصل','المرحلة','القسم','المعلم','المواد','القاعة','السعة','عدد الطلاب','الحالة'], rows, 'الفصول', 'classes_صفوة_الرواد.xlsx');
       setSuccess('تم تصدير البيانات بنجاح');
     } catch {
       setError('فشل في تصدير البيانات');
@@ -248,6 +249,7 @@ export default function ClassesPage() {
                 <TableCell>المرحلة</TableCell>
                 <TableCell>القسم</TableCell>
                 <TableCell>المعلم</TableCell>
+                <TableCell>المواد</TableCell>
                 <TableCell>القاعة</TableCell>
                 <TableCell>السعة</TableCell>
                 <TableCell>الطلاب</TableCell>
@@ -256,10 +258,10 @@ export default function ClassesPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={9} align="center"><CircularProgress /></TableCell></TableRow>
+                {loading ? (
+                <TableRow><TableCell colSpan={10} align="center"><CircularProgress /></TableCell></TableRow>
               ) : classes.length === 0 ? (
-                <TableRow><TableCell colSpan={9} align="center"><EmptyState message="لا يوجد فصول" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} align="center"><EmptyState message="لا يوجد فصول" /></TableCell></TableRow>
               ) : (
                 classes.map((c) => (
                   <TableRow key={c.id}>
@@ -267,6 +269,7 @@ export default function ClassesPage() {
                     <TableCell>{c.grade}</TableCell>
                     <TableCell>{c.section || '-'}</TableCell>
                     <TableCell>{c.teacher_name || '-'}</TableCell>
+                    <TableCell>{c.subjects || '-'}</TableCell>
                     <TableCell>{c.room_number || '-'}</TableCell>
                     <TableCell>{c.capacity}</TableCell>
                     <TableCell>{c.student_count || 0}</TableCell>
