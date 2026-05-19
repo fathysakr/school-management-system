@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
 
     const schoolFilter = getSchoolFilter(user.role, searchParams.get('school') || undefined);
     if (schoolFilter.grade) {
-      whereClause += ' AND c.grade = ?';
-      params.push(schoolFilter.grade);
+      whereClause += ' AND c.grade LIKE ?';
+      params.push(`%${schoolFilter.grade}%`);
     }
 
     if (search) {

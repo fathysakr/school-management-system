@@ -273,12 +273,12 @@ export function getSchoolFilter(role: UserRole, adminOverride?: string): { grade
   const stage = getSchoolStage(role);
   if (stage === 'both') {
     if (adminOverride) {
-      const gradeLabel = adminOverride === 'middle' ? 'المتوسطة' : 'الثانوية';
+      const gradeLabel = adminOverride === 'middle' ? 'متوسط' : 'ثانوي';
       return { grade: gradeLabel, school: adminOverride };
     }
     return {};
   }
-  const gradeLabel = stage === 'middle' ? 'المتوسطة' : 'الثانوية';
+  const gradeLabel = stage === 'middle' ? 'متوسط' : 'ثانوي';
   return { grade: gradeLabel, school: stage };
 }
 

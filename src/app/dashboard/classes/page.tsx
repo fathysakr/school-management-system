@@ -9,7 +9,7 @@ import {
   DialogActions, TextField, IconButton, Chip, Alert, CircularProgress,
   TablePagination, Select, MenuItem, InputLabel, FormControl, Grid
 } from '@mui/material';
-import { Add, Edit, Delete, People, Close, FileDownload } from '@mui/icons-material';
+import { Add, Edit, Delete, People, Close, FileDownload, FileUpload, Download } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
 import EmptyState from '@/components/empty-state';
@@ -35,6 +35,9 @@ export default function ClassesPage() {
   const [enrollData, setEnrollData] = useState({ student_id: '' });
   const [isEdit, setIsEdit] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [selectedImportIds, setSelectedImportIds] = useState<number[]>([]);
+  const [importing, setImporting] = useState(false);
 
   const fetchClasses = async () => {
     if (!token) return;
@@ -182,6 +185,45 @@ export default function ClassesPage() {
     }
   };
 
+  const handleOpenBulkImport = () => {
+    setSelectedImportIds([]);
+    fetchStudents();
+    setBulkImportOpen(true);
+  };
+
+  const handleBulkImport = async () => {
+    if (!token || !selectedClass || selectedImportIds.length === 0) return;
+    setImporting(true);
+    setError('');
+    try {
+      const res = await api.post('/classes/enroll/bulk', { class_id: selectedClass.id, student_ids: selectedImportIds }, token);
+      setSuccess(res.message || `تم تسجيل ${selectedImportIds.length} طالب`);
+      setBulkImportOpen(false);
+      setSelectedImportIds([]);
+      const classRes = await api.get(`/classes/${selectedClass.id}`, token);
+      setClassStudents(classRes.students || []);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleExportClassStudents = () => {
+    if (!selectedClass || classStudents.length === 0) return;
+    const rows = classStudents.map((s: any) => [
+      s.student_id,
+      s.first_name,
+      s.last_name,
+      s.email || '-',
+      s.parent_phone || '-',
+      s.enrollment_date,
+    ]);
+    exportToExcel(['رقم الطالب', 'الاسم الأول', 'اسم العائلة', 'البريد', 'رقم ولي الأمر', 'تاريخ التسجيل'],
+      rows, `${selectedClass.class_name}`, `students_${selectedClass.class_name}.xlsx`);
+    setSuccess('تم تصدير الطلاب بنجاح');
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 3 }}>
@@ -233,15 +275,17 @@ export default function ClassesPage() {
                         color={c.status === 'active' ? 'success' : 'default'} size="small" />
                     </TableCell>
                     <TableCell>
-                      {hasPermission(user?.role, 'classes:edit') && (
-                        <IconButton size="small" onClick={() => handleOpenEnroll(c)} title="إدارة الطلاب"><People /></IconButton>
-                      )}
-                      {hasPermission(user?.role, 'classes:edit') && (
-                        <IconButton size="small" onClick={() => handleOpenDialog(c)}><Edit /></IconButton>
-                      )}
-                      {hasPermission(user?.role, 'classes:delete') && (
-                        <IconButton size="small" color="error" onClick={() => handleDelete(c.id)}><Delete /></IconButton>
-                      )}
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        {hasPermission(user?.role, 'classes:edit') && (
+                          <IconButton size="small" color="info" onClick={() => handleOpenEnroll(c)} title="إدارة الطلاب"><People /></IconButton>
+                        )}
+                        {hasPermission(user?.role, 'classes:edit') && (
+                          <IconButton size="small" onClick={() => handleOpenDialog(c)} title="تعديل"><Edit /></IconButton>
+                        )}
+                        {hasPermission(user?.role, 'classes:delete') && (
+                          <IconButton size="small" color="error" onClick={() => handleDelete(c.id)} title="حذف"><Delete /></IconButton>
+                        )}
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))
@@ -279,8 +323,19 @@ export default function ClassesPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={enrollDialog} onClose={() => setEnrollDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>إدارة طلاب الفصل: {selectedClass?.class_name}</DialogTitle>
+      <Dialog open={enrollDialog} onClose={() => setEnrollDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>إدارة طلاب الفصل: {selectedClass?.class_name}</span>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button size="small" variant="outlined" startIcon={<FileUpload />} onClick={handleOpenBulkImport}>
+              استيراد
+            </Button>
+            <Button size="small" variant="outlined" startIcon={<Download />}
+              onClick={handleExportClassStudents} disabled={classStudents.length === 0}>
+              تصدير
+            </Button>
+          </Box>
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', gap: 2, mb: 3, mt: 1, flexWrap: 'wrap' }}>
             <FormControl sx={{ flexGrow: 1, minWidth: 200 }}>
@@ -341,6 +396,55 @@ export default function ClassesPage() {
         <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button onClick={() => setDeleteConfirm(null)}>إلغاء</Button>
           <Button variant="contained" color="error" onClick={confirmDelete} startIcon={<Delete />}>تأكيد الحذف</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk import dialog */}
+      <Dialog open={bulkImportOpen} onClose={() => setBulkImportOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>استيراد طلاب - {selectedClass?.class_name}</DialogTitle>
+        <DialogContent>
+          {students.length === 0 ? (
+            <Typography color="text.secondary" textAlign="center" py={2}>لا يوجد طلاب</Typography>
+          ) : (
+            <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+              {students
+                .filter(s => !classStudents.some(cs => cs.id === s.id))
+                .map(s => {
+                  const isSelected = selectedImportIds.includes(s.id);
+                  return (
+                    <Box key={s.id} sx={{
+                      display: 'flex', alignItems: 'center', gap: 1.5, p: 1,
+                      cursor: 'pointer', borderRadius: 1,
+                      '&:hover': { bgcolor: 'action.hover' },
+                      bgcolor: isSelected ? 'action.selected' : 'transparent',
+                    }} onClick={() => {
+                      setSelectedImportIds(prev =>
+                        isSelected ? prev.filter(id => id !== s.id) : [...prev, s.id]
+                      );
+                    }}>
+                      <Box sx={{ width: 20, height: 20, borderRadius: 0.5, border: '2px solid',
+                        borderColor: isSelected ? 'primary.main' : 'grey.400',
+                        bgcolor: isSelected ? 'primary.main' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {isSelected && <Typography sx={{ color: '#fff', fontSize: 14, lineHeight: 1 }}>✓</Typography>}
+                      </Box>
+                      <Typography>{s.first_name} {s.last_name} ({s.student_id})</Typography>
+                    </Box>
+                  );
+                })}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+            تم اختيار {selectedImportIds.length} طالب
+          </Typography>
+          <Button onClick={() => setBulkImportOpen(false)}>إلغاء</Button>
+          <Button variant="contained" onClick={handleBulkImport}
+            disabled={selectedImportIds.length === 0 || importing} startIcon={<FileUpload />}>
+            {importing ? 'جاري الاستيراد...' : 'استيراد'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

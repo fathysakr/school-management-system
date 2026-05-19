@@ -10,7 +10,7 @@ import {
   TextField, FormControl, InputLabel, Select, MenuItem,
   Autocomplete, Grid
 } from '@mui/material';
-import { AdminPanelSettings, LockReset, Visibility as VisIcon, VisibilityOff, FileDownload, Add, Edit, Delete } from '@mui/icons-material';
+import { AdminPanelSettings, LockReset, Visibility as VisIcon, VisibilityOff, FileDownload, Add, Edit, Delete, GroupWork, PersonAdd, RemoveCircleOutline } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import EmptyState from '@/components/empty-state';
 
@@ -67,6 +67,12 @@ export default function ManagementPage() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [schoolFilter, setSchoolFilter] = useState('all');
   const isAdmin = user?.role === 'admin';
+
+  const [positionsDialog, setPositionsDialog] = useState(false);
+  const [positions, setPositions] = useState<any[]>([]);
+  const [newPosition, setNewPosition] = useState({ title: '', school: 'middle' });
+  const [assignDialog, setAssignDialog] = useState<{ position: any } | null>(null);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
 
   const fetchStaff = async () => {
     if (!token) return;
@@ -180,6 +186,71 @@ export default function ManagementPage() {
     setSuccess('تم تصدير البيانات بنجاح');
   };
 
+  const fetchPositions = async () => {
+    if (!token) return;
+    try {
+      const res = await api.get('/management-positions', token);
+      setPositions(res.positions || []);
+    } catch { /* ignore */ }
+  };
+
+  const fetchAllUsers = async () => {
+    if (!token) return;
+    try {
+      const res = await api.get('/management', token);
+      setAllUsers(res.staff || []);
+    } catch { /* ignore */ }
+  };
+
+  const openPositionsDialog = () => {
+    setPositionsDialog(true);
+    fetchPositions();
+    fetchAllUsers();
+    setError('');
+  };
+
+  const handleAddPosition = async () => {
+    if (!token || !newPosition.title) return;
+    setError('');
+    try {
+      await api.post('/management-positions', newPosition, token);
+      setNewPosition({ title: '', school: 'middle' });
+      setSuccess('تمت إضافة المسمى');
+      fetchPositions();
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : 'حدث خطأ'); }
+  };
+
+  const handleDeletePosition = async (id: number) => {
+    if (!token) return;
+    setError('');
+    try {
+      await api.delete(`/management-positions/${id}`, token);
+      setSuccess('تم حذف المسمى');
+      fetchPositions();
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : 'حدث خطأ'); }
+  };
+
+  const handleAssignUser = async (positionId: number, userId: number) => {
+    if (!token) return;
+    setError('');
+    try {
+      await api.post('/management-positions/assign', { position_id: positionId, user_id: userId }, token);
+      setAssignDialog(null);
+      setSuccess('تمت الإضافة');
+      fetchPositions();
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : 'حدث خطأ'); }
+  };
+
+  const handleUnassignUser = async (positionId: number, userId: number) => {
+    if (!token) return;
+    setError('');
+    try {
+      await api.delete('/management-positions/assign', token, { position_id: positionId, user_id: userId });
+      setSuccess('تمت إزالة المستخدم');
+      fetchPositions();
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : 'حدث خطأ'); }
+  };
+
   const filteredStaff = staff.filter(s => {
     if (roleFilter !== 'all' && !s.user_role.includes(roleFilter)) return false;
     return true;
@@ -199,7 +270,10 @@ export default function ManagementPage() {
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button variant="outlined" startIcon={<FileDownload />} onClick={handleExport}>تصدير Excel</Button>
           {isAdmin && (
-            <Button variant="contained" startIcon={<Add />} onClick={openAddDialog}>إضافة عضو إدارة</Button>
+            <>
+              <Button variant="outlined" startIcon={<GroupWork />} onClick={openPositionsDialog}>إدارة المسميات</Button>
+              <Button variant="contained" startIcon={<Add />} onClick={openAddDialog}>إضافة عضو إدارة</Button>
+            </>
           )}
         </Box>
       </Box>
@@ -410,6 +484,97 @@ export default function ManagementPage() {
         <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button onClick={() => setDeleteConfirm(null)}>إلغاء</Button>
           <Button variant="contained" color="error" onClick={handleDelete} startIcon={<Delete />}>تأكيد الحذف</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Management Positions Dialog */}
+      <Dialog open={positionsDialog} onClose={() => setPositionsDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <GroupWork sx={{ color: '#7c4dff' }} />
+          إدارة المسميات الإدارية
+        </DialogTitle>
+        <DialogContent>
+          {/* Add position form */}
+          <Paper sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5' }}>
+            <Typography variant="subtitle2" gutterBottom>إضافة مسمى جديد</Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <TextField size="small" label="المسمى" value={newPosition.title}
+                onChange={(e) => setNewPosition({ ...newPosition, title: e.target.value })}
+                sx={{ minWidth: 200 }} />
+              <FormControl size="small" sx={{ minWidth: 140 }}>
+                <InputLabel>المرحلة</InputLabel>
+                <Select value={newPosition.school} label="المرحلة"
+                  onChange={(e) => setNewPosition({ ...newPosition, school: e.target.value })}>
+                  <MenuItem value="middle">متوسطة</MenuItem>
+                  <MenuItem value="high">ثانوية</MenuItem>
+                </Select>
+              </FormControl>
+              <Button variant="contained" onClick={handleAddPosition}
+                disabled={!newPosition.title}>إضافة</Button>
+            </Box>
+          </Paper>
+
+          {positions.length === 0 ? (
+            <Typography color="text.secondary" textAlign="center" py={4}>لا توجد مسميات إدارية</Typography>
+          ) : (
+            <Grid container spacing={2}>
+              {positions.map((pos) => (
+                <Grid item xs={12} sm={6} key={pos.id}>
+                  <Paper sx={{ p: 2, position: 'relative' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Box>
+                        <Typography variant="subtitle1" fontWeight="bold">{pos.title}</Typography>
+                        <Chip label={pos.school === 'middle' ? 'متوسطة' : 'ثانوية'} size="small"
+                          color={pos.school === 'high' ? 'warning' : 'info'} />
+                      </Box>
+                      <IconButton size="small" color="error" onClick={() => handleDeletePosition(pos.id)} title="حذف المسمى">
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Box>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, minHeight: 32 }}>
+                      {(pos.assignments || []).map((a: any) => (
+                        <Chip key={a.user_id} size="small"
+                          label={a.first_name ? `${a.first_name} ${a.last_name}` : a.email}
+                          onDelete={() => handleUnassignUser(pos.id, a.user_id)}
+                          deleteIcon={<RemoveCircleOutline />} />
+                      ))}
+                    </Box>
+                    <Button size="small" startIcon={<PersonAdd />} sx={{ mt: 1 }}
+                      onClick={() => setAssignDialog({ position: pos })}>
+                      إضافة مستخدم
+                    </Button>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setPositionsDialog(false)}>إغلاق</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Assign user dialog */}
+      <Dialog open={!!assignDialog} onClose={() => setAssignDialog(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>إضافة مستخدم - {assignDialog?.position?.title}</DialogTitle>
+        <DialogContent>
+          {allUsers.length === 0 ? (
+            <Typography color="text.secondary">لا يوجد مستخدمين</Typography>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1 }}>
+              {allUsers
+                .filter(u => !(assignDialog?.position?.assignments || []).some((a: any) => a.user_id === u.user_id))
+                .map(u => (
+                  <Button key={u.user_id} variant="outlined" sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                    onClick={() => handleAssignUser(assignDialog!.position.id, u.user_id)}>
+                    {u.first_name ? `${u.first_name} ${u.last_name}` : u.email} - {u.role}
+                  </Button>
+                ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAssignDialog(null)}>إلغاء</Button>
         </DialogActions>
       </Dialog>
     </Box>

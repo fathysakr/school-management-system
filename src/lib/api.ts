@@ -54,6 +54,6 @@ export const api = {
       token: token ?? undefined,
     }),
 
-  delete: (endpoint: string, token?: string | null) =>
-    apiRequest(endpoint, { method: 'DELETE', token: token ?? undefined }),
+  delete: (endpoint: string, token?: string | null, body?: unknown) =>
+    apiRequest(endpoint, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined, token: token ?? undefined }),
 };

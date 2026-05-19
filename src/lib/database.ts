@@ -639,12 +639,48 @@ function applyMigrations(bsql: Database.Database) {
         }
       })()
     },
+    {
+      name: '019_management_positions',
+      sql: `
+        CREATE TABLE IF NOT EXISTS management_positions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          school TEXT NOT NULL CHECK (school IN ('middle', 'high')),
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS management_position_assignments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          position_id INTEGER NOT NULL REFERENCES management_positions(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(position_id, user_id)
+        );
+      `
+    },
   ];
 
   for (const migration of migrations) {
     if (applied.has(migration.name)) continue;
     bsql.exec(migration.sql);
     bsql.prepare('INSERT OR IGNORE INTO _migrations (name) VALUES (?)').run(migration.name);
+  }
+
+  // Seed classes if empty
+  const classCnt = (bsql.prepare("SELECT COUNT(*) as cnt FROM classes WHERE status = 'active'").get() as any)?.cnt;
+  bsql.pragma('foreign_keys = OFF');
+  if (!classCnt) {
+    const hsTeacher = bsql.prepare("SELECT id FROM teachers WHERE school = 'high' AND status = 'active' LIMIT 1").get() as any;
+    const msTeacher = bsql.prepare("SELECT id FROM teachers WHERE school = 'middle' AND status = 'active' LIMIT 1").get() as any;
+    const hsTid = hsTeacher?.id || (bsql.prepare("SELECT id FROM teachers LIMIT 1").get() as any)?.id || 1;
+    const msTid = msTeacher?.id || hsTid;
+    bsql.prepare(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ` +
+      `('1/أ','الصف الأول الثانوي','أ',${hsTid},'101',30,'active'),('1/ب','الصف الأول الثانوي','ب',${hsTid},'102',30,'active'),('1/ت','الصف الأول الثانوي','ت',${hsTid},'103',30,'active'),('1/ث','الصف الأول الثانوي','ث',${hsTid},'104',30,'active'),('1/ج','الصف الأول الثانوي','ج',${hsTid},'105',30,'active'),('1/ح','الصف الأول الثانوي','ح',${hsTid},'106',30,'active'),('1/خ','الصف الأول الثانوي','خ',${hsTid},'107',30,'active'),` +
+      `('2/أ','الصف الثاني الثانوي','أ',${hsTid},'201',30,'active'),('2/ب','الصف الثاني الثانوي','ب',${hsTid},'202',30,'active'),('2/ت','الصف الثاني الثانوي','ت',${hsTid},'203',30,'active'),('2/ث','الصف الثاني الثانوي','ث',${hsTid},'204',30,'active'),('2/ج','الصف الثاني الثانوي','ج',${hsTid},'205',30,'active'),('2/ح','الصف الثاني الثانوي','ح',${hsTid},'206',30,'active'),('2/خ','الصف الثاني الثانوي','خ',${hsTid},'207',30,'active'),` +
+      `('3/أ','الصف الثالث الثانوي','أ',${hsTid},'301',30,'active'),('3/ب','الصف الثالث الثانوي','ب',${hsTid},'302',30,'active'),('3/ت','الصف الثالث الثانوي','ت',${hsTid},'303',30,'active'),('3/ث','الصف الثالث الثانوي','ث',${hsTid},'304',30,'active'),('3/ج','الصف الثالث الثانوي','ج',${hsTid},'305',30,'active'),('3/ح','الصف الثالث الثانوي','ح',${hsTid},'306',30,'active'),` +
+      `('1/أ','الصف الأول المتوسط','أ',${msTid},'401',30,'active'),('1/ب','الصف الأول المتوسط','ب',${msTid},'402',30,'active'),('1/ت','الصف الأول المتوسط','ت',${msTid},'403',30,'active'),('1/ث','الصف الأول المتوسط','ث',${msTid},'404',30,'active'),('1/ج','الصف الأول المتوسط','ج',${msTid},'405',30,'active'),('1/ح','الصف الأول المتوسط','ح',${msTid},'406',30,'active'),('1/خ','الصف الأول المتوسط','خ',${msTid},'407',30,'active'),` +
+      `('2/أ','الصف الثاني المتوسط','أ',${msTid},'501',30,'active'),('2/ب','الصف الثاني المتوسط','ب',${msTid},'502',30,'active'),('2/ت','الصف الثاني المتوسط','ت',${msTid},'503',30,'active'),('2/ث','الصف الثاني المتوسط','ث',${msTid},'504',30,'active'),('2/ج','الصف الثاني المتوسط','ج',${msTid},'505',30,'active'),('2/ح','الصف الثاني المتوسط','ح',${msTid},'506',30,'active'),('2/خ','الصف الثاني المتوسط','خ',${msTid},'507',30,'active'),` +
+      `('3/أ','الصف الثالث المتوسط','أ',${msTid},'601',30,'active'),('3/ب','الصف الثالث المتوسط','ب',${msTid},'602',30,'active'),('3/ت','الصف الثالث المتوسط','ت',${msTid},'603',30,'active'),('3/ث','الصف الثالث المتوسط','ث',${msTid},'604',30,'active'),('3/ج','الصف الثالث المتوسط','ج',${msTid},'605',30,'active'),('3/ح','الصف الثالث المتوسط','ح',${msTid},'606',30,'active')`).run();
+    bsql.pragma('foreign_keys = ON');
   }
 
   // Performance indexes
@@ -688,11 +724,19 @@ function applyMigrations(bsql: Database.Database) {
 
 let db: DbAdapter;
 let tursoReady = false;
+let tursoReadyPromise: Promise<void> | null = null;
 
 async function ensureTursoReady() {
+  if (tursoReady) return;
+  if (!process.env.TURSO_DB_URL || !process.env.TURSO_DB_TOKEN) return;
+  if (tursoReadyPromise) return tursoReadyPromise;
+  const p = _ensureTursoReady();
+  tursoReadyPromise = p;
+  return p;
+}
+
+async function _ensureTursoReady() {
   try {
-    if (tursoReady) return;
-    if (!process.env.TURSO_DB_URL || !process.env.TURSO_DB_TOKEN) return;
     await db.exec(`CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
       title TEXT NOT NULL, message TEXT NOT NULL,
@@ -716,12 +760,41 @@ async function ensureTursoReady() {
       sessions_per_week INTEGER NOT NULL DEFAULT 3,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS management_positions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      school TEXT NOT NULL CHECK (school IN ('middle', 'high')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS management_position_assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      position_id INTEGER NOT NULL REFERENCES management_positions(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(position_id, user_id)
+    )`);
 
     try { await db.exec(`ALTER TABLE users ADD COLUMN teacher_id INTEGER`); } catch {}
     try { await db.exec(`UPDATE users SET teacher_id = (SELECT id FROM teachers WHERE teachers.user_id = users.id) WHERE EXISTS (SELECT 1 FROM teachers WHERE teachers.user_id = users.id)`); } catch {}
 
     try { await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`); } catch {}
     try { await db.exec(`ALTER TABLE subjects ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL`); } catch {}
+
+    try {
+      await db.exec(`CREATE TABLE IF NOT EXISTS classes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_name TEXT NOT NULL,
+        grade TEXT NOT NULL,
+        section TEXT,
+        teacher_id INTEGER,
+        room_number TEXT,
+        capacity INTEGER DEFAULT 30,
+        status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(class_name, grade, section)
+      )`);
+    } catch {}
 
     try {
       const cols = await db.prepare("PRAGMA table_info(classes)").all() as any[];
@@ -771,24 +844,20 @@ async function ensureTursoReady() {
     if (hsTeacher) { hsTid = hsTeacher.id; } else { const t = await db.prepare("SELECT id FROM teachers LIMIT 1").get() as any; if (t) hsTid = t.id; }
     const msTeacher = await db.prepare("SELECT id FROM teachers WHERE school = 'middle' AND status = 'active' LIMIT 1").get() as any;
     if (msTeacher) { msTid = msTeacher.id; } else { msTid = hsTid; }
+    await db.exec(`PRAGMA foreign_keys=OFF`);
     await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('1/أ','الصف الأول الثانوي','أ',${hsTid},'101',30,'active'),('1/ب','الصف الأول الثانوي','ب',${hsTid},'102',30,'active'),('1/ت','الصف الأول الثانوي','ت',${hsTid},'103',30,'active'),('1/ث','الصف الأول الثانوي','ث',${hsTid},'104',30,'active'),('1/ج','الصف الأول الثانوي','ج',${hsTid},'105',30,'active'),('1/ح','الصف الأول الثانوي','ح',${hsTid},'106',30,'active'),('1/خ','الصف الأول الثانوي','خ',${hsTid},'107',30,'active')`);
     await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('2/أ','الصف الثاني الثانوي','أ',${hsTid},'201',30,'active'),('2/ب','الصف الثاني الثانوي','ب',${hsTid},'202',30,'active'),('2/ت','الصف الثاني الثانوي','ت',${hsTid},'203',30,'active'),('2/ث','الصف الثاني الثانوي','ث',${hsTid},'204',30,'active'),('2/ج','الصف الثاني الثانوي','ج',${hsTid},'205',30,'active'),('2/ح','الصف الثاني الثانوي','ح',${hsTid},'206',30,'active'),('2/خ','الصف الثاني الثانوي','خ',${hsTid},'207',30,'active')`);
     await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('3/أ','الصف الثالث الثانوي','أ',${hsTid},'301',30,'active'),('3/ب','الصف الثالث الثانوي','ب',${hsTid},'302',30,'active'),('3/ت','الصف الثالث الثانوي','ت',${hsTid},'303',30,'active'),('3/ث','الصف الثالث الثانوي','ث',${hsTid},'304',30,'active'),('3/ج','الصف الثالث الثانوي','ج',${hsTid},'305',30,'active'),('3/ح','الصف الثالث الثانوي','ح',${hsTid},'306',30,'active')`);
     await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('1/أ','الصف الأول المتوسط','أ',${msTid},'401',30,'active'),('1/ب','الصف الأول المتوسط','ب',${msTid},'402',30,'active'),('1/ت','الصف الأول المتوسط','ت',${msTid},'403',30,'active'),('1/ث','الصف الأول المتوسط','ث',${msTid},'404',30,'active'),('1/ج','الصف الأول المتوسط','ج',${msTid},'405',30,'active'),('1/ح','الصف الأول المتوسط','ح',${msTid},'406',30,'active'),('1/خ','الصف الأول المتوسط','خ',${msTid},'407',30,'active')`);
     await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('2/أ','الصف الثاني المتوسط','أ',${msTid},'501',30,'active'),('2/ب','الصف الثاني المتوسط','ب',${msTid},'502',30,'active'),('2/ت','الصف الثاني المتوسط','ت',${msTid},'503',30,'active'),('2/ث','الصف الثاني المتوسط','ث',${msTid},'504',30,'active'),('2/ج','الصف الثاني المتوسط','ج',${msTid},'505',30,'active'),('2/ح','الصف الثاني المتوسط','ح',${msTid},'506',30,'active'),('2/خ','الصف الثاني المتوسط','خ',${msTid},'507',30,'active')`);
     await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('3/أ','الصف الثالث المتوسط','أ',${msTid},'601',30,'active'),('3/ب','الصف الثالث المتوسط','ب',${msTid},'602',30,'active'),('3/ت','الصف الثالث المتوسط','ت',${msTid},'603',30,'active'),('3/ث','الصف الثالث المتوسط','ث',${msTid},'604',30,'active'),('3/ج','الصف الثالث المتوسط','ج',${msTid},'605',30,'active'),('3/ح','الصف الثالث المتوسط','ح',${msTid},'606',30,'active')`);
+    await db.exec(`PRAGMA foreign_keys=ON`);
 
-    const h = { admin:'$2a$04$QpWlATKSbm.yJD5MRt7FquL2XIrvb0foaijQRZGJvEDpCyYlWLfsm', sup:'$2a$04$r/QVAk.Y1yaztIsEeKReaeXCofMmrRhQp74TAl6BsANhU6C8oQL9G', teacher:'$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u', counselor:'$2a$04$PPYZbxrtd2evEZVcCkE9suySMeMBTa9HLU3XyBWjrFSao4axlRpLy', principal:'$2a$04$2Iju6MqiTgXFRTo6D5hiXe6KGAQCD5r2zRz3hrraJMe7ilB7O7wdC' };
+    const h = { admin:'$2a$04$QpWlATKSbm.yJD5MRt7FquL2XIrvb0foaijQRZGJvEDpCyYlWLfsm', teacher:'$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u' };
     const users: [string, string, string][] = [
       ['admin@school.com', h.admin, 'admin'],
-      ['middle.sup@school.com', h.sup, 'middle_supervisor'],
-      ['high.sup@school.com', h.sup, 'high_supervisor'],
       ['middle.teacher@school.com', h.teacher, 'middle_teacher'],
       ['high.teacher@school.com', h.teacher, 'high_teacher'],
-      ['middle.counselor@school.com', h.counselor, 'middle_counselor'],
-      ['high.counselor@school.com', h.counselor, 'high_counselor'],
-      ['middle.principal@school.com', h.principal, 'middle_principal'],
-      ['high.principal@school.com', h.principal, 'high_principal'],
     ];
     try {
       await db.prepare("INSERT INTO users (email, password, role) VALUES ('__test_monitor__', '__test__', 'middle_monitor')").run();
