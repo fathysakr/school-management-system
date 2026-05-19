@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server';
 import db from '@/lib/database';
-import { authenticate, unauthorized, serverError, success } from '@/lib/auth';
+import { authenticate, hashPassword, unauthorized, badRequest, serverError, success } from '@/lib/auth';
+import { sanitizeString } from '@/lib/validation';
+
+const MANAGEMENT_ROLES = ['admin', 'middle_principal', 'high_principal', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor'];
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,8 +13,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const school = searchParams.get('school') || '';
 
-    const managementRoles = ['admin', 'principal', 'supervisor', 'counselor'];
-    const roleConditions = managementRoles.map(r => `u.role LIKE '%${r}%'`).join(' OR ');
+    const roleConditions = MANAGEMENT_ROLES.map(r => `u.role = '${r}'`).join(' OR ');
 
     let whereClause = `WHERE (${roleConditions})`;
     const params: any[] = [];
@@ -45,5 +47,37 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Get management staff error:', error);
     return serverError('Failed to fetch management staff');
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await authenticate(request);
+    if (!user) return unauthorized();
+    if (user.role !== 'admin') return unauthorized();
+
+    const body = await request.json();
+    const { email, password, role, teacher_id } = body;
+
+    if (!email || !password) return badRequest('البريد الإلكتروني وكلمة المرور مطلوبان');
+    if (password.length < 6) return badRequest('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+    if (!role || !MANAGEMENT_ROLES.includes(role)) return badRequest('دور غير صالح');
+
+    const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(sanitizeString(email));
+    if (existing) return badRequest('البريد الإلكتروني موجود مسبقاً');
+
+    const hashed = await hashPassword(password);
+    const insert = db.prepare('INSERT INTO users (email, password, role) VALUES (?, ?, ?)');
+    const result = await insert.run(sanitizeString(email), hashed, role);
+    const userId = result.lastInsertRowid;
+
+    if (teacher_id) {
+      await db.prepare('UPDATE users SET teacher_id = ? WHERE id = ?').run(teacher_id, userId);
+    }
+
+    return success({ message: 'تمت الإضافة بنجاح', user_id: userId }, 201);
+  } catch (error) {
+    console.error('Create management staff error:', error);
+    return serverError('Failed to create management staff');
   }
 }

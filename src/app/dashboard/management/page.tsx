@@ -7,22 +7,24 @@ import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Chip, Alert, CircularProgress,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, FormControl, InputLabel, Select, MenuItem
+  TextField, FormControl, InputLabel, Select, MenuItem,
+  Autocomplete, Grid
 } from '@mui/material';
-import { AdminPanelSettings, LockReset, Visibility as VisIcon, VisibilityOff, FileDownload } from '@mui/icons-material';
+import { AdminPanelSettings, LockReset, Visibility as VisIcon, VisibilityOff, FileDownload, Add, Edit, Delete } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import EmptyState from '@/components/empty-state';
 
-const roleLabels: Record<string, string> = {
-  admin: 'مدير النظام',
-  middle_principal: 'مدير مدرسة - متوسط',
-  high_principal: 'مدير مدرسة - ثانوي',
-  middle_supervisor: 'مشرف متوسط',
-  high_supervisor: 'مشرف ثانوي',
-  middle_counselor: 'مرشد طلابي متوسط',
-  high_counselor: 'مرشد طلابي ثانوي',
-};
+const ROLES = [
+  { value: 'admin', label: 'مدير النظام', school: 'none' },
+  { value: 'middle_principal', label: 'مدير مدرسة - متوسط', school: 'middle' },
+  { value: 'high_principal', label: 'مدير مدرسة - ثانوي', school: 'high' },
+  { value: 'middle_supervisor', label: 'مشرف متوسط', school: 'middle' },
+  { value: 'high_supervisor', label: 'مشرف ثانوي', school: 'high' },
+  { value: 'middle_counselor', label: 'مرشد طلابي متوسط', school: 'middle' },
+  { value: 'high_counselor', label: 'مرشد طلابي ثانوي', school: 'high' },
+];
 
+const roleLabels: Record<string, string> = Object.fromEntries(ROLES.map(r => [r.value, r.label]));
 const roleColors: Record<string, string> = {
   admin: '#7c4dff',
   middle_principal: '#4a148c',
@@ -35,17 +37,28 @@ const roleColors: Record<string, string> = {
 
 const getRoleLabel = (role: string): string => roleLabels[role] || role;
 const getRoleColor = (role: string): string => roleColors[role] || '#757575';
+const getSchoolLabel = (role: string): string => {
+  if (role === 'admin') return '-';
+  if (role.includes('middle')) return 'متوسطة';
+  if (role.includes('high')) return 'ثانوية';
+  return '-';
+};
 
 export default function ManagementPage() {
   const { user, token, selectedSchool } = useAuth();
   const [staff, setStaff] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [passwordDialog, setPasswordDialog] = useState<{ member: any } | null>(null);
   const [passwordForm, setPasswordForm] = useState({ password: '', show: false });
+  const [formDialog, setFormDialog] = useState<{ open: boolean; edit: any | null }>({ open: false, edit: null });
+  const [formData, setFormData] = useState({ email: '', password: '', role: 'middle_supervisor', teacher_id: '' });
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [roleFilter, setRoleFilter] = useState('all');
   const [schoolFilter, setSchoolFilter] = useState('all');
+  const isAdmin = user?.role === 'admin';
 
   const fetchStaff = async () => {
     if (!token) return;
@@ -61,7 +74,15 @@ export default function ManagementPage() {
     }
   };
 
-  useEffect(() => { fetchStaff(); }, [token, selectedSchool, schoolFilter]);
+  const fetchTeachers = async () => {
+    if (!token) return;
+    try {
+      const res = await api.get('/teachers?limit=500', token);
+      setTeachers(res.teachers || []);
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => { fetchStaff(); fetchTeachers(); }, [token, selectedSchool, schoolFilter]);
 
   const handlePasswordReset = async () => {
     if (!token || !passwordDialog || !passwordForm.password) return;
@@ -81,15 +102,73 @@ export default function ManagementPage() {
     setPasswordForm({ ...passwordForm, password: pwd, show: true });
   };
 
+  const openAddDialog = () => {
+    setFormData({ email: '', password: '', role: 'middle_supervisor', teacher_id: '' });
+    setFormDialog({ open: true, edit: null });
+    setError('');
+  };
+
+  const openEditDialog = (member: any) => {
+    setFormData({
+      email: member.email,
+      password: '',
+      role: member.user_role,
+      teacher_id: member.teacher_id ? String(member.teacher_id) : '',
+    });
+    setFormDialog({ open: true, edit: member });
+    setError('');
+  };
+
+  const handleFormSubmit = async () => {
+    if (!token) return;
+    setError('');
+    try {
+      if (formDialog.edit) {
+        const body: any = { email: formData.email };
+        if (formData.role) body.role = formData.role;
+        if (formData.password) body.password = formData.password;
+        body.teacher_id = formData.teacher_id ? parseInt(formData.teacher_id) : null;
+        await api.put(`/management/${formDialog.edit.user_id}`, body, token);
+        setSuccess('تم التحديث بنجاح');
+      } else {
+        if (!formData.password || formData.password.length < 6) { setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+        await api.post('/management', {
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          teacher_id: formData.teacher_id ? parseInt(formData.teacher_id) : null,
+        }, token);
+        setSuccess('تمت الإضافة بنجاح');
+      }
+      setFormDialog({ open: false, edit: null });
+      fetchStaff();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!token || deleteConfirm === null) return;
+    try {
+      await api.delete(`/management/${deleteConfirm}`, token);
+      setSuccess('تم الحذف بنجاح');
+      setDeleteConfirm(null);
+      fetchStaff();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ');
+      setDeleteConfirm(null);
+    }
+  };
+
   const handleExport = () => {
     const rows = filteredStaff.map((s: any) => [
-      s.employee_id || '-',
       s.first_name ? `${s.first_name} ${s.last_name}` : s.email,
       s.email,
       getRoleLabel(s.user_role),
-      s.school === 'middle' ? 'متوسطة' : s.school === 'high' ? 'ثانوية' : '-',
+      getSchoolLabel(s.user_role),
+      s.employee_id || '-',
     ]);
-    exportToExcel(['الموظف', 'الاسم', 'البريد الإلكتروني', 'الدور', 'المرحلة'], rows, 'الإدارة', 'management_صفوة_الرواد.xlsx');
+    exportToExcel(['الاسم', 'البريد الإلكتروني', 'الدور', 'المرحلة', 'رقم الموظف'], rows, 'الإدارة', 'management_صفوة_الرواد.xlsx');
     setSuccess('تم تصدير البيانات بنجاح');
   };
 
@@ -98,12 +177,22 @@ export default function ManagementPage() {
     return true;
   });
 
+  const selectedTeacher = teachers.find(t => t.id === parseInt(formData.teacher_id));
+
   return (
     <Box>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold">الإدارة</Typography>
+        <Box>
+          <Typography variant="h4" fontWeight="bold">الإدارة</Typography>
+          <Typography variant="body2" color="text.secondary">
+            إدارة صلاحيات مدير النظام، مدير المدرسة، المشرفين، والمرشدين الطلابيين
+          </Typography>
+        </Box>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button variant="outlined" startIcon={<FileDownload />} onClick={handleExport}>تصدير Excel</Button>
+          {isAdmin && (
+            <Button variant="contained" startIcon={<Add />} onClick={openAddDialog}>إضافة عضو إدارة</Button>
+          )}
         </Box>
       </Box>
 
@@ -126,8 +215,8 @@ export default function ManagementPage() {
         ))}
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>{success}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2, whiteSpace: 'pre-wrap' }} onClose={() => setSuccess('')}>{success}</Alert>}
 
       {/* Filters */}
       <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
@@ -155,7 +244,7 @@ export default function ManagementPage() {
 
       <Paper sx={{ overflow: 'auto' }}>
         <TableContainer>
-          <Table sx={{ minWidth: 800 }} dir="rtl">
+          <Table sx={{ minWidth: 900 }} dir="rtl">
             <TableHead>
               <TableRow>
                 <TableCell>الاسم</TableCell>
@@ -163,14 +252,14 @@ export default function ManagementPage() {
                 <TableCell>الدور</TableCell>
                 <TableCell>المرحلة</TableCell>
                 <TableCell>رقم الموظف</TableCell>
-                <TableCell>الإجراءات</TableCell>
+                {isAdmin && <TableCell>الإجراءات</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={isAdmin ? 6 : 5} align="center"><CircularProgress /></TableCell></TableRow>
               ) : filteredStaff.length === 0 ? (
-                <TableRow><TableCell colSpan={6} align="center"><EmptyState message="لا يوجد أعضاء إدارة" icon={<AdminPanelSettings />} /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={isAdmin ? 6 : 5} align="center"><EmptyState message="لا يوجد أعضاء إدارة" icon={<AdminPanelSettings />} action={isAdmin ? 'إضافة عضو إدارة' : undefined} onAction={openAddDialog} /></TableCell></TableRow>
               ) : (
                 filteredStaff.map((s) => (
                   <TableRow key={s.user_id}>
@@ -178,25 +267,35 @@ export default function ManagementPage() {
                       {s.first_name ? `${s.first_name} ${s.last_name}` : s.email}
                       {!s.first_name && <Typography variant="caption" color="text.secondary" display="block">(بدون حساب معلم)</Typography>}
                     </TableCell>
-                    <TableCell>{s.email}</TableCell>
+                    <TableCell dir="ltr">{s.email}</TableCell>
                     <TableCell>
                       <Chip label={getRoleLabel(s.user_role)} size="small"
                         sx={{ bgcolor: getRoleColor(s.user_role), color: '#fff', fontWeight: 600 }} />
                     </TableCell>
                     <TableCell>
-                      {s.school ? (
-                        <Chip label={s.school === 'high' ? 'ثانوية' : 'متوسطة'} size="small"
-                          color={s.school === 'high' ? 'warning' : 'info'} />
-                      ) : s.user_role !== 'admin' ? (
-                        <Chip label="غير محدد" size="small" variant="outlined" />
-                      ) : '-'}
+                      {s.user_role === 'admin' ? '-' : (
+                        <Chip label={getSchoolLabel(s.user_role)} size="small"
+                          color={s.user_role.includes('high') ? 'warning' : 'info'} />
+                      )}
                     </TableCell>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>{s.employee_id || '-'}</TableCell>
-                    <TableCell>
-                      <IconButton size="small" color="primary" onClick={() => { setPasswordDialog({ member: s }); setPasswordForm({ password: '', show: false }); }} title="تغيير كلمة المرور">
-                        <LockReset fontSize="small" />
-                      </IconButton>
-                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton size="small" color="primary" onClick={() => openEditDialog(s)} title="تعديل">
+                            <Edit fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" sx={{ color: '#ed6c02' }} onClick={() => { setPasswordDialog({ member: s }); setPasswordForm({ password: '', show: false }); }} title="تغيير كلمة المرور">
+                            <LockReset fontSize="small" />
+                          </IconButton>
+                          {s.user_role !== 'admin' && (
+                            <IconButton size="small" color="error" onClick={() => setDeleteConfirm(s.user_id)} title="حذف">
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Box>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -204,6 +303,50 @@ export default function ManagementPage() {
           </Table>
         </TableContainer>
       </Paper>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={formDialog.open} onClose={() => setFormDialog({ open: false, edit: null })} maxWidth="sm" fullWidth>
+        <DialogTitle>{formDialog.edit ? 'تعديل عضو إدارة' : 'إضافة عضو إدارة جديد'}</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={12}>
+              <TextField fullWidth label="البريد الإلكتروني" type="email" value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth label={formDialog.edit ? 'كلمة المرور (اتركها فارغة لعدم التغيير)' : 'كلمة المرور'}
+                type="password" value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>الدور</InputLabel>
+                <Select value={formData.role} label="الدور" onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+                  {ROLES.map(r => (
+                    <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <Autocomplete
+                options={teachers}
+                getOptionLabel={(t) => `${t.first_name} ${t.last_name} (${t.teacher_id})`}
+                value={selectedTeacher || null}
+                onChange={(_, v) => setFormData({ ...formData, teacher_id: v ? String(v.id) : '' })}
+                renderInput={(params) => <TextField {...params} label="ربط بمعلم (اختياري)" />}
+                noOptionsText="لا يوجد معلمون"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setFormDialog({ open: false, edit: null })}>إلغاء</Button>
+          <Button variant="contained" onClick={handleFormSubmit} disabled={!formData.email || (!formDialog.edit && !formData.password)}>
+            {formDialog.edit ? 'تحديث' : 'إضافة'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Password reset dialog */}
       <Dialog open={!!passwordDialog} onClose={() => setPasswordDialog(null)} maxWidth="xs" fullWidth>
@@ -240,6 +383,21 @@ export default function ManagementPage() {
           <Button variant="contained" onClick={handlePasswordReset} disabled={!passwordForm.password || passwordForm.password.length < 6}>
             حفظ كلمة المرور
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={deleteConfirm !== null} onClose={() => setDeleteConfirm(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Delete color="error" />
+          حذف عضو إدارة
+        </DialogTitle>
+        <DialogContent>
+          <Typography>هل أنت متأكد من حذف هذا العضو؟ هذا الإجراء لا يمكن التراجع عنه.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setDeleteConfirm(null)}>إلغاء</Button>
+          <Button variant="contained" color="error" onClick={handleDelete} startIcon={<Delete />}>تأكيد الحذف</Button>
         </DialogActions>
       </Dialog>
     </Box>
