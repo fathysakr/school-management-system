@@ -20,15 +20,19 @@ import { ToggleButtonGroup, ToggleButton } from '@mui/material';
 const DRAWER_OPEN = 280;
 const DRAWER_CLOSED = 80;
 
-const allRoles = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal'];
+const allRoles = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal', 'middle_monitor', 'high_monitor', 'middle_admin_staff', 'high_admin_staff'];
+
+const managementViewRoles = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal', 'middle_monitor', 'high_monitor', 'middle_admin_staff', 'high_admin_staff'];
+const substitutionRoles = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_principal', 'high_principal', 'middle_admin_staff', 'high_admin_staff'];
+const announcementRoles = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal', 'middle_admin_staff', 'high_admin_staff'];
 
 const menuGroups = [
   {
     label: 'الرئيسية',
     items: [
       { text: 'لوحة التحكم', icon: <Speed />, path: '/dashboard', roles: allRoles },
-      { text: 'الإدارة', icon: <VerifiedUser />, path: '/dashboard/management', roles: ['admin', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal'] },
-      { text: 'المعلمون', icon: <People />, path: '/dashboard/teachers', roles: ['admin', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal'] },
+      { text: 'الإدارة', icon: <VerifiedUser />, path: '/dashboard/management', roles: managementViewRoles },
+      { text: 'المعلمون', icon: <People />, path: '/dashboard/teachers', roles: managementViewRoles },
       { text: 'إدارة النظام', icon: <Build />, path: '/dashboard/admin', roles: ['admin'] },
       { text: 'شؤون المدرسة', icon: <AdminPanelSettings />, path: '/dashboard/principal', roles: ['middle_principal', 'high_principal'] },
       { text: 'الطلاب', icon: <School />, path: '/dashboard/students', roles: allRoles },
@@ -39,7 +43,7 @@ const menuGroups = [
     label: 'التعليم',
     items: [
       { text: 'الجدول الدراسي', icon: <Schedule />, path: '/dashboard/schedules', roles: allRoles },
-      { text: 'حصص الانتظار', icon: <SwapHoriz />, path: '/dashboard/substitutions', roles: ['admin', 'middle_supervisor', 'high_supervisor', 'middle_principal', 'high_principal'] },
+      { text: 'حصص الانتظار', icon: <SwapHoriz />, path: '/dashboard/substitutions', roles: substitutionRoles },
       { text: 'الحضور', icon: <EventNote />, path: '/dashboard/attendance', roles: allRoles },
       { text: 'الدرجات', icon: <Grade />, path: '/dashboard/grades', roles: allRoles },
       { text: 'الإجازات', icon: <CalendarMonth />, path: '/dashboard/leaves', roles: allRoles },
@@ -49,7 +53,7 @@ const menuGroups = [
     label: 'التقارير',
     items: [
       { text: 'التقارير', icon: <Assessment />, path: '/dashboard/reports', roles: allRoles },
-      { text: 'الإعلانات', icon: <Campaign />, path: '/dashboard/announcements', roles: ['admin', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal'] },
+      { text: 'الإعلانات', icon: <Campaign />, path: '/dashboard/announcements', roles: announcementRoles },
     ],
   },
   {
@@ -70,6 +74,10 @@ const roleLabels: Record<string, string> = {
   high_counselor: 'مرشد طلابي ثانوي',
   middle_principal: 'مدير مدرسة - متوسط',
   high_principal: 'مدير مدرسة - ثانوي',
+  middle_monitor: 'مراقب متوسط',
+  high_monitor: 'مراقب ثانوي',
+  middle_admin_staff: 'إداري متوسط',
+  high_admin_staff: 'إداري ثانوي',
 };
 
 const roleColors: Record<string, string> = {
@@ -82,6 +90,10 @@ const roleColors: Record<string, string> = {
   high_counselor: '#6a1b9a',
   middle_principal: '#4a148c',
   high_principal: '#880e4f',
+  middle_monitor: '#f9a825',
+  high_monitor: '#e65100',
+  middle_admin_staff: '#546e7a',
+  high_admin_staff: '#37474f',
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

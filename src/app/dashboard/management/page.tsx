@@ -22,6 +22,10 @@ const ROLES = [
   { value: 'high_supervisor', label: 'مشرف ثانوي', school: 'high' },
   { value: 'middle_counselor', label: 'مرشد طلابي متوسط', school: 'middle' },
   { value: 'high_counselor', label: 'مرشد طلابي ثانوي', school: 'high' },
+  { value: 'middle_monitor', label: 'مراقب متوسط', school: 'middle' },
+  { value: 'high_monitor', label: 'مراقب ثانوي', school: 'high' },
+  { value: 'middle_admin_staff', label: 'إداري متوسط', school: 'middle' },
+  { value: 'high_admin_staff', label: 'إداري ثانوي', school: 'high' },
 ];
 
 const roleLabels: Record<string, string> = Object.fromEntries(ROLES.map(r => [r.value, r.label]));
@@ -33,6 +37,10 @@ const roleColors: Record<string, string> = {
   high_supervisor: '#e65100',
   middle_counselor: '#00897b',
   high_counselor: '#6a1b9a',
+  middle_monitor: '#f9a825',
+  high_monitor: '#e65100',
+  middle_admin_staff: '#546e7a',
+  high_admin_staff: '#37474f',
 };
 
 const getRoleLabel = (role: string): string => roleLabels[role] || role;
@@ -202,6 +210,8 @@ export default function ManagementPage() {
           ['مدير المدرسة', staff.filter(s => s.user_role.includes('principal')).length, '#6a1b9a'],
           ['مشرف', staff.filter(s => s.user_role.includes('supervisor')).length, '#1565c0'],
           ['مرشد طلابي', staff.filter(s => s.user_role.includes('counselor')).length, '#00897b'],
+          ['مراقب', staff.filter(s => s.user_role.includes('monitor')).length, '#f9a825'],
+          ['إداري', staff.filter(s => s.user_role.includes('admin_staff')).length, '#546e7a'],
         ].map(([label, count, color]) => (
           <Paper key={label as string} sx={{ p: 2, minWidth: 160, display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
             <Box sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: color as string, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -227,6 +237,8 @@ export default function ManagementPage() {
             <MenuItem value="principal">مدير مدرسة</MenuItem>
             <MenuItem value="supervisor">مشرف</MenuItem>
             <MenuItem value="counselor">مرشد طلابي</MenuItem>
+            <MenuItem value="monitor">مراقب</MenuItem>
+            <MenuItem value="admin_staff">إداري</MenuItem>
             <MenuItem value="admin">مدير النظام</MenuItem>
           </Select>
         </FormControl>

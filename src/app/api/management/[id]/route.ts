@@ -3,7 +3,7 @@ import db from '@/lib/database';
 import { authenticate, hashPassword, unauthorized, badRequest, notFound, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
 
-const MANAGEMENT_ROLES = ['admin', 'middle_principal', 'high_principal', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor'];
+const MANAGEMENT_ROLES = ['admin', 'middle_principal', 'high_principal', 'middle_supervisor', 'high_supervisor', 'middle_counselor', 'high_counselor', 'middle_monitor', 'high_monitor', 'middle_admin_staff', 'high_admin_staff'];
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {

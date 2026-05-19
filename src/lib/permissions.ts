@@ -12,7 +12,7 @@ export type Permission =
   | 'dashboard:stats'
   | 'settings:edit';
 
-export type UserRole = 'admin' | 'middle_supervisor' | 'high_supervisor' | 'middle_teacher' | 'high_teacher' | 'middle_counselor' | 'high_counselor' | 'middle_principal' | 'high_principal';
+export type UserRole = 'admin' | 'middle_supervisor' | 'high_supervisor' | 'middle_teacher' | 'high_teacher' | 'middle_counselor' | 'high_counselor' | 'middle_principal' | 'high_principal' | 'middle_monitor' | 'high_monitor' | 'middle_admin_staff' | 'high_admin_staff';
 
 const rolePermissions: Record<UserRole, Permission[]> = {
   admin: [
@@ -91,6 +91,52 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'reports:view',
     'schedules:view',
     'announcements:view',
+    'dashboard:stats',
+  ],
+  middle_monitor: [
+    'teachers:view',
+    'students:view',
+    'classes:view',
+    'attendance:view',
+    'grades:view',
+    'reports:view',
+    'schedules:view',
+    'announcements:view',
+    'dashboard:stats',
+  ],
+  high_monitor: [
+    'teachers:view',
+    'students:view',
+    'classes:view',
+    'attendance:view',
+    'grades:view',
+    'reports:view',
+    'schedules:view',
+    'announcements:view',
+    'dashboard:stats',
+  ],
+  middle_admin_staff: [
+    'teachers:view', 'teachers:create', 'teachers:edit',
+    'students:view', 'students:create', 'students:edit',
+    'classes:view', 'classes:create', 'classes:edit',
+    'attendance:view', 'attendance:create', 'attendance:edit',
+    'grades:view', 'grades:create', 'grades:edit',
+    'reports:view', 'reports:create', 'reports:edit',
+    'schedules:view', 'schedules:create', 'schedules:edit',
+    'substitutions:view', 'substitutions:create', 'substitutions:edit',
+    'announcements:view', 'announcements:create', 'announcements:edit',
+    'dashboard:stats',
+  ],
+  high_admin_staff: [
+    'teachers:view', 'teachers:create', 'teachers:edit',
+    'students:view', 'students:create', 'students:edit',
+    'classes:view', 'classes:create', 'classes:edit',
+    'attendance:view', 'attendance:create', 'attendance:edit',
+    'grades:view', 'grades:create', 'grades:edit',
+    'reports:view', 'reports:create', 'reports:edit',
+    'schedules:view', 'schedules:create', 'schedules:edit',
+    'substitutions:view', 'substitutions:create', 'substitutions:edit',
+    'announcements:view', 'announcements:create', 'announcements:edit',
     'dashboard:stats',
   ],
   middle_principal: [
@@ -200,10 +246,12 @@ export function canAccessRole(currentRole: UserRole | undefined, targetRole: Use
   if (!currentRole) return false;
   if (currentRole === 'admin') return true;
   const hierarchy: Record<string, number> = {
-    counselor: 0,
-    teacher: 1,
-    supervisor: 2,
-    principal: 3,
+    monitor: 0,
+    admin_staff: 0,
+    counselor: 1,
+    teacher: 2,
+    supervisor: 3,
+    principal: 4,
   };
   const currentBase = currentRole.split('_').slice(1).join('_');
   const targetBase = targetRole.split('_').slice(1).join('_');
@@ -217,7 +265,7 @@ export function canAccessRole(currentRole: UserRole | undefined, targetRole: Use
 
 export function getSchoolStage(role: UserRole): 'middle' | 'high' | 'both' {
   if (role === 'admin') return 'both';
-  if (role === 'middle_supervisor' || role === 'middle_teacher' || role === 'middle_counselor' || role === 'middle_principal') return 'middle';
+  if (role.includes('middle_')) return 'middle';
   return 'high';
 }
 

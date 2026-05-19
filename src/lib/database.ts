@@ -609,6 +609,36 @@ function applyMigrations(bsql: Database.Database) {
         `;
       })()
     },
+    {
+      name: '018_add_monitor_admin_staff_roles',
+      sql: (() => {
+        try {
+          bsql.prepare("INSERT INTO users (email, password, role) VALUES ('__test__', '__test__', 'middle_monitor')").run();
+          bsql.prepare("DELETE FROM users WHERE email = '__test__'").run();
+          return 'SELECT 1';
+        } catch {
+          return `
+            PRAGMA foreign_keys = OFF;
+            DROP TABLE IF EXISTS users_new;
+            CREATE TABLE users_new (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              email TEXT UNIQUE NOT NULL,
+              password TEXT NOT NULL,
+              role TEXT NOT NULL CHECK (role IN ('admin', 'middle_supervisor', 'high_supervisor', 'middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal', 'middle_monitor', 'high_monitor', 'middle_admin_staff', 'high_admin_staff')),
+              status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+              custom_permissions TEXT,
+              teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO users_new SELECT * FROM users;
+            DROP TABLE users;
+            ALTER TABLE users_new RENAME TO users;
+            PRAGMA foreign_keys = ON;
+          `;
+        }
+      })()
+    },
   ];
 
   for (const migration of migrations) {
