@@ -21,18 +21,29 @@ export async function GET(request: NextRequest) {
     }
     query += ` ORDER BY p.title`;
 
-    const positions = await db.prepare(query).all(...params);
+    let positions = await db.prepare(query).all(...params) as any[];
+    const posIds = positions.map((p: any) => p.id);
 
-    for (const pos of positions as any[]) {
-      const assignments = await db.prepare(`
-        SELECT mpa.user_id, u.email, u.role,
+    if (posIds.length > 0) {
+      const placeholders = posIds.map(() => '?').join(',');
+      const allAssignments = await db.prepare(`
+        SELECT mpa.position_id, mpa.user_id, u.email, u.role,
                t.first_name, t.last_name, t.teacher_id as employee_id
         FROM management_position_assignments mpa
         JOIN users u ON u.id = mpa.user_id
         LEFT JOIN teachers t ON t.id = u.teacher_id
-        WHERE mpa.position_id = ?
-      `).all(pos.id);
-      pos.assignments = assignments;
+        WHERE mpa.position_id IN (${placeholders})
+      `).all(...posIds) as any[];
+
+      const assignMap = new Map<number, any[]>();
+      for (const a of allAssignments) {
+        const list = assignMap.get(a.position_id) || [];
+        list.push(a);
+        assignMap.set(a.position_id, list);
+      }
+      for (const pos of positions) {
+        pos.assignments = assignMap.get(pos.id) || [];
+      }
     }
 
     return success({ positions });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 
@@ -8,6 +8,7 @@ const LAST_NAMES = ['القحطاني', 'الدوسري', 'الغامدي', 'ا�
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(req);
     if (!user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
     if (!hasPermission(user.role, 'students:create')) return NextResponse.json({ error: 'ليس لديك صلاحية' }, { status: 403 });

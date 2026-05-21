@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, notFound, serverError, success } from '@/lib/auth';
 import { sanitizeString, isValidScore } from '@/lib/validation';
 import { hasPermission, getSchoolFilter } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'grades:view')) return forbidden();
@@ -58,6 +59,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'grades:create')) return forbidden();
@@ -115,6 +117,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'grades:edit')) return forbidden();

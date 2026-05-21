@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, notFound, serverError, success } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'students:edit')) return forbidden();
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'students:edit')) return forbidden();

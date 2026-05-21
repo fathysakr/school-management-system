@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, unauthorized, forbidden, badRequest, serverError, success } from '@/lib/auth';
 
 const IMPORT_ORDER = [
@@ -13,6 +13,7 @@ const DELETE_ORDER = [...IMPORT_ORDER].reverse();
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (user.role !== 'admin') return forbidden('Admin only');

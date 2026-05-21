@@ -1,15 +1,16 @@
 import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, unauthorized, forbidden, badRequest, serverError, success } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'substitutions:edit')) return forbidden();
 
-    const { id } = await params;
+    const { id } = params;
     const body = await request.json();
     const { substitute_teacher_id, status } = body;
 
@@ -43,13 +44,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'substitutions:delete')) return forbidden();
 
-    const { id } = await params;
+    const { id } = params;
     const existing = await db.prepare('SELECT id FROM substitutions WHERE id = ?').get(id);
     if (!existing) return badRequest('البديل غير موجود');
 

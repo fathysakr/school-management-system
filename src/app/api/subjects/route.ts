@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, unauthorized, forbidden, badRequest, serverError, success } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { sanitizeString } from '@/lib/validation';
 
 export async function GET(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     const { searchParams } = new URL(request.url);
@@ -28,6 +29,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'settings:edit')) return forbidden();
@@ -55,6 +57,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'settings:edit')) return forbidden();
@@ -84,6 +87,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'settings:edit')) return forbidden();

@@ -1,5 +1,5 @@
-import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import { NextRequest, NextResponse } from 'next/server';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, unauthorized } from '@/lib/auth';
 
 const HIGH_CLASSES = [
@@ -25,6 +25,7 @@ const GRADE_SUBJECTS: Record<string, string[]> = {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (user.role !== 'admin') return unauthorized();
@@ -168,8 +169,8 @@ export async function POST(request: NextRequest) {
     }
     results.push('تم تعيين التخصصات للمعلمين');
 
-    return Response.json({ success: true, results });
+    return NextResponse.json({ success: true, results });
   } catch {
-    return Response.json({ success: false, error: 'Seed failed' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Seed failed' }, { status: 500 });
   }
 }

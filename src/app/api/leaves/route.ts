@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, unauthorized, badRequest, serverError, success } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     const { searchParams } = new URL(request.url);
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     const body = await request.json();

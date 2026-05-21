@@ -149,8 +149,8 @@ export function validateClass(data: any): ValidationResult {
     errors.push({ field: 'grade', message: 'Grade is required' });
   }
 
-  if (!data.teacher_id) {
-    errors.push({ field: 'teacher_id', message: 'Teacher assignment is required' });
+  if (data.teacher_id !== undefined && data.teacher_id !== null && !data.teacher_id) {
+    errors.push({ field: 'teacher_id', message: 'Invalid teacher assignment' });
   }
 
   if (data.capacity && (isNaN(data.capacity) || data.capacity < 1 || data.capacity > 100)) {

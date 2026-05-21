@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, notFound, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
 import { hasPermission, getSchoolFilter } from '@/lib/permissions';
@@ -9,6 +9,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'students:view')) return forbidden();
@@ -40,6 +41,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'students:edit')) return forbidden();
@@ -119,6 +121,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'students:delete')) return forbidden();

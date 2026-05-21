@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 
@@ -68,6 +68,7 @@ function interleave<T>(items: T[], key: (item: T) => string): T[] {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(req);
     if (!user) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });

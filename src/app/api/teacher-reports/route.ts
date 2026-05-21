@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
 import { hasPermission, getSchoolFilter } from '@/lib/permissions';
@@ -8,6 +8,7 @@ import { notifyUsers } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'reports:view')) return forbidden();
@@ -62,7 +63,15 @@ export async function GET(request: NextRequest) {
     if (report_type) { countQuery += ' AND r.report_type = ?'; countParams.push(report_type); }
     const count = await db.prepare(countQuery).get(...countParams) as any;
 
-    return success({ reports, total: count.c });
+    return success({
+      reports,
+      pagination: {
+        page,
+        limit,
+        total: count.c,
+        pages: Math.ceil((count.c || 0) / limit),
+      },
+    });
   } catch (error) {
     console.error('Get teacher reports error:', error);
     return serverError('Failed to fetch reports');
@@ -71,6 +80,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'reports:create')) return forbidden();
@@ -136,6 +146,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'reports:edit')) return forbidden();
@@ -165,6 +176,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'reports:delete')) return forbidden();

@@ -672,20 +672,7 @@ export default function DashboardPage() {
                 <Typography variant="h6" fontWeight="bold">أحدث الطلاب</Typography>
                 <Button size="small" variant="text" sx={{ mr: 'auto' }} onClick={() => router.push('/dashboard/students')}>عرض الكل</Button>
               </Box>
-              {true ? (
-                <Typography color="text.secondary" textAlign="center" sx={{ py: 3 }}>لا يوجد طلاب</Typography>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Paper key={0} variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.light', fontSize: 14 }} />
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="body2" fontWeight="bold" />
-                      <Typography variant="caption" color="text.secondary" />
-                    </Box>
-                    <Chip label="نشط" color="success" size="small" />
-                  </Paper>
-                </Box>
-              )}
+              <Typography color="text.secondary" textAlign="center" sx={{ py: 3 }}>لا يوجد طلاب</Typography>
             </CardContent>
           </Card>
 

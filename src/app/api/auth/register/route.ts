@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { hashPassword, generateToken, badRequest, serverError, success } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const body = await request.json();
     const { email, password, role: rawRole } = body;
 

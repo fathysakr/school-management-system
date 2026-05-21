@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(req);
     if (!user || user.role !== 'admin') {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });

@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
-import db from '@/lib/database';
+import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
 import { hasPermission, getSchoolFilter } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'attendance:view')) return forbidden();
@@ -52,6 +53,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'attendance:create')) return forbidden();
@@ -115,6 +117,7 @@ export async function POST(request: NextRequest) {
 // Bulk attendance upload
 export async function PUT(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'attendance:create')) return forbidden();
