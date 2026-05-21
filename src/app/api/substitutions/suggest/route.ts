@@ -120,6 +120,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Suggest substitutions error:', error);
-    return serverError('Failed to suggest substitutions');
+    return serverError('فشل في اقتراح البدائل');
   }
 }

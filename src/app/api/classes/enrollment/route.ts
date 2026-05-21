@@ -14,20 +14,20 @@ export async function POST(request: NextRequest) {
     const { student_id, class_id } = body;
 
     if (!student_id || !class_id) {
-      return badRequest('Student ID and Class ID are required');
+      return badRequest('معرف الطالب والفصل مطلوبان');
     }
 
     // Verify student and class exist
     const student = await db.prepare('SELECT id FROM students WHERE id = ? AND status = "active"').get(student_id);
-    if (!student) return badRequest('Student not found or inactive');
+    if (!student) return badRequest('الطالب غير موجود أو غير نشط');
 
     const classData = await db.prepare('SELECT id, capacity FROM classes WHERE id = ? AND status = "active"').get(class_id) as any;
-    if (!classData) return badRequest('Class not found or inactive');
+    if (!classData) return badRequest('الفصل غير موجود أو غير نشط');
 
     // Check capacity
     const enrolled = await db.prepare('SELECT COUNT(*) as count FROM enrollments WHERE class_id = ? AND status = "active"').get(class_id) as any;
     if (enrolled.count >= classData.capacity) {
-      return badRequest('Class is at full capacity');
+      return badRequest('الفصل ممتلئ');
     }
 
     // Check if already enrolled
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       'SELECT id FROM enrollments WHERE student_id = ? AND class_id = ? AND status = "active"'
     ).get(student_id, class_id);
     if (existing) {
-      return badRequest('Student is already enrolled in this class');
+      return badRequest('الطالب مسجل بالفعل في هذا الفصل');
     }
 
     const stmt = await db.prepare(`
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }, 201);
   } catch (error) {
     console.error('Enroll student error:', error);
-    return serverError('Failed to enroll student');
+    return serverError('فشل في تسجيل الطالب');
   }
 }
 
@@ -67,14 +67,14 @@ export async function DELETE(request: NextRequest) {
     const class_id = searchParams.get('class_id');
 
     if (!student_id || !class_id) {
-      return badRequest('Student ID and Class ID are required');
+      return badRequest('معرف الطالب والفصل مطلوبان');
     }
 
     const enrollment = await db.prepare(
       'SELECT id FROM enrollments WHERE student_id = ? AND class_id = ? AND status = "active"'
     ).get(parseInt(student_id), parseInt(class_id));
 
-    if (!enrollment) return notFound('Enrollment not found');
+    if (!enrollment) return notFound('التسجيل غير موجود');
 
     await db.prepare('UPDATE enrollments SET status = ? WHERE student_id = ? AND class_id = ?')
       .run('dropped', parseInt(student_id), parseInt(class_id));
@@ -82,6 +82,6 @@ export async function DELETE(request: NextRequest) {
     return success({ message: 'Student unenrolled successfully' });
   } catch (error) {
     console.error('Unenroll student error:', error);
-    return serverError('Failed to unenroll student');
+    return serverError('فشل في إلغاء تسجيل الطالب');
   }
 }

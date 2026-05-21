@@ -45,31 +45,31 @@ export function validateTeacher(data: any): ValidationResult {
   const errors: ValidationError[] = [];
 
   if (!data.teacher_id?.trim()) {
-    errors.push({ field: 'teacher_id', message: 'Teacher ID is required' });
+    errors.push({ field: 'teacher_id', message: 'رقم المعلم مطلوب' });
   }
 
   if (!data.first_name?.trim()) {
-    errors.push({ field: 'first_name', message: 'First name is required' });
+    errors.push({ field: 'first_name', message: 'الاسم الأول مطلوب' });
   }
 
   if (!data.last_name?.trim()) {
-    errors.push({ field: 'last_name', message: 'Last name is required' });
+    errors.push({ field: 'last_name', message: 'الاسم الأخير مطلوب' });
   }
 
   if (data.email && !isValidEmail(data.email)) {
-    errors.push({ field: 'email', message: 'Invalid email format' });
+    errors.push({ field: 'email', message: 'صيغة البريد الإلكتروني غير صالحة' });
   }
 
   if (data.phone && !isValidPhone(data.phone)) {
-    errors.push({ field: 'phone', message: 'Invalid phone format' });
+    errors.push({ field: 'phone', message: 'صيغة رقم الجوال غير صالحة' });
   }
 
   if (data.date_of_birth && !isValidDate(data.date_of_birth)) {
-    errors.push({ field: 'date_of_birth', message: 'Invalid date format' });
+    errors.push({ field: 'date_of_birth', message: 'صيغة التاريخ غير صالحة' });
   }
 
   if (data.specialization && !data.specialization.trim()) {
-    errors.push({ field: 'specialization', message: 'Specialization cannot be empty' });
+    errors.push({ field: 'specialization', message: 'التخصص لا يمكن أن يكون فارغاً' });
   }
 
   return {
@@ -83,49 +83,49 @@ export function validateStudent(data: any): ValidationResult {
   const errors: ValidationError[] = [];
 
   if (!data.student_id?.trim()) {
-    errors.push({ field: 'student_id', message: 'Student ID is required' });
+    errors.push({ field: 'student_id', message: 'رقم الطالب مطلوب' });
   }
 
   if (!data.first_name?.trim()) {
-    errors.push({ field: 'first_name', message: 'First name is required' });
+    errors.push({ field: 'first_name', message: 'الاسم الأول مطلوب' });
   }
 
   if (!data.last_name?.trim()) {
-    errors.push({ field: 'last_name', message: 'Last name is required' });
+    errors.push({ field: 'last_name', message: 'الاسم الأخير مطلوب' });
   }
 
   if (!data.date_of_birth || !isValidDate(data.date_of_birth)) {
-    errors.push({ field: 'date_of_birth', message: 'Valid date of birth is required' });
+    errors.push({ field: 'date_of_birth', message: 'تاريخ ميلاد صحيح مطلوب' });
   } else {
     const age = getAge(data.date_of_birth);
     if (age < 4 || age > 25) {
-      errors.push({ field: 'date_of_birth', message: 'Student age must be between 4 and 25' });
+      errors.push({ field: 'date_of_birth', message: 'عمر الطالب يجب أن يكون بين 4 و 25 سنة' });
     }
   }
 
   if (data.email && !isValidEmail(data.email)) {
-    errors.push({ field: 'email', message: 'Invalid email format' });
+    errors.push({ field: 'email', message: 'صيغة البريد الإلكتروني غير صالحة' });
   }
 
   if (data.phone && !isValidPhone(data.phone)) {
-    errors.push({ field: 'phone', message: 'Invalid phone format' });
+    errors.push({ field: 'phone', message: 'صيغة رقم الجوال غير صالحة' });
   }
 
   if (data.parent_email && !isValidEmail(data.parent_email)) {
-    errors.push({ field: 'parent_email', message: 'Invalid parent email format' });
+    errors.push({ field: 'parent_email', message: 'صيغة البريد الإلكتروني لولي الأمر غير صالحة' });
   }
 
   if (data.parent_phone && !isValidPhone(data.parent_phone)) {
-    errors.push({ field: 'parent_phone', message: 'Invalid parent phone format' });
+    errors.push({ field: 'parent_phone', message: 'صيغة رقم جوال ولي الأمر غير صالحة' });
   }
 
   if (data.parent_phones) {
     if (!Array.isArray(data.parent_phones)) {
-      errors.push({ field: 'parent_phones', message: 'Parent phones must be an array' });
+      errors.push({ field: 'parent_phones', message: 'يجب أن تكون أرقام أولياء الأمور مصفوفة' });
     } else {
       for (let i = 0; i < data.parent_phones.length; i++) {
         if (data.parent_phones[i] && !isValidPhone(data.parent_phones[i])) {
-          errors.push({ field: `parent_phones[${i}]`, message: `Invalid phone format at index ${i}` });
+          errors.push({ field: `parent_phones[${i}]`, message: `صيغة رقم جوال غير صالحة في الرقم ${i + 1}` });
         }
       }
     }
@@ -142,19 +142,19 @@ export function validateClass(data: any): ValidationResult {
   const errors: ValidationError[] = [];
 
   if (!data.class_name?.trim()) {
-    errors.push({ field: 'class_name', message: 'Class name is required' });
+    errors.push({ field: 'class_name', message: 'اسم الفصل مطلوب' });
   }
 
   if (!data.grade?.trim()) {
-    errors.push({ field: 'grade', message: 'Grade is required' });
+    errors.push({ field: 'grade', message: 'المرحلة الدراسية مطلوبة' });
   }
 
   if (data.teacher_id !== undefined && data.teacher_id !== null && !data.teacher_id) {
-    errors.push({ field: 'teacher_id', message: 'Invalid teacher assignment' });
+    errors.push({ field: 'teacher_id', message: 'المعلم المحدد غير صالح' });
   }
 
   if (data.capacity && (isNaN(data.capacity) || data.capacity < 1 || data.capacity > 100)) {
-    errors.push({ field: 'capacity', message: 'Capacity must be between 1 and 100' });
+    errors.push({ field: 'capacity', message: 'السعة يجب أن تكون بين 1 و 100' });
   }
 
   return {

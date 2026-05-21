@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get students error:', error);
-    return serverError('Failed to fetch students');
+    return serverError('فشل في جلب الطلاب');
   }
 }
 
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     // Check if student_id exists
     const existing = await db.prepare('SELECT id FROM students WHERE student_id = ?').get(student_id);
     if (existing) {
-      return badRequest('Student ID already exists');
+      return badRequest('رقم الطالب موجود مسبقاً');
     }
 
     // Insert student
@@ -145,6 +145,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Create student error:', error);
-    return serverError('Failed to add student');
+    return serverError('فشل في إضافة الطالب');
   }
 }

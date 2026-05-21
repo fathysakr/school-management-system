@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     return success({ users });
   } catch (error) {
     console.error('Get users error:', error);
-    return serverError('Failed to fetch users');
+    return serverError('فشل في جلب المستخدمين');
   }
 }
 
@@ -39,10 +39,10 @@ export async function POST(request: NextRequest) {
       return badRequest('مطلوب: اسم المستخدم، كلمة المرور، الدور');
     }
     if (password.length < 6) {
-      return badRequest('Password must be at least 6 characters');
+      return badRequest('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
     }
     if (!ALLOWED_ROLES.includes(role)) {
-      return badRequest('Invalid role');
+      return badRequest('دور غير صالح');
     }
 
     const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     return success({ message: 'User created successfully', user_id: userId }, 201);
   } catch (error) {
     console.error('Create user error:', error);
-    return serverError('Failed to create user');
+    return serverError('فشل في إنشاء المستخدم');
   }
 }
 
@@ -74,10 +74,10 @@ export async function PUT(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    if (!id) return badRequest('User ID is required');
+    if (!id) return badRequest('معرف المستخدم مطلوب');
 
     const existing = await db.prepare('SELECT * FROM users WHERE id = ?').get(parseInt(id)) as any;
-    if (!existing) return notFound('User not found');
+    if (!existing) return notFound('المستخدم غير موجود');
 
     const body = await request.json();
     const { email, password, role, status, teacher_id } = body;
@@ -93,20 +93,20 @@ export async function PUT(request: NextRequest) {
     }
 
     if (password !== undefined) {
-      if (password.length < 6) return badRequest('Password must be at least 6 characters');
+      if (password.length < 6) return badRequest('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
       const hashed = await hashPassword(password);
       updates.push('password = ?');
       values.push(hashed);
     }
 
     if (role !== undefined) {
-      if (!ALLOWED_ROLES.includes(role)) return badRequest('Invalid role');
+      if (!ALLOWED_ROLES.includes(role)) return badRequest('دور غير صالح');
       updates.push('role = ?');
       values.push(role);
     }
 
     if (status !== undefined) {
-      if (!['active', 'inactive'].includes(status)) return badRequest('Invalid status');
+      if (!['active', 'inactive'].includes(status)) return badRequest('حالة غير صالحة');
       updates.push('status = ?');
       values.push(status);
     }
@@ -116,7 +116,7 @@ export async function PUT(request: NextRequest) {
       values.push(teacher_id || null);
     }
 
-    if (updates.length === 0) return badRequest('No fields to update');
+    if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
     updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(parseInt(id));
@@ -125,7 +125,7 @@ export async function PUT(request: NextRequest) {
     return success({ message: 'User updated successfully' });
   } catch (error) {
     console.error('Update user error:', error);
-    return serverError('Failed to update user');
+    return serverError('فشل في تحديث المستخدم');
   }
 }
 
@@ -137,16 +137,16 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    if (!id) return badRequest('User ID is required');
+    if (!id) return badRequest('معرف المستخدم مطلوب');
 
     const target = await db.prepare('SELECT * FROM users WHERE id = ?').get(parseInt(id)) as any;
-    if (!target) return notFound('User not found');
-    if (target.role === 'admin') return forbidden('Cannot delete admin accounts');
+    if (!target) return notFound('المستخدم غير موجود');
+    if (target.role === 'admin') return forbidden('لا يمكن حذف حساب المدير');
 
     await db.prepare('DELETE FROM users WHERE id = ?').run(parseInt(id));
     return success({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Delete user error:', error);
-    return serverError('Failed to delete user');
+    return serverError('فشل في حذف المستخدم');
   }
 }

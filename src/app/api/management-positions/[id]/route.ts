@@ -28,7 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return success({ message: 'تم التحديث بنجاح' });
   } catch (error) {
     console.error('Update position error:', error);
-    return serverError('Failed to update position');
+    return serverError('فشل في تحديث المسمى');
   }
 }
 
@@ -51,6 +51,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return success({ message: 'تم الحذف بنجاح' });
   } catch (error) {
     console.error('Delete position error:', error);
-    return serverError('Failed to delete position');
+    return serverError('فشل في حذف المسمى');
   }
 }

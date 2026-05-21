@@ -109,6 +109,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Dashboard stats error:', error);
-    return serverError('Failed to fetch stats');
+    return serverError('فشل في جلب الإحصائيات');
   }
 }

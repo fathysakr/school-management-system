@@ -15,7 +15,7 @@ export async function GET(
     if (!hasPermission(user.role, 'students:view')) return forbidden();
 
     const id = parseInt(params.id);
-    if (isNaN(id)) return badRequest('Invalid student ID');
+    if (isNaN(id)) return badRequest('معرف الطالب غير صالح');
 
     const { searchParams } = new URL(request.url);
     const schoolFilter = getSchoolFilter(user.role, searchParams.get('school') || undefined);
@@ -27,12 +27,12 @@ export async function GET(
     }
 
     const student = await db.prepare(`SELECT * FROM students WHERE id = ? ${schoolClause}`).get(...schoolParams);
-    if (!student) return notFound('Student not found');
+    if (!student) return notFound('الطالب غير موجود');
 
     return success({ student });
   } catch (error) {
     console.error('Get student error:', error);
-    return serverError('Failed to fetch student');
+    return serverError('فشل في جلب بيانات الطالب');
   }
 }
 
@@ -47,12 +47,12 @@ export async function PUT(
     if (!hasPermission(user.role, 'students:edit')) return forbidden();
 
     const id = parseInt(params.id);
-    if (isNaN(id)) return badRequest('Invalid student ID');
+    if (isNaN(id)) return badRequest('معرف الطالب غير صالح');
 
     const body = await request.json();
 
     const existing = await db.prepare('SELECT id FROM students WHERE id = ?').get(id);
-    if (!existing) return notFound('Student not found');
+    if (!existing) return notFound('الطالب غير موجود');
 
     const allowedFields = [
       'first_name', 'last_name', 'email', 'phone',
@@ -101,7 +101,7 @@ export async function PUT(
     }
 
     if (updates.length === 0) {
-      return badRequest('No valid fields to update');
+      return badRequest('لا توجد بيانات صالحة للتحديث');
     }
 
     values.push(id);
@@ -112,7 +112,7 @@ export async function PUT(
     return success({ message: 'Student updated successfully' });
   } catch (error) {
     console.error('Update student error:', error);
-    return serverError('Failed to update student');
+    return serverError('فشل في تحديث بيانات الطالب');
   }
 }
 
@@ -127,10 +127,10 @@ export async function DELETE(
     if (!hasPermission(user.role, 'students:delete')) return forbidden();
 
     const id = parseInt(params.id);
-    if (isNaN(id)) return badRequest('Invalid student ID');
+    if (isNaN(id)) return badRequest('معرف الطالب غير صالح');
 
     const existing = await db.prepare('SELECT id FROM students WHERE id = ?').get(id);
-    if (!existing) return notFound('Student not found');
+    if (!existing) return notFound('الطالب غير موجود');
 
     // Hard delete (cascades to enrollments, attendance, grades, teacher_reports)
     await db.prepare('DELETE FROM enrollments WHERE student_id = ?').run(id);
@@ -142,6 +142,6 @@ export async function DELETE(
     return success({ message: 'تم حذف الطالب وكل بياناته' });
   } catch (error) {
     console.error('Delete student error:', error);
-    return serverError('Failed to delete student');
+    return serverError('فشل في حذف الطالب');
   }
 }

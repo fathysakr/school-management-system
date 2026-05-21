@@ -20,12 +20,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       WHERE g.id = ?
     `).get(parseInt(params.id)) as any;
 
-    if (!grade) return notFound('Grade record not found');
+    if (!grade) return notFound('سجل الدرجة غير موجود');
 
     return success({ grade });
   } catch (error) {
     console.error('Get grade error:', error);
-    return serverError('Failed to fetch grade record');
+    return serverError('فشل في جلب سجل الدرجة');
   }
 }
 
@@ -40,7 +40,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { score, total_score, assessment_type, remarks, assessment_date } = body;
 
     const grade = await db.prepare('SELECT * FROM grades WHERE id = ?').get(parseInt(params.id)) as any;
-    if (!grade) return notFound('Grade record not found');
+    if (!grade) return notFound('سجل الدرجة غير موجود');
 
     const newTotal = total_score ?? grade.total_score;
     const newScore = score ?? grade.score;
@@ -50,7 +50,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     if (assessment_type !== undefined && !['test', 'quiz', 'assignment', 'midterm', 'final'].includes(assessment_type)) {
-      return badRequest('Invalid assessment type');
+      return badRequest('نوع التقييم غير صالح');
     }
 
     const updates: string[] = [];
@@ -62,7 +62,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (remarks !== undefined) { updates.push('remarks = ?'); values.push(remarks ? sanitizeString(remarks) : null); }
     if (assessment_date !== undefined) { updates.push('assessment_date = ?'); values.push(assessment_date || null); }
 
-    if (updates.length === 0) return badRequest('No fields to update');
+    if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
     values.push(parseInt(params.id));
     await db.prepare(`UPDATE grades SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
@@ -70,7 +70,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return success({ message: 'Grade record updated successfully' });
   } catch (error) {
     console.error('Update grade error:', error);
-    return serverError('Failed to update grade record');
+    return serverError('فشل في تحديث سجل الدرجة');
   }
 }
 
@@ -82,13 +82,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!hasPermission(user.role, 'grades:delete')) return forbidden();
 
     const grade = await db.prepare('SELECT * FROM grades WHERE id = ?').get(parseInt(params.id));
-    if (!grade) return notFound('Grade record not found');
+    if (!grade) return notFound('سجل الدرجة غير موجود');
 
     await db.prepare('DELETE FROM grades WHERE id = ?').run(parseInt(params.id));
 
     return success({ message: 'Grade record deleted successfully' });
   } catch (error) {
     console.error('Delete grade error:', error);
-    return serverError('Failed to delete grade record');
+    return serverError('فشل في حذف سجل الدرجة');
   }
 }

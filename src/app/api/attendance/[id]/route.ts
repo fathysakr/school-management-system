@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       WHERE a.id = ?
     `).get(parseInt(params.id)) as any;
 
-    if (!record) return notFound('Attendance record not found');
+    if (!record) return notFound('سجل الحضور غير موجود');
 
     return success({ attendance: record });
   } catch (error) {
@@ -40,11 +40,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { status, remarks } = body;
 
     if (!status || !['present', 'absent', 'late', 'excused'].includes(status)) {
-      return badRequest('Invalid attendance status');
+      return badRequest('حالة الحضور غير صالحة');
     }
 
     const record = await db.prepare('SELECT * FROM attendance WHERE id = ?').get(parseInt(params.id));
-    if (!record) return notFound('Attendance record not found');
+    if (!record) return notFound('سجل الحضور غير موجود');
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       values.push(remarks ? sanitizeString(remarks) : null);
     }
 
-    if (updates.length === 0) return badRequest('No fields to update');
+    if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
     values.push(parseInt(params.id));
     await db.prepare(`UPDATE attendance SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
@@ -66,7 +66,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return success({ message: 'Attendance record updated successfully' });
   } catch (error) {
     console.error('Update attendance error:', error);
-    return serverError('Failed to update attendance record');
+    return serverError('فشل في تحديث سجل الحضور');
   }
 }
 
@@ -78,13 +78,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!hasPermission(user.role, 'attendance:delete')) return forbidden();
 
     const record = await db.prepare('SELECT * FROM attendance WHERE id = ?').get(parseInt(params.id));
-    if (!record) return notFound('Attendance record not found');
+    if (!record) return notFound('سجل الحضور غير موجود');
 
     await db.prepare('DELETE FROM attendance WHERE id = ?').run(parseInt(params.id));
 
     return success({ message: 'Attendance record deleted successfully' });
   } catch (error) {
     console.error('Delete attendance error:', error);
-    return serverError('Failed to delete attendance record');
+    return serverError('فشل في حذف سجل الحضور');
   }
 }

@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     return success({ announcements });
   } catch (error) {
     console.error('Get announcements error:', error);
-    return serverError('Failed to fetch announcements');
+    return serverError('فشل في جلب الإعلانات');
   }
 }
 
@@ -64,20 +64,20 @@ export async function POST(request: NextRequest) {
     const { title, content, target_audience, class_id } = body;
 
     if (!title || !content || !target_audience) {
-      return badRequest('Title, content, and target audience are required');
+      return badRequest('العنوان والمحتوى والفئة المستهدفة مطلوبة');
     }
 
     if (!['all', 'teachers', 'students', 'parents', 'class'].includes(target_audience)) {
-      return badRequest('Invalid target audience');
+      return badRequest('الفئة المستهدفة غير صالحة');
     }
 
     if (target_audience === 'class' && !class_id) {
-      return badRequest('Class ID is required for class-targeted announcements');
+      return badRequest('معرف الفصل مطلوب للإعلانات الموجهة للفصل');
     }
 
     if (class_id) {
       const cls = await db.prepare('SELECT id FROM classes WHERE id = ?').get(parseInt(class_id));
-      if (!cls) return badRequest('Class not found');
+      if (!cls) return badRequest('الفصل غير موجود');
     }
 
     const stmt = db.prepare(`
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     return success({ message: 'Announcement published successfully', id: result.lastInsertRowid }, 201);
   } catch (error) {
     console.error('Create announcement error:', error);
-    return serverError('Failed to create announcement');
+    return serverError('فشل في إنشاء الإعلان');
   }
 }
 
@@ -109,13 +109,13 @@ export async function PUT(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    if (!id) return badRequest('Announcement ID is required');
+    if (!id) return badRequest('معرف الإعلان مطلوب');
 
     const body = await request.json();
     const { title, content, target_audience, class_id, status } = body;
 
     const announcement = await db.prepare('SELECT * FROM announcements WHERE id = ?').get(parseInt(id));
-    if (!announcement) return notFound('Announcement not found');
+    if (!announcement) return notFound('الإعلان غير موجود');
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -130,7 +130,7 @@ export async function PUT(request: NextRequest) {
     }
     if (target_audience !== undefined) {
       if (!['all', 'teachers', 'students', 'parents', 'class'].includes(target_audience)) {
-        return badRequest('Invalid target audience');
+        return badRequest('الفئة المستهدفة غير صالحة');
       }
       updates.push('target_audience = ?');
       values.push(target_audience);
@@ -140,12 +140,12 @@ export async function PUT(request: NextRequest) {
       values.push(class_id ? parseInt(class_id) : null);
     }
     if (status !== undefined) {
-      if (!['active', 'archived'].includes(status)) return badRequest('Invalid status');
+      if (!['active', 'archived'].includes(status)) return badRequest('حالة غير صالحة');
       updates.push('status = ?');
       values.push(status);
     }
 
-    if (updates.length === 0) return badRequest('No fields to update');
+    if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
     values.push(parseInt(id));
     await db.prepare(`UPDATE announcements SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
@@ -153,7 +153,7 @@ export async function PUT(request: NextRequest) {
     return success({ message: 'Announcement updated successfully' });
   } catch (error) {
     console.error('Update announcement error:', error);
-    return serverError('Failed to update announcement');
+    return serverError('فشل في تحديث الإعلان');
   }
 }
 
@@ -166,16 +166,16 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    if (!id) return badRequest('Announcement ID is required');
+    if (!id) return badRequest('معرف الإعلان مطلوب');
 
     const announcement = await db.prepare('SELECT * FROM announcements WHERE id = ?').get(parseInt(id));
-    if (!announcement) return notFound('Announcement not found');
+    if (!announcement) return notFound('الإعلان غير موجود');
 
     await db.prepare('DELETE FROM announcements WHERE id = ?').run(parseInt(id));
 
     return success({ message: 'Announcement deleted successfully' });
   } catch (error) {
     console.error('Delete announcement error:', error);
-    return serverError('Failed to delete announcement');
+    return serverError('فشل في حذف الإعلان');
   }
 }

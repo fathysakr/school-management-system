@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (password.length < 6) {
-      return badRequest('Password must be at least 6 characters');
+      return badRequest('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
     }
 
     const ALLOWED_SELF_REGISTER_ROLES = ['middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor'];
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     // Check if user exists
     const existingUser = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);
     if (existingUser) {
-      return badRequest('Email already registered');
+      return badRequest('البريد الإلكتروني مسجل مسبقاً');
     }
 
     // Hash password
@@ -54,6 +54,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Registration error:', error);
-    return serverError('Registration failed');
+    return serverError('فشل التسجيل');
   }
 }

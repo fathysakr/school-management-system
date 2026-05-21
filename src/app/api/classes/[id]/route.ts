@@ -15,7 +15,7 @@ export async function GET(
     if (!hasPermission(user.role, 'classes:view')) return forbidden();
 
     const id = parseInt(params.id);
-    if (isNaN(id)) return badRequest('Invalid class ID');
+    if (isNaN(id)) return badRequest('معرف الفصل غير صالح');
 
     const { searchParams } = new URL(request.url);
     const schoolFilter = getSchoolFilter(user.role, searchParams.get('school') || undefined);
@@ -34,7 +34,7 @@ export async function GET(
       WHERE c.id = ? ${gradeClause}
     `).get(...queryParams);
 
-    if (!classData) return notFound('Class not found');
+    if (!classData) return notFound('الفصل غير موجود');
 
     // Get enrolled students
     const students = await db.prepare(`
@@ -63,12 +63,12 @@ export async function PUT(
     if (!hasPermission(user.role, 'classes:edit')) return forbidden();
 
     const id = parseInt(params.id);
-    if (isNaN(id)) return badRequest('Invalid class ID');
+    if (isNaN(id)) return badRequest('معرف الفصل غير صالح');
 
     const body = await request.json();
 
     const existing = await db.prepare('SELECT id FROM classes WHERE id = ?').get(id);
-    if (!existing) return notFound('Class not found');
+    if (!existing) return notFound('الفصل غير موجود');
 
     const allowedFields = ['class_name', 'grade', 'section', 'room_number', 'capacity', 'status', 'teacher_id'];
 
@@ -82,7 +82,7 @@ export async function PUT(
           values.push(body[field] ? sanitizeString(body[field].toString()) : null);
         } else if (field === 'capacity') {
           const cap = parseInt(body[field]);
-          if (isNaN(cap) || cap < 1) return badRequest('Invalid capacity');
+          if (isNaN(cap) || cap < 1) return badRequest('السعة غير صالحة');
           values.push(cap);
         } else {
           values.push(body[field]);
@@ -92,7 +92,7 @@ export async function PUT(
     }
 
     if (updates.length === 0) {
-      return badRequest('No valid fields to update');
+      return badRequest('لا توجد بيانات صالحة للتحديث');
     }
 
     values.push(id);
@@ -102,7 +102,7 @@ export async function PUT(
     return success({ message: 'Class updated successfully' });
   } catch (error) {
     console.error('Update class error:', error);
-    return serverError('Failed to update class');
+    return serverError('فشل في تحديث الفصل');
   }
 }
 
@@ -117,16 +117,16 @@ export async function DELETE(
     if (!hasPermission(user.role, 'classes:delete')) return forbidden();
 
     const id = parseInt(params.id);
-    if (isNaN(id)) return badRequest('Invalid class ID');
+    if (isNaN(id)) return badRequest('معرف الفصل غير صالح');
 
     const existing = await db.prepare('SELECT id FROM classes WHERE id = ?').get(id);
-    if (!existing) return notFound('Class not found');
+    if (!existing) return notFound('الفصل غير موجود');
 
     await db.prepare('UPDATE classes SET status = ? WHERE id = ?').run('inactive', id);
 
     return success({ message: 'Class deleted successfully' });
   } catch (error) {
     console.error('Delete class error:', error);
-    return serverError('Failed to delete class');
+    return serverError('فشل في حذف الفصل');
   }
 }

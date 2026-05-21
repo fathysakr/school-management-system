@@ -152,7 +152,7 @@ export default function DashboardPage() {
     if (!token) return;
     setLastLogin(localStorage.getItem('lastLogin') || '');
     fetchAll();
-  }, [token, todayKey]);
+  }, [token, todayKey, selectedSchool]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';

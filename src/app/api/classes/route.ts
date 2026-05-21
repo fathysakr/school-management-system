@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get classes error:', error);
-    return serverError('Failed to fetch classes');
+    return serverError('فشل في جلب الفصول');
   }
 }
 
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     const teacher = await db.prepare("SELECT id FROM teachers WHERE id = ? AND status = 'active'")
       .get(body.teacher_id);
     if (!teacher) {
-      return badRequest('Teacher not found or inactive');
+      return badRequest('المعلم غير موجود أو غير نشط');
     }
 
     const { class_name, grade, section, teacher_id, room_number, capacity } = body;
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       'SELECT id FROM classes WHERE class_name = ? AND grade = ? AND ((section IS NULL AND ? IS NULL) OR section = ?)'
     ).get(class_name, grade, section, section);
     if (existing) {
-      return badRequest('Class already exists');
+      return badRequest('الفصل موجود مسبقاً');
     }
 
     const stmt = await db.prepare(`
@@ -152,6 +152,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Create class error:', error);
-    return serverError('Failed to create class');
+    return serverError('فشل في إنشاء الفصل');
   }
 }

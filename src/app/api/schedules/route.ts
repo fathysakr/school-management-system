@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     return success({ schedules });
   } catch (error) {
     console.error('Get schedules error:', error);
-    return serverError('Failed to fetch schedules');
+    return serverError('فشل في جلب الجداول');
   }
 }
 
@@ -53,18 +53,18 @@ export async function POST(request: NextRequest) {
     const { class_id, teacher_id, subject, day_of_week, start_time, end_time, room_number } = body;
 
     if (!class_id || !teacher_id || !subject || !day_of_week || !start_time || !end_time) {
-      return badRequest('All fields are required: class_id, teacher_id, subject, day_of_week, start_time, end_time');
+      return badRequest('جميع الحقول مطلوبة: معرف الفصل والمعلم والمادة ويوم الأسبوع ووقت البداية والنهاية');
     }
 
     if (!['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'].includes(day_of_week)) {
-      return badRequest('Invalid day. Must be: sunday, monday, tuesday, wednesday, thursday');
+      return badRequest('اليوم غير صالح. يجب أن يكون: الأحد، الإثنين، الثلاثاء، الأربعاء، الخميس');
     }
 
     const cls = await db.prepare('SELECT id FROM classes WHERE id = ?').get(parseInt(class_id));
-    if (!cls) return badRequest('Class not found');
+    if (!cls) return badRequest('الفصل غير موجود');
 
     const teacher = await db.prepare('SELECT id FROM teachers WHERE id = ?').get(parseInt(teacher_id));
-    if (!teacher) return badRequest('Teacher not found');
+    if (!teacher) return badRequest('المعلم غير موجود');
 
     // Check for time conflicts
     const conflict = await db.prepare(`
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       AND start_time < ? AND end_time > ?
     `).get(parseInt(class_id), day_of_week, end_time, start_time);
 
-    if (conflict) return badRequest('There is a schedule conflict at this time');
+    if (conflict) return badRequest('يوجد تعارض في الجدول في هذا الوقت');
 
     const stmt = db.prepare(`
       INSERT INTO schedules (class_id, teacher_id, subject, day_of_week, start_time, end_time, room_number, status)
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     return success({ message: 'Schedule added successfully', id: result.lastInsertRowid }, 201);
   } catch (error) {
     console.error('Create schedule error:', error);
-    return serverError('Failed to create schedule');
+    return serverError('فشل في إنشاء الجدول');
   }
 }
 
@@ -105,11 +105,11 @@ export async function PUT(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    if (!id) return badRequest('Schedule ID is required');
+    if (!id) return badRequest('معرف الجدول مطلوب');
 
     const body = await request.json();
     const schedule = await db.prepare('SELECT * FROM schedules WHERE id = ?').get(parseInt(id));
-    if (!schedule) return notFound('Schedule not found');
+    if (!schedule) return notFound('الجدول غير موجود');
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -121,7 +121,7 @@ export async function PUT(request: NextRequest) {
     if (body.room_number !== undefined) { updates.push('room_number = ?'); values.push(body.room_number ? sanitizeString(body.room_number) : null); }
     if (body.status !== undefined) { updates.push('status = ?'); values.push(body.status); }
 
-    if (updates.length === 0) return badRequest('No fields to update');
+    if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
     values.push(parseInt(id));
     await db.prepare(`UPDATE schedules SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
@@ -129,7 +129,7 @@ export async function PUT(request: NextRequest) {
     return success({ message: 'Schedule updated successfully' });
   } catch (error) {
     console.error('Update schedule error:', error);
-    return serverError('Failed to update schedule');
+    return serverError('فشل في تحديث الجدول');
   }
 }
 
@@ -142,16 +142,16 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    if (!id) return badRequest('Schedule ID is required');
+    if (!id) return badRequest('معرف الجدول مطلوب');
 
     const schedule = await db.prepare('SELECT * FROM schedules WHERE id = ?').get(parseInt(id));
-    if (!schedule) return notFound('Schedule not found');
+    if (!schedule) return notFound('الجدول غير موجود');
 
     await db.prepare('DELETE FROM schedules WHERE id = ?').run(parseInt(id));
 
     return success({ message: 'Schedule deleted successfully' });
   } catch (error) {
     console.error('Delete schedule error:', error);
-    return serverError('Failed to delete schedule');
+    return serverError('فشل في حذف الجدول');
   }
 }

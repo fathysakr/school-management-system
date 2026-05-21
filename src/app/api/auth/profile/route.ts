@@ -13,7 +13,7 @@ export async function PUT(request: NextRequest) {
 
     // Fetch current user from DB
     const dbUser = await db.prepare('SELECT * FROM users WHERE id = ?').get(user.id) as any;
-    if (!dbUser) return badRequest('User not found');
+    if (!dbUser) return badRequest('المستخدم غير موجود');
 
     // Update email if provided
     if (email && email !== dbUser.email) {
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       WHERE u.id = ?
     `).get(authUser.id) as any;
 
-    if (!dbUser) return badRequest('User not found');
+    if (!dbUser) return badRequest('المستخدم غير موجود');
 
     return success({ user: dbUser });
   } catch (error) {

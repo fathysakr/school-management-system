@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     if (transcript === 'true' && student_id) {
       const student = await db.prepare('SELECT * FROM students WHERE id = ?').get(parseInt(student_id));
-      if (!student) return notFound('Student not found');
+      if (!student) return notFound('الطالب غير موجود');
 
       const grades = await db.prepare(`
         SELECT subject, COUNT(*) as assessment_count, AVG(score) as average,
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     return success({ grades });
   } catch (error) {
     console.error('Get grades error:', error);
-    return serverError('Failed to fetch grades');
+    return serverError('فشل في جلب الدرجات');
   }
 }
 
@@ -68,11 +68,11 @@ export async function POST(request: NextRequest) {
     const { student_id, class_id, subject, assessment_type, score, total_score, assessment_date, remarks } = body;
 
     if (!student_id || !class_id || !subject || !assessment_type || score === undefined) {
-      return badRequest('Required fields: student_id, class_id, subject, assessment_type, score');
+      return badRequest('الحقول المطلوبة: معرف الطالب والفصل والمادة ونوع التقييم والدرجة');
     }
 
     if (!['test', 'quiz', 'assignment', 'midterm', 'final'].includes(assessment_type)) {
-      return badRequest('Invalid assessment type');
+      return badRequest('نوع التقييم غير صالح');
     }
 
     const totalScore = total_score || 100;
@@ -82,10 +82,10 @@ export async function POST(request: NextRequest) {
 
     // Verify student and class
     const student = await db.prepare('SELECT id FROM students WHERE id = ?').get(student_id);
-    if (!student) return badRequest('Student not found');
+    if (!student) return badRequest('الطالب غير موجود');
 
     const classData = await db.prepare('SELECT id FROM classes WHERE id = ?').get(class_id);
-    if (!classData) return badRequest('Class not found');
+    if (!classData) return badRequest('الفصل غير موجود');
 
     const stmt = db.prepare(`
       INSERT INTO grades (
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     }, 201);
   } catch (error) {
     console.error('Record grade error:', error);
-    return serverError('Failed to record grade');
+    return serverError('فشل في تسجيل الدرجة');
   }
 }
 
@@ -125,13 +125,13 @@ export async function PUT(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const grade_id = searchParams.get('id');
 
-    if (!grade_id) return badRequest('Grade ID is required');
+    if (!grade_id) return badRequest('معرف الدرجة مطلوب');
 
     const body = await request.json();
     const { score, remarks } = body;
 
     const grade = await db.prepare('SELECT * FROM grades WHERE id = ?').get(parseInt(grade_id)) as any;
-    if (!grade) return notFound('Grade not found');
+    if (!grade) return notFound('الدرجة غير موجودة');
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -150,7 +150,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (updates.length === 0) {
-      return badRequest('No fields to update');
+      return badRequest('لا توجد بيانات للتحديث');
     }
 
     values.push(parseInt(grade_id));
@@ -160,7 +160,7 @@ export async function PUT(request: NextRequest) {
     return success({ message: 'Grade updated successfully' });
   } catch (error) {
     console.error('Update grade error:', error);
-    return serverError('Failed to update grade');
+    return serverError('فشل في تحديث الدرجة');
   }
 }
 

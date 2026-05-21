@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     for (const table of DELETE_ORDER) {
       if (!backup[table]) continue;
       try {
-        await db.prepare(`DELETE FROM \`${table}\``).run();
+        await db.prepare(`DELETE FROM "${table}"`).run();
       } catch {}
     }
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       const first = rows[0];
       const columns = Object.keys(first).filter(k => k !== 'id');
       const placeholders = columns.map(() => '?').join(',');
-      const colNames = columns.map(c => `\`${c}\``).join(',');
+      const colNames = columns.map(c => `"${c}"`).join(',');
 
       let inserted = 0;
       for (const row of rows) {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
             const v = row[c];
             return v === undefined || v === null ? null : v;
           });
-          await db.prepare(`INSERT INTO \`${table}\` (${colNames}) VALUES (${placeholders})`).run(...values);
+          await db.prepare(`INSERT INTO "${table}" (${colNames}) VALUES (${placeholders})`).run(...values);
           inserted++;
         } catch (err: unknown) {
           console.error(`Backup import: skipping row in ${table}:`, err instanceof Error ? err.message : err);

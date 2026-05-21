@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     return success({ message: 'تمت الإضافة بنجاح' }, 201);
   } catch (error) {
     console.error('Assign user to position error:', error);
-    return serverError('Failed to assign user');
+    return serverError('فشل في تعيين المستخدم');
   }
 }
 
@@ -59,6 +59,6 @@ export async function DELETE(request: NextRequest) {
     return success({ message: 'تمت إزالة المستخدم من المسمى' });
   } catch (error) {
     console.error('Unassign user from position error:', error);
-    return serverError('Failed to unassign user');
+    return serverError('فشل في إلغاء تعيين المستخدم');
   }
 }

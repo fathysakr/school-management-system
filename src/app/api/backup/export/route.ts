@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     for (const table of BACKUP_TABLES) {
       try {
-        const rows = await db.prepare(`SELECT * FROM \`${table}\``).all() as any[];
+        const rows = await db.prepare(`SELECT * FROM "${table}"`).all() as any[];
         backup[table] = rows.map((r: any) => ({ ...r }));
       } catch {
         backup[table] = [];

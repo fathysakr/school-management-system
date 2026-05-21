@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     return success({ subjects });
   } catch (error: any) {
     console.error('Get subjects error:', error);
-    return serverError('Failed to fetch subjects');
+    return serverError('فشل في جلب المواد');
   }
 }
 
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     return success({ message: 'تم إضافة المادة', id: result.lastInsertRowid }, 201);
   } catch (error: any) {
     console.error('Create subject error:', error);
-    return serverError('Failed to create subject');
+    return serverError('فشل في إنشاء المادة');
   }
 }
 
@@ -81,7 +81,7 @@ export async function PUT(request: NextRequest) {
     return success({ message: 'تم تحديث المادة' });
   } catch (error: any) {
     console.error('Update subject error:', error);
-    return serverError('Failed to update subject');
+    return serverError('فشل في تحديث المادة');
   }
 }
 
@@ -98,6 +98,6 @@ export async function DELETE(request: NextRequest) {
     return success({ message: 'تم حذف المادة' });
   } catch (error: any) {
     console.error('Delete subject error:', error);
-    return serverError('Failed to delete subject');
+    return serverError('فشل في حذف المادة');
   }
 }

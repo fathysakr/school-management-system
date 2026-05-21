@@ -12,10 +12,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');
-    if (!userId) return badRequest('user_id is required');
+    if (!userId) return badRequest('معرف المستخدم مطلوب');
 
     const targetUser = await db.prepare('SELECT id, role, custom_permissions FROM users WHERE id = ?').get(parseInt(userId)) as any;
-    if (!targetUser) return notFound('User not found');
+    if (!targetUser) return notFound('المستخدم غير موجود');
 
     const roleDefault = rolePermissions[targetUser.role as keyof typeof rolePermissions] || [];
     let customPermissions: string[] | null = null;
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get permissions error:', error);
-    return serverError('Failed to fetch permissions');
+    return serverError('فشل في جلب الصلاحيات');
   }
 }
 
@@ -46,11 +46,11 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { user_id, permissions } = body;
 
-    if (!user_id) return badRequest('user_id is required');
-    if (!Array.isArray(permissions)) return badRequest('permissions must be an array');
+    if (!user_id) return badRequest('معرف المستخدم مطلوب');
+    if (!Array.isArray(permissions)) return badRequest('الصلاحيات يجب أن تكون مصفوفة');
 
     const targetUser = await db.prepare('SELECT id FROM users WHERE id = ?').get(user_id) as any;
-    if (!targetUser) return notFound('User not found');
+    if (!targetUser) return notFound('المستخدم غير موجود');
 
     if (permissions.length === 0) {
       await db.prepare('UPDATE users SET custom_permissions = NULL WHERE id = ?').run(user_id);
@@ -63,6 +63,6 @@ export async function PUT(request: NextRequest) {
     return success({ message: 'تم تحديث الصلاحيات بنجاح', enabled: validPermissions });
   } catch (error) {
     console.error('Update permissions error:', error);
-    return serverError('Failed to update permissions');
+    return serverError('فشل في تحديث الصلاحيات');
   }
 }

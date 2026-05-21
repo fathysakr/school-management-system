@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get teacher reports error:', error);
-    return serverError('Failed to fetch reports');
+    return serverError('فشل في جلب التقارير');
   }
 }
 
@@ -89,11 +89,11 @@ export async function POST(request: NextRequest) {
     const { teacher_id, student_id, class_id, report_type, title, content, date } = body;
 
     if (!student_id || !class_id || !report_type || !content) {
-      return badRequest('Required fields: student_id, class_id, report_type, content');
+      return badRequest('الحقول المطلوبة: معرف الطالب والفصل ونوع التقرير والمحتوى');
     }
 
     if (!['activity', 'positive', 'behavioral', 'academic_deficiency'].includes(report_type)) {
-      return badRequest('Invalid report type');
+      return badRequest('نوع التقرير غير صالح');
     }
 
     const stmt = db.prepare(`
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     return success({ message: 'Report added successfully', id: result.lastInsertRowid }, 201);
   } catch (error) {
     console.error('Create report error:', error);
-    return serverError('Failed to create report');
+    return serverError('فشل في إنشاء التقرير');
   }
 }
 
@@ -153,7 +153,7 @@ export async function PUT(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    if (!id) return badRequest('Report ID is required');
+    if (!id) return badRequest('معرف التقرير مطلوب');
 
     const body = await request.json();
     const updates: string[] = [];
@@ -162,7 +162,7 @@ export async function PUT(request: NextRequest) {
     if (body.title !== undefined) { updates.push('title = ?'); values.push(sanitizeString(body.title)); }
     if (body.content !== undefined) { updates.push('content = ?'); values.push(sanitizeString(body.content)); }
     if (body.status !== undefined) { updates.push('status = ?'); values.push(body.status); }
-    if (updates.length === 0) return badRequest('No fields to update');
+    if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
     values.push(parseInt(id));
     await db.prepare(`UPDATE teacher_reports SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
@@ -170,7 +170,7 @@ export async function PUT(request: NextRequest) {
     return success({ message: 'Report updated' });
   } catch (error) {
     console.error('Update report error:', error);
-    return serverError('Failed to update report');
+    return serverError('فشل في تحديث التقرير');
   }
 }
 
@@ -183,12 +183,12 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    if (!id) return badRequest('Report ID is required');
+    if (!id) return badRequest('معرف التقرير مطلوب');
 
     await db.prepare('DELETE FROM teacher_reports WHERE id = ?').run(parseInt(id));
     return success({ message: 'Report deleted' });
   } catch (error) {
     console.error('Delete report error:', error);
-    return serverError('Failed to delete report');
+    return serverError('فشل في حذف التقرير');
   }
 }

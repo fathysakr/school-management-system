@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const leaves = await db.prepare(sql).all(...params);
     return success({ leaves });
   } catch {
-    return serverError('Failed to fetch leaves');
+    return serverError('فشل في جلب الإجازات');
   }
 }
 
@@ -42,6 +42,6 @@ export async function POST(request: NextRequest) {
     ).run(user.id, leave_type, start_date, end_date, reason || null, 'pending');
     return success({ message: 'تم تقديم طلب الإجازة' });
   } catch {
-    return serverError('Failed to create leave request');
+    return serverError('فشل في إنشاء طلب الإجازة');
   }
 }

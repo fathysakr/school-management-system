@@ -22,7 +22,7 @@ export async function PUT(
     ).run(status, approved_by || user.id, id);
     return success({ message: 'تم تحديث حالة الإجازة' });
   } catch {
-    return serverError('Failed to update leave');
+    return serverError('فشل في تحديث الإجازة');
   }
 }
 
@@ -42,6 +42,6 @@ export async function DELETE(
     await db.prepare('DELETE FROM leave_requests WHERE id = ?').run(id);
     return success({ message: 'تم حذف طلب الإجازة' });
   } catch {
-    return serverError('Failed to delete leave');
+    return serverError('فشل في حذف الإجازة');
   }
 }

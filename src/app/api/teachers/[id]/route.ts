@@ -15,7 +15,7 @@ export async function GET(
     if (!hasPermission(user.role, 'teachers:view')) return forbidden();
 
     const id = parseInt(params.id);
-    if (isNaN(id)) return badRequest('Invalid teacher ID');
+    if (isNaN(id)) return badRequest('معرف المعلم غير صالح');
 
     const { searchParams } = new URL(request.url);
     const schoolFilter = getSchoolFilter(user.role, searchParams.get('school') || undefined);
@@ -37,12 +37,12 @@ export async function GET(
     `;
 
     const teacher = await db.prepare(query).get(id, ...schoolParams);
-    if (!teacher) return notFound('Teacher not found');
+    if (!teacher) return notFound('المعلم غير موجود');
 
     return success({ teacher });
   } catch (error) {
     console.error('Get teacher error:', error);
-    return serverError('Failed to fetch teacher');
+    return serverError('فشل في جلب بيانات المعلم');
   }
 }
 
@@ -57,13 +57,13 @@ export async function PUT(
     if (!hasPermission(user.role, 'teachers:edit')) return forbidden();
 
     const id = parseInt(params.id);
-    if (isNaN(id)) return badRequest('Invalid teacher ID');
+    if (isNaN(id)) return badRequest('معرف المعلم غير صالح');
 
     const body = await request.json();
 
     // Check if teacher exists
     const existing = await db.prepare('SELECT id FROM teachers WHERE id = ?').get(id);
-    if (!existing) return notFound('Teacher not found');
+    if (!existing) return notFound('المعلم غير موجود');
 
     // Prepare updates - only allow specific fields
     const allowedFields = [
@@ -82,15 +82,15 @@ export async function PUT(
           values.push(sanitizeString(body[field]));
         } else if (field === 'email') {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(body[field])) return badRequest('Invalid email format');
+          if (!emailRegex.test(body[field])) return badRequest('صيغة البريد الإلكتروني غير صالحة');
           values.push(body[field]);
         } else if (field === 'phone') {
           const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
-          if (!phoneRegex.test(body[field])) return badRequest('Invalid phone format');
+          if (!phoneRegex.test(body[field])) return badRequest('صيغة رقم الجوال غير صالحة');
           values.push(body[field]);
         } else if (field === 'status') {
           if (!['active', 'inactive'].includes(body[field])) {
-            return badRequest('Invalid status value');
+            return badRequest('قيمة الحالة غير صالحة');
           }
           values.push(body[field]);
         } else {
@@ -102,7 +102,7 @@ export async function PUT(
     }
 
     if (updates.length === 0) {
-      return badRequest('No valid fields to update');
+      return badRequest('لا توجد بيانات صالحة للتحديث');
     }
 
     values.push(id);
@@ -112,7 +112,7 @@ export async function PUT(
       const existingEmail = await db.prepare(
         'SELECT id FROM teachers WHERE email = ? AND id != ?'
       ).get(body.email, id);
-      if (existingEmail) return badRequest('Email already exists');
+      if (existingEmail) return badRequest('البريد الإلكتروني موجود مسبقاً');
     }
 
     const query = `UPDATE teachers SET ${updates.join(', ')} WHERE id = ?`;
@@ -121,7 +121,7 @@ export async function PUT(
     return success({ message: 'Teacher updated successfully' });
   } catch (error) {
     console.error('Update teacher error:', error);
-    return serverError('Failed to update teacher');
+    return serverError('فشل في تحديث بيانات المعلم');
   }
 }
 
@@ -136,11 +136,11 @@ export async function DELETE(
     if (!hasPermission(user.role, 'teachers:delete')) return forbidden();
 
     const id = parseInt(params.id);
-    if (isNaN(id)) return badRequest('Invalid teacher ID');
+    if (isNaN(id)) return badRequest('معرف المعلم غير صالح');
 
     // Check if teacher exists
     const existing = await db.prepare('SELECT id FROM teachers WHERE id = ?').get(id);
-    if (!existing) return notFound('Teacher not found');
+    if (!existing) return notFound('المعلم غير موجود');
 
     // Soft delete
     await db.prepare('UPDATE teachers SET status = ? WHERE id = ?').run('inactive', id);
@@ -148,6 +148,6 @@ export async function DELETE(
     return success({ message: 'Teacher deleted successfully' });
   } catch (error) {
     console.error('Delete teacher error:', error);
-    return serverError('Failed to delete teacher');
+    return serverError('فشل في حذف المعلم');
   }
 }

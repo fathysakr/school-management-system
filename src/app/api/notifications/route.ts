@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     return success({ notifications, unread_count: count.cnt });
   } catch (error) {
     console.error('Get notifications error:', error);
-    return serverError('Failed to fetch notifications');
+    return serverError('فشل في جلب الإشعارات');
   }
 }
 
@@ -47,6 +47,6 @@ export async function PUT(request: NextRequest) {
     return success({ message: 'تم التحديث' });
   } catch (error) {
     console.error('Update notification error:', error);
-    return serverError('Failed to update notification');
+    return serverError('فشل في تحديث الإشعار');
   }
 }

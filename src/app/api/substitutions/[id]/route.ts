@@ -40,7 +40,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return success({ message: 'تم التحديث' });
   } catch (error) {
     console.error('Update substitution error:', error);
-    return serverError('Failed to update substitution');
+    return serverError('فشل في تحديث البديل');
   }
 }
 
@@ -59,6 +59,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return success({ message: 'تم الحذف' });
   } catch (error) {
     console.error('Delete substitution error:', error);
-    return serverError('Failed to delete substitution');
+    return serverError('فشل في حذف البديل');
   }
 }

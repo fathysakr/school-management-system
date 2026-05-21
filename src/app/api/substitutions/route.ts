@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get substitutions error:', error);
-    return serverError('Failed to fetch substitutions');
+    return serverError('فشل في جلب البدائل');
   }
 }
 
@@ -84,6 +84,6 @@ export async function POST(request: NextRequest) {
     return success({ message: 'تم تسجيل البديل', id: result.lastInsertRowid }, 201);
   } catch (error) {
     console.error('Create substitution error:', error);
-    return serverError('Failed to create substitution');
+    return serverError('فشل في إنشاء البديل');
   }
 }

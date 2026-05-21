@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     return success({ attendance: records });
   } catch (error) {
     console.error('Get attendance error:', error);
-    return serverError('Failed to fetch attendance');
+    return serverError('فشل في جلب الحضور');
   }
 }
 
@@ -62,19 +62,19 @@ export async function POST(request: NextRequest) {
     const { student_id, class_id, attendance_date, status, remarks } = body;
 
     if (!student_id || !class_id || !attendance_date || !status) {
-      return badRequest('Student ID, Class ID, date, and status are required');
+      return badRequest('معرف الطالب والفصل والتاريخ والحالة مطلوبة');
     }
 
     if (!['present', 'absent', 'late', 'excused'].includes(status)) {
-      return badRequest('Invalid attendance status');
+      return badRequest('حالة الحضور غير صالحة');
     }
 
     // Verify student and class
     const student = await db.prepare('SELECT id FROM students WHERE id = ?').get(student_id);
-    if (!student) return badRequest('Student not found');
+    if (!student) return badRequest('الطالب غير موجود');
 
     const classData = await db.prepare('SELECT id FROM classes WHERE id = ?').get(class_id);
-    if (!classData) return badRequest('Class not found');
+    if (!classData) return badRequest('الفصل غير موجود');
 
     // Check if record exists
     const existing = await db.prepare(
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Record attendance error:', error);
-    return serverError('Failed to record attendance');
+    return serverError('فشل في تسجيل الحضور');
   }
 }
 
@@ -126,11 +126,11 @@ export async function PUT(request: NextRequest) {
     const { class_id, attendance_date, records } = body;
 
     if (!class_id || !attendance_date || !Array.isArray(records)) {
-      return badRequest('Class ID, date, and records array are required');
+      return badRequest('معرف الفصل والتاريخ وسجل الحضور مطلوبة');
     }
 
     const classData = await db.prepare('SELECT id FROM classes WHERE id = ?').get(class_id);
-    if (!classData) return badRequest('Class not found');
+    if (!classData) return badRequest('الفصل غير موجود');
 
     let successCount = 0;
     let errorCount = 0;
@@ -172,6 +172,6 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error('Bulk attendance error:', error);
-    return serverError('Failed to process attendance');
+    return serverError('فشل في معالجة الحضور');
   }
 }

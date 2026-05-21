@@ -61,6 +61,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Login error:', error);
-    return serverError('Login failed');
+    return serverError('فشل تسجيل الدخول');
   }
 }

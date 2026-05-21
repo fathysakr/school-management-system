@@ -171,6 +171,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, results });
   } catch {
-    return NextResponse.json({ success: false, error: 'Seed failed' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'فشلت عملية البذر' }, { status: 500 });
   }
 }

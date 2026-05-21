@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return success({ message: 'تم التحديث بنجاح' });
   } catch (error) {
     console.error('Update management staff error:', error);
-    return serverError('Failed to update management staff');
+    return serverError('فشل في تحديث بيانات الإدارة');
   }
 }
 
@@ -81,6 +81,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return success({ message: 'تم الحذف بنجاح' });
   } catch (error) {
     console.error('Delete management staff error:', error);
-    return serverError('Failed to delete management staff');
+    return serverError('فشل في حذف عضو الإدارة');
   }
 }

@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get teachers error:', error);
-    return serverError('Failed to fetch teachers');
+    return serverError('فشل في جلب المعلمين');
   }
 }
 
@@ -119,13 +119,13 @@ export async function POST(request: NextRequest) {
     // Check if teacher_id exists
     const existing = await db.prepare('SELECT id FROM teachers WHERE teacher_id = ?').get(teacherId);
     if (existing) {
-      return badRequest('Teacher ID already exists');
+      return badRequest('رقم المعلم موجود مسبقاً');
     }
 
     if (email) {
       const existingEmail = await db.prepare('SELECT id FROM teachers WHERE email = ?').get(email);
       if (existingEmail) {
-        return badRequest('Email already exists');
+        return badRequest('البريد الإلكتروني موجود مسبقاً');
       }
     }
 
@@ -163,6 +163,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Create teacher error:', error);
-    return serverError('Failed to add teacher');
+    return serverError('فشل في إضافة المعلم');
   }
 }

@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     return success({ staff });
   } catch (error) {
     console.error('Get management staff error:', error);
-    return serverError('Failed to fetch management staff');
+    return serverError('فشل في جلب بيانات الإدارة');
   }
 }
 
@@ -83,6 +83,6 @@ export async function POST(request: NextRequest) {
     return success({ message: 'تمت الإضافة بنجاح', user_id: userId }, 201);
   } catch (error) {
     console.error('Create management staff error:', error);
-    return serverError('Failed to create management staff');
+    return serverError('فشل في إنشاء عضو الإدارة');
   }
 }

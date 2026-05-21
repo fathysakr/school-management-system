@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     return success({ positions });
   } catch (error) {
     console.error('Get management positions error:', error);
-    return serverError('Failed to fetch management positions');
+    return serverError('فشل في جلب المسميات الإدارية');
   }
 }
 
@@ -73,6 +73,6 @@ export async function POST(request: NextRequest) {
     return success({ message: 'تمت الإضافة بنجاح', id: result.lastInsertRowid }, 201);
   } catch (error) {
     console.error('Create position error:', error);
-    return serverError('Failed to create position');
+    return serverError('فشل في إنشاء المسمى');
   }
 }

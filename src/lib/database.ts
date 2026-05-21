@@ -994,10 +994,10 @@ async function _ensureTursoReady() {
       'CREATE INDEX IF NOT EXISTS idx_t_schedules_teacher_id ON schedules(teacher_id)',
     ];
     for (const cmd of idxCmds) {
-      try { await db.exec(cmd); } catch {}
+      try { await db.exec(cmd); } catch (e) { console.error('Index creation error:', e); }
     }
     tursoReady = true;
-  } catch {}
+  } catch (e) { console.error('Turso initialization error:', e); }
 }
 
 if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
