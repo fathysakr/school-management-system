@@ -53,6 +53,8 @@ const menuGroups = [
     label: 'التقارير',
     items: [
       { text: 'التقارير', icon: <Assessment />, path: '/dashboard/reports', roles: allRoles },
+      { text: 'كشف الدرجات', icon: <Grade />, path: '/dashboard/report-card', roles: allRoles },
+      { text: 'التحليلات', icon: <Speed />, path: '/dashboard/analytics', roles: ['admin', 'middle_supervisor', 'high_supervisor', 'middle_principal', 'high_principal'] },
       { text: 'الإعلانات', icon: <Campaign />, path: '/dashboard/announcements', roles: announcementRoles },
     ],
   },
@@ -78,6 +80,7 @@ const roleLabels: Record<string, string> = {
   high_monitor: 'مراقب ثانوي',
   middle_admin_staff: 'إداري متوسط',
   high_admin_staff: 'إداري ثانوي',
+  parent: 'ولي أمر',
 };
 
 const roleColors: Record<string, string> = {
@@ -94,6 +97,7 @@ const roleColors: Record<string, string> = {
   high_monitor: '#e65100',
   middle_admin_staff: '#546e7a',
   high_admin_staff: '#37474f',
+  parent: '#00bcd4',
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -324,7 +328,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Box>
         )}
 
+        {/* Parent Menu */}
+        {user.role === 'parent' && (
+          <Box sx={{ flex: 1, overflow: 'auto', py: 1 }}>
+            <Box sx={{ mb: 0.5 }}>
+              {isHovered && (
+                <Typography variant="caption" sx={{ display: 'block', px: 3, py: 1, fontSize: 11, fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: 1 }}>
+                  الرئيسية
+                </Typography>
+              )}
+              <List disablePadding>
+                {[
+                  { text: 'لوحة التحكم', icon: <Speed />, path: '/dashboard/parent' },
+                ].map((item) => {
+                  const isActive = pathname === item.path || pathname.startsWith('/dashboard/parent');
+                  return (
+                    <Tooltip key={item.path} title={!isHovered ? item.text : ''} placement="left" arrow>
+                      <ListItem disablePadding sx={{ display: 'block', px: 1, py: 0.3 }}>
+                        <ListItemButton
+                          onClick={() => { router.push(item.path); if (isMobile) setOpen(false); }}
+                          selected={isActive}
+                          sx={{ minHeight: 44, justifyContent: isHovered ? 'flex-start' : 'center', px: 1.5, py: 1, borderRadius: 2.5, mx: 0.5 }}>
+                          <ListItemIcon sx={{ minWidth: 0, justifyContent: 'center', mr: isHovered ? 1.5 : 0 }}>
+                            {item.icon}
+                          </ListItemIcon>
+                          {isHovered && <ListItemText primary={item.text} primaryTypographyProps={{ fontSize: 14, fontWeight: isActive ? 700 : 500 }} />}
+                        </ListItemButton>
+                      </ListItem>
+                    </Tooltip>
+                  );
+                })}
+              </List>
+            </Box>
+          </Box>
+        )}
+
         {/* Menu Groups */}
+        {user.role !== 'parent' && (
         <Box sx={{ flex: 1, overflow: 'auto', py: 1 }}>
           {menuGroups.map((group, gi) => {
             const filteredItems = group.items.filter(item => item.roles.includes(user.role));
@@ -439,6 +479,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
         </Box>
+        )}
 
         {/* Logout */}
         <Box sx={{ borderTop: '1px solid #e0e0e0', py: 1 }}>

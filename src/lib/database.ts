@@ -657,6 +657,19 @@ function applyMigrations(bsql: Database.Database) {
         );
       `
     },
+    {
+      name: '020_parents',
+      sql: `
+        CREATE TABLE IF NOT EXISTS parents (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          email TEXT UNIQUE,
+          phone TEXT NOT NULL,
+          password TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+      `
+    },
   ];
 
   for (const migration of migrations) {
@@ -819,6 +832,14 @@ async function _ensureTursoReady() {
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(position_id, user_id)
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS parents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE,
+      phone TEXT NOT NULL,
+      password TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
     try { await db.exec(`ALTER TABLE users ADD COLUMN teacher_id INTEGER`); } catch {}
