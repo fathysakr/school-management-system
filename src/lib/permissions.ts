@@ -12,7 +12,7 @@ export type Permission =
   | 'dashboard:stats'
   | 'settings:edit';
 
-export type UserRole = 'admin' | 'middle_supervisor' | 'high_supervisor' | 'middle_teacher' | 'high_teacher' | 'middle_counselor' | 'high_counselor' | 'middle_principal' | 'high_principal' | 'middle_monitor' | 'high_monitor' | 'middle_admin_staff' | 'high_admin_staff';
+export type UserRole = 'admin' | 'middle_supervisor' | 'high_supervisor' | 'middle_teacher' | 'high_teacher' | 'middle_counselor' | 'high_counselor' | 'middle_principal' | 'high_principal' | 'middle_monitor' | 'high_monitor' | 'middle_admin_staff' | 'high_admin_staff' | 'parent';
 
 const rolePermissions: Record<UserRole, Permission[]> = {
   admin: [
@@ -165,6 +165,13 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'dashboard:stats',
   ],
+  parent: [
+    'students:view',
+    'attendance:view',
+    'grades:view',
+    'reports:view',
+    'schedules:view',
+  ],
 };
 
 const allPermissions: Permission[] = [
@@ -266,7 +273,7 @@ export function canAccessRole(currentRole: UserRole | undefined, targetRole: Use
 }
 
 export function getSchoolStage(role: UserRole): 'middle' | 'high' | 'both' {
-  if (role === 'admin') return 'both';
+  if (role === 'admin' || role === 'parent') return 'both';
   if (role.includes('middle_')) return 'middle';
   return 'high';
 }

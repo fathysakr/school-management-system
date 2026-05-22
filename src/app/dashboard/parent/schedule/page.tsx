@@ -22,7 +22,7 @@ const subjectColors = [
   '#d32f2f', '#4a148c', '#e65100', '#558b2f', '#283593',
 ];
 
-const getSubjectColor = (subject: string, index: number) => {
+const getSubjectColor = (_subject: string, index: number) => {
   const colors = subjectColors;
   return colors[index % colors.length];
 };
@@ -170,7 +170,7 @@ export default function ParentSchedulePage() {
         <Paper sx={{ p: 2, mt: 2, borderRadius: 3 }}>
           <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>المواد الدراسية</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {allSubjects.map((sub, idx) => (
+            {allSubjects.map((sub, _idx) => (
               <Chip
                 key={sub}
                 label={sub}

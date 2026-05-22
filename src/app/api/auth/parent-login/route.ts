@@ -30,7 +30,6 @@ export async function POST(request: NextRequest) {
       id: parent.id,
       email: parent.email,
       role: 'parent',
-      name: parent.name,
     });
 
     return success({
