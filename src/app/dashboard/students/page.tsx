@@ -37,6 +37,7 @@ export default function StudentsPage() {
     phone: '', date_of_birth: '', address: '',
     parent_email: '', parent_phone: '', parent_phones: [''] as string[],
     enrollment_date: new Date().toISOString().split('T')[0],
+    semester: '',
   });
   const [isEdit, setIsEdit] = useState(false);
   const [importTab, setImportTab] = useState(0);
@@ -79,6 +80,7 @@ export default function StudentsPage() {
         parent_phone: student.parent_phone || '',
         parent_phones: parsePhones(student),
         enrollment_date: student.enrollment_date || '',
+        semester: student.semester || '',
       });
     } else {
       setIsEdit(false);
@@ -87,6 +89,7 @@ export default function StudentsPage() {
         phone: '', date_of_birth: '', address: '',
         parent_email: '', parent_phone: '', parent_phones: [''],
         enrollment_date: new Date().toISOString().split('T')[0],
+        semester: '',
       });
     }
     setOpenDialog(true);
@@ -198,10 +201,11 @@ export default function StudentsPage() {
           s.address || '',
           s.enrollment_date || '',
           s.school === 'middle' ? 'متوسطة' : 'ثانوية',
+          s.semester || '',
           s.status === 'active' ? 'نشط' : s.status === 'graduated' ? 'متخرج' : 'غير نشط',
         ];
       });
-      exportToExcel(['رقم الطالب','الاسم الأول','الاسم الأخير','البريد الإلكتروني','الهاتف','تاريخ الميلاد','هواتف ولي الأمر','بريد ولي الأمر','العنوان','تاريخ القيد','المرحلة','الحالة'], rows, 'الطلاب', 'students_صفوة_الرواد.xlsx');
+      exportToExcel(['رقم الطالب','الاسم الأول','الاسم الأخير','البريد الإلكتروني','الهاتف','تاريخ الميلاد','هواتف ولي الأمر','بريد ولي الأمر','العنوان','تاريخ القيد','المرحلة','الفصل الدراسي','الحالة'], rows, 'الطلاب', 'students_صفوة_الرواد.xlsx');
       setSuccess('تم تصدير البيانات بنجاح');
     } catch {
       setError('فشل في تصدير البيانات');
@@ -235,6 +239,7 @@ export default function StudentsPage() {
           parent_email: String(row['بريد ولي الأمر'] || row['parent_email'] || ''),
           address: String(row['العنوان'] || row['address'] || ''),
           enrollment_date: String(row['تاريخ القيد'] || row['enrollment_date'] || new Date().toISOString().split('T')[0]),
+          semester: String(row['الفصل الدراسي'] || row['semester'] || ''),
           school,
         };
       }).filter(r => r.first_name && r.last_name);
@@ -258,6 +263,7 @@ export default function StudentsPage() {
               parent_email: String(row[8] || ''),
               address: String(row[9] || ''),
               enrollment_date: String(row[10] || new Date().toISOString().split('T')[0]),
+              semester: String(row[11] || ''),
               school,
             };
           }).filter(r => r.first_name && r.last_name);
@@ -330,15 +336,16 @@ export default function StudentsPage() {
                 <TableCell>البريد</TableCell>
                 <TableCell>هواتف ولي الأمر</TableCell>
                 <TableCell>المرحلة</TableCell>
+                <TableCell>الفصل الدراسي</TableCell>
                 <TableCell>الحالة</TableCell>
                 <TableCell>الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} align="center"><CircularProgress /></TableCell></TableRow>
               ) : students.length === 0 ? (
-                <TableRow><TableCell colSpan={7} align="center"><EmptyState message={loading ? '' : 'لا يوجد طلاب'} /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} align="center"><EmptyState message={loading ? '' : 'لا يوجد طلاب'} /></TableCell></TableRow>
               ) : (
                 students.map((s) => (
                   <TableRow key={s.id}>
@@ -362,6 +369,7 @@ export default function StudentsPage() {
                       <Chip label={s.school === 'high' ? 'ثانوية' : 'متوسطة'} size="small"
                         color={s.school === 'high' ? 'warning' : 'info'} />
                     </TableCell>
+                    <TableCell>{s.semester || '-'}</TableCell>
                     <TableCell>
                       <Chip label={s.status === 'active' ? 'نشط' : s.status === 'graduated' ? 'متخرج' : 'غير نشط'}
                         color={s.status === 'active' ? 'success' : s.status === 'graduated' ? 'info' : 'default'} size="small" />
@@ -441,6 +449,7 @@ export default function StudentsPage() {
               </Button>
             </Grid>
             <Grid item xs={12}><TextField fullWidth label="العنوان" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} /></Grid>
+            <Grid item xs={12} sm={6}><TextField fullWidth label="الفصل الدراسي" value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })} placeholder="مثال: الفصل الأول" /></Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
@@ -454,7 +463,7 @@ export default function StudentsPage() {
         <DialogContent>
           {selectedStudent && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
-              {[['الرقم', selectedStudent.student_id], ['الاسم', `${selectedStudent.first_name} ${selectedStudent.last_name}`], ['البريد', selectedStudent.email || '-'], ['بريد ولي الأمر', selectedStudent.parent_email || '-'], ['الحالة', selectedStudent.status === 'active' ? 'نشط' : selectedStudent.status === 'graduated' ? 'متخرج' : 'غير نشط']].map(([label, value]) => (
+              {[['الرقم', selectedStudent.student_id], ['الاسم', `${selectedStudent.first_name} ${selectedStudent.last_name}`], ['البريد', selectedStudent.email || '-'], ['المرحلة', selectedStudent.school === 'high' ? 'ثانوية' : 'متوسطة'], ['الفصل الدراسي', selectedStudent.semester || '-'], ['بريد ولي الأمر', selectedStudent.parent_email || '-'], ['الحالة', selectedStudent.status === 'active' ? 'نشط' : selectedStudent.status === 'graduated' ? 'متخرج' : 'غير نشط']].map(([label, value]) => (
                 <Box key={label} sx={{ display: 'flex', borderBottom: 1, borderColor: 'divider', pb: 1 }}>
                   <Typography fontWeight="bold" sx={{ minWidth: 130 }}>{label}:</Typography>
                   <Typography>{value}</Typography>
@@ -502,9 +511,9 @@ export default function StudentsPage() {
               <Button variant="contained" onClick={() => fileInputRef.current?.click()}>اختيار ملف</Button>
               <Box sx={{ mt: 3 }}>
                 <Button size="small" onClick={() => {
-                  exportToExcel(['رقم الطالب','الاسم الأول','الاسم الأخير','البريد الإلكتروني','الهاتف','تاريخ الميلاد','هواتف ولي الأمر','بريد ولي الأمر','العنوان','تاريخ القيد','المرحلة'],
-                    [['STU001','أحمد','محمد','ahmed@example.com','0555555555','2010-01-15','0555555551','parent@example.com','الرياض','2024-09-01','ثانوية'],
-                    ['STU002','خالد','عمر','khaled@example.com','0555555556','2011-03-20','0555555552','parent2@example.com','جدة','2024-09-01','متوسطة']],
+                  exportToExcel(['رقم الطالب','الاسم الأول','الاسم الأخير','البريد الإلكتروني','الهاتف','تاريخ الميلاد','هواتف ولي الأمر','بريد ولي الأمر','العنوان','تاريخ القيد','المرحلة','الفصل الدراسي'],
+                    [['STU001','أحمد','محمد','ahmed@example.com','0555555555','2010-01-15','0555555551','parent@example.com','الرياض','2024-09-01','ثانوية','الفصل الأول'],
+                    ['STU002','خالد','عمر','khaled@example.com','0555555556','2011-03-20','0555555552','parent2@example.com','جدة','2024-09-01','متوسطة','الفصل الأول']],
                     'نموذج_استيراد', 'import_template.xlsx');
                 }}>تحميل نموذج ملف</Button>
               </Box>

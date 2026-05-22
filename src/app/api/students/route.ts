@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     const {
       student_id, first_name, last_name, date_of_birth,
-      address, phone, email, parent_email, parent_phone, parent_phones, enrollment_date
+      address, phone, email, parent_email, parent_phone, parent_phones, enrollment_date, semester
     } = body;
 
     // Build parent_phones array
@@ -117,8 +117,8 @@ export async function POST(request: NextRequest) {
       INSERT INTO students (
         student_id, first_name, last_name, date_of_birth,
         address, phone, email, parent_email, parent_phone, parent_phones,
-        enrollment_date, school, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+        enrollment_date, school, semester, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
     `);
 
     const result = await stmt.run(
@@ -133,7 +133,8 @@ export async function POST(request: NextRequest) {
       finalParentPhone,
       phonesJson,
       enrollment_date || new Date().toISOString().split('T')[0],
-      studentSchool
+      studentSchool,
+      semester || ''
     );
 
     return success(

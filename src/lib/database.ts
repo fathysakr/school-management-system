@@ -670,6 +670,12 @@ function applyMigrations(bsql: Database.Database) {
         );
       `
     },
+    {
+      name: '021_add_semester',
+      sql: colExists('students', 'semester')
+        ? 'SELECT 1'
+        : `ALTER TABLE students ADD COLUMN semester TEXT DEFAULT ''`
+    },
   ];
 
   for (const migration of migrations) {
@@ -847,6 +853,8 @@ async function _ensureTursoReady() {
 
     try { await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`); } catch {}
     try { await db.exec(`ALTER TABLE subjects ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL`); } catch {}
+
+    try { await db.exec(`ALTER TABLE students ADD COLUMN semester TEXT DEFAULT ''`); } catch {}
 
     try {
       await db.exec(`CREATE TABLE IF NOT EXISTS classes (
