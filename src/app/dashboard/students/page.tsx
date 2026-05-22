@@ -249,8 +249,9 @@ export default function StudentsPage() {
         const arrRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
         if (arrRows.length > 1) {
           mapped = arrRows.slice(1).map((row, i) => {
-            const rawSchool = String(row[11] || '');
+            const rawSchool = String(row[10] || '');
             const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : '';
+            const phones = (row[6] || '').split('/').map((s: string) => s.trim()).filter(Boolean);
             return {
               student_id: String(row[0] || `STU${ts}${i}`),
               first_name: String(row[1] || ''),
@@ -258,11 +259,11 @@ export default function StudentsPage() {
               email: String(row[3] || ''),
               phone: String(row[4] || ''),
               date_of_birth: String(row[5] || ''),
-              parent_phones: (row[6] || '').split('/').map((s: string) => s.trim()).filter(Boolean),
-              parent_phone: String(row[7] || ''),
-              parent_email: String(row[8] || ''),
-              address: String(row[9] || ''),
-              enrollment_date: String(row[10] || new Date().toISOString().split('T')[0]),
+              parent_phones: phones,
+              parent_phone: phones[0] || '',
+              parent_email: String(row[7] || ''),
+              address: String(row[8] || ''),
+              enrollment_date: String(row[9] || new Date().toISOString().split('T')[0]),
               semester: String(row[11] || ''),
               school,
             };
