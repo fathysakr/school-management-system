@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Grid, Card, CardContent, Paper, Table, TableHead, TableBody,
-  TableRow, TableCell, Chip, LinearProgress, CircularProgress, Button, Alert
+  TableRow, TableCell, Chip, LinearProgress, CircularProgress, Alert
 } from '@mui/material';
 import { School, Warning, EventNote, Grade } from '@mui/icons-material';
 

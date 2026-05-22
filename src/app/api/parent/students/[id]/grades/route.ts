@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
-import { verifyToken, authenticate, unauthorized, serverError, success } from '@/lib/auth';
+import { verifyToken, unauthorized, serverError, success } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
