@@ -14,11 +14,12 @@ import {
   DeleteSweep, Warning, School, Grade, Assessment, People,
   Schedule, Campaign, AutoStories, RestartAlt, ManageAccounts,
   Add, Edit, Delete, Refresh, Search, FileDownload, Security,
-  LockReset, Visibility, VisibilityOff, ContentCopy, CloudDownload, CloudUpload, CalendarToday
+  LockReset, Visibility, VisibilityOff, ContentCopy, CloudDownload, CloudUpload, CalendarToday, GroupAdd
 } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { permissionGroups, permissionLabels, allPermissions } from '@/lib/permissions';
 import AcademicManagement from './AcademicManagement';
+import ParentsManagement from './ParentsManagement';
 
 const actions = [
   { key: 'delete_all_grades', label: 'حذف جميع الدرجات', icon: <Grade />, color: '#e65100', desc: 'مسح جميع سجلات الدرجات والتقييمات' },
@@ -353,6 +354,7 @@ export default function AdminPage() {
         <Tab icon={<Security />} label="الصلاحيات" iconPosition="start" />
         <Tab icon={<CloudDownload />} label="النسخ الاحتياطي" iconPosition="start" />
         <Tab icon={<CalendarToday />} label="الجدول الدراسي" iconPosition="start" />
+        <Tab icon={<GroupAdd />} label="أولياء الأمور" iconPosition="start" />
       </Tabs>
 
       {tab === 0 && (
@@ -817,6 +819,7 @@ export default function AdminPage() {
         </>
       )}
       {tab === 4 && <AcademicManagement />}
+      {tab === 5 && <ParentsManagement />}
     </Box>
   );
 }
