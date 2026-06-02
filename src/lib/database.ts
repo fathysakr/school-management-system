@@ -166,8 +166,11 @@ function applyMigrations(bsql: any) {
           address TEXT,
           parent_email TEXT,
           parent_phone TEXT,
+          parent_phones TEXT DEFAULT '[]',
           photo_url TEXT,
           enrollment_date DATE,
+          school TEXT DEFAULT 'middle',
+          semester TEXT DEFAULT '',
           status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'graduated')),
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -330,14 +333,17 @@ function applyMigrations(bsql: any) {
              address TEXT,
              parent_email TEXT,
              parent_phone TEXT,
+             parent_phones TEXT DEFAULT '[]',
              photo_url TEXT,
              enrollment_date DATE,
+             school TEXT DEFAULT 'middle',
+             semester TEXT DEFAULT '',
              status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'graduated')),
              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
            );
-           INSERT INTO students_new SELECT id, student_id, user_id, first_name, last_name, date_of_birth, email, phone, address, parent_email, parent_phone, photo_url, enrollment_date, status, created_at, updated_at FROM students;
+           INSERT INTO students_new SELECT id, student_id, user_id, first_name, last_name, date_of_birth, email, phone, address, parent_email, parent_phone, parent_phones, photo_url, enrollment_date, school, semester, status, created_at, updated_at FROM students;
            DROP TABLE students;
            ALTER TABLE students_new RENAME TO students;`
         : 'SELECT 1'
@@ -926,6 +932,7 @@ async function _ensureTursoReady() {
       address TEXT,
       parent_email TEXT,
       parent_phone TEXT,
+      parent_phones TEXT DEFAULT '[]',
       photo_url TEXT,
       enrollment_date DATE,
       semester TEXT DEFAULT '',
