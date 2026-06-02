@@ -64,9 +64,14 @@ export function extractToken(request: NextRequest): string | null {
 export async function authenticate(request: NextRequest) {
   const token = extractToken(request);
   if (!token) {
+    console.error('[AUTH] No token in request');
     return null;
   }
-  return verifyToken(token);
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    console.error('[AUTH] Invalid token, JWT_SECRET length:', JWT_SECRET?.length);
+  }
+  return decoded;
 }
 
 // Response helpers

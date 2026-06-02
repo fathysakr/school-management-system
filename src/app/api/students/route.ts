@@ -7,8 +7,13 @@ import { hasPermission, getSchoolFilter, getSchoolStage } from '@/lib/permission
 export async function GET(request: NextRequest) {
   try {
     await ensureTursoReady();
+    console.error('[STUDENTS] GET called, headers:', JSON.stringify(Object.fromEntries(request.headers)));
     const user = await authenticate(request);
-    if (!user) return unauthorized();
+    if (!user) {
+      console.error('[STUDENTS] Auth failed');
+      return unauthorized();
+    }
+    console.error('[STUDENTS] Auth success, user role:', user.role);
     if (!hasPermission(user.role, 'students:view')) return forbidden();
 
     const { searchParams } = new URL(request.url);
