@@ -142,6 +142,24 @@ export async function POST(request: NextRequest) {
       semester || ''
     );
 
+    // Auto-enroll in class if class_name + grade provided
+    const class_name = body.class_name || '';
+    const grade = body.grade || '';
+    if (class_name && grade) {
+      try {
+        let classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name = ? AND grade = ? AND status = ?').get(class_name, grade, 'active') as any;
+        if (!classRow) {
+          classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name LIKE ? AND grade = ? AND status = ? LIMIT 1').get(`${class_name}/%`, grade, 'active') as any;
+        }
+        if (classRow) {
+          const cnt = (await db.prepare('SELECT COUNT(*) as count FROM enrollments WHERE class_id = ? AND status = ?').get(classRow.id, 'active') as any)?.count || 0;
+          if (cnt < classRow.capacity) {
+            await db.prepare("INSERT OR IGNORE INTO enrollments (student_id, class_id, enrollment_date, status) VALUES (?, ?, date('now'), 'active')").run(result.lastInsertRowid, classRow.id);
+          }
+        }
+      } catch (e) { console.error('Auto-enroll error:', e); }
+    }
+
     return success(
       {
         message: 'Student added successfully',

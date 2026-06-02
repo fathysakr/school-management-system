@@ -258,6 +258,8 @@ export default function StudentsPage() {
 
             let semester = String(row['الفصل الدراسي'] || row['semester'] || row['فصل الطالب'] || '');
             let student_id = String(row['رقم الطالب'] || row['student_id'] || row['id'] || row['الرقم'] || `STU${ts}${i}`);
+            let class_name = String(row['الفصل'] || row['class_name'] || row['class'] || '');
+            let grade = String(row['المرحلة'] || row['grade'] || row['الصف'] || '');
 
             return {
               student_id,
@@ -272,6 +274,8 @@ export default function StudentsPage() {
               address: String(row['العنوان'] || row['address'] || ''),
               enrollment_date: String(row['تاريخ القيد'] || row['enrollment_date'] || new Date().toISOString().split('T')[0]),
               semester,
+              class_name,
+              grade,
               school,
             };
           }).filter((r: any) => r.first_name && r.last_name);
@@ -329,8 +333,8 @@ export default function StudentsPage() {
                   enrollment_date: new Date().toISOString().split('T')[0],
                   semester: '',
                   school: schoolFromFile || 'high',
-                  _noor_class: classNum,
-                  _noor_grade: gradeFromFile,
+                  class_name: classNum,
+                  grade: gradeFromFile,
                 };
               }).filter((r: any) => r.first_name && r.last_name);
             }
@@ -349,6 +353,7 @@ export default function StudentsPage() {
               const lastName = spaceIdx > 0 ? fullName.substring(spaceIdx + 1).trim() : '';
               const rawSchool = String(row[3] || '').trim();
               const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : fileSchool || 'high';
+              const classInfo = String(row[2] || '').trim();
               return {
                 student_id: String(row[0] || `STU${ts}${i}`),
                 first_name: firstName,
@@ -361,7 +366,7 @@ export default function StudentsPage() {
                 parent_email: '',
                 address: '',
                 enrollment_date: new Date().toISOString().split('T')[0],
-                semester: String(row[2] || ''),
+                semester: classInfo,
                 school,
               };
             }).filter(r => r.first_name && r.last_name);
