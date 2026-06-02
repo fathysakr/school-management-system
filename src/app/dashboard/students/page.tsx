@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, Dialog, DialogTitle, DialogContent,
+  TableHead, TableRow, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, IconButton, Chip, Alert, CircularProgress,
-  TablePagination, Grid, Tabs, Tab} from '@mui/material';
-import { Add, Edit, Delete, Visibility, Close, FileUpload, FileDownload, CloudUpload, Phone, RemoveCircleOutline, DeleteSweep, AutoAwesome } from '@mui/icons-material';
+  Grid, Tabs, Tab, Select, Accordion, AccordionSummary, AccordionDetails} from '@mui/material';
+import { Add, Edit, Delete, Visibility, Close, FileUpload, FileDownload, CloudUpload, Phone, RemoveCircleOutline, DeleteSweep, AutoAwesome, ExpandMore } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
@@ -20,9 +20,7 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [total, setTotal] = useState(0);
+  const [enrollingId, setEnrollingId] = useState<number | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [viewDialog, setViewDialog] = useState(false);
   const [importDialog, setImportDialog] = useState(false);
@@ -48,11 +46,10 @@ export default function StudentsPage() {
     if (!token) return;
     try {
       const [studentsRes, classesRes] = await Promise.all([
-        api.get(`/students?page=${page + 1}&limit=${rowsPerPage}${schoolParam}`, token),
+        api.get(`/students?page=1&limit=500${schoolParam}`, token),
         api.get(`/classes?page=1&limit=500${schoolParam}`, token),
       ]);
       setStudents(studentsRes.students || []);
-      setTotal(studentsRes.pagination?.total || 0);
       setClasses(classesRes.classes || []);
     } catch (err: any) {
       console.error('fetchStudents error:', err?.message || err);
@@ -62,7 +59,7 @@ export default function StudentsPage() {
     }
   };
 
-  useEffect(() => { fetchStudents(); }, [token, page, rowsPerPage]);
+  useEffect(() => { fetchStudents(); }, [token]);
 
   const parsePhones = (student: any): string[] => {
     if (student.parent_phones) {
@@ -186,6 +183,52 @@ export default function StudentsPage() {
     }
     setGenerating(false);
   };
+
+  const handleEnroll = async (studentId: number, classId: string) => {
+    if (!token) return;
+    setEnrollingId(studentId);
+    try {
+      const payload: Record<string, unknown> = { class_id: classId || undefined };
+      await api.put(`/students/${studentId}`, payload, token);
+      await fetchStudents();
+    } catch (err: any) {
+      setError('فشل في تحديث الفصل: ' + (err?.message || ''));
+    } finally {
+      setEnrollingId(null);
+    }
+  };
+
+  const classesByGrade = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    classes.forEach((c: any) => {
+      const key = c.grade || 'other';
+      if (!map[key]) map[key] = [];
+      map[key].push(c);
+    });
+    return map;
+  }, [classes]);
+
+  const groupedStudents = useMemo(() => {
+    const gradeOrder = [
+      'الصف الأول الثانوي', 'الصف الثاني الثانوي', 'الصف الثالث الثانوي',
+      'الصف الأول المتوسط', 'الصف الثاني المتوسط', 'الصف الثالث المتوسط',
+    ];
+    const groups: { label: string; students: any[] }[] = [];
+
+    gradeOrder.forEach(g => {
+      const gStudents = students.filter((s: any) => s.class_grade === g);
+      if (gStudents.length > 0) groups.push({ label: g, students: gStudents });
+    });
+
+    const unassigned = students.filter((s: any) => !s.class_grade);
+    if (unassigned.length > 0) {
+      const highUnassigned = unassigned.filter((s: any) => s.school === 'high');
+      const middleUnassigned = unassigned.filter((s: any) => s.school !== 'high');
+      if (highUnassigned.length > 0) groups.push({ label: 'ثانوية - بدون فصل', students: highUnassigned });
+      if (middleUnassigned.length > 0) groups.push({ label: 'متوسطة - بدون فصل', students: middleUnassigned });
+    }
+    return groups;
+  }, [students]);
 
   const handleExport = async () => {
     if (!token) return;
@@ -476,86 +519,75 @@ export default function StudentsPage() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}<IconButton size="small" onClick={() => setError('')}><Close fontSize="small" /></IconButton></Alert>}
       {success && <Alert severity="success" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>{success}<IconButton size="small" onClick={() => setSuccess('')}><Close fontSize="small" /></IconButton></Alert>}
 
-      <Paper sx={{ overflow: 'auto' }}>
-        <TableContainer>
-          <Table sx={{ minWidth: 650 }} dir="rtl">
-            <TableHead>
-              <TableRow>
-                <TableCell>الرقم</TableCell>
-                <TableCell>الاسم</TableCell>
-                <TableCell>البريد</TableCell>
-                <TableCell>هواتف ولي الأمر</TableCell>
-                <TableCell>المرحلة</TableCell>
-                <TableCell>الفصل الدراسي</TableCell>
-                <TableCell>الفصل</TableCell>
-                <TableCell>الحالة</TableCell>
-                <TableCell>الإجراءات</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={9} align="center"><CircularProgress /></TableCell></TableRow>
-              ) : students.length === 0 ? (
-                <TableRow><TableCell colSpan={9} align="center"><EmptyState message={loading ? '' : 'لا يوجد طلاب'} /></TableCell></TableRow>
-              ) : (
-                students.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell>{s.student_id}</TableCell>
-                    <TableCell>{s.first_name} {s.last_name}</TableCell>
-                    <TableCell>{s.email || '-'}</TableCell>
-                    <TableCell>
-                      {(() => {
-                        const phones: string[] = (() => {
-                          if (s.parent_phones) {
-                            try { const p = JSON.parse(s.parent_phones); if (Array.isArray(p)) return p; } catch { /* */ }
-                          }
-                          return s.parent_phone ? [s.parent_phone] : [];
-                        })();
-                        return phones.length > 0
-                          ? phones.map((p, i) => <Chip key={i} label={p} size="small" sx={{ ml: 0.5, mb: 0.3 }} />)
-                          : '-';
-                      })()}
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={s.school === 'high' ? 'ثانوية' : 'متوسطة'} size="small"
-                        color={s.school === 'high' ? 'warning' : 'info'} />
-                    </TableCell>
-                    <TableCell>{s.semester || '-'}</TableCell>
-                    <TableCell>
-                      {s.class_name
-                        ? <Chip label={s.class_name} size="small" color="primary" variant="outlined" />
-                        : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={s.status === 'active' ? 'نشط' : s.status === 'graduated' ? 'متخرج' : 'غير نشط'}
-                        color={s.status === 'active' ? 'success' : s.status === 'graduated' ? 'info' : 'default'} size="small" />
-                    </TableCell>
-                    <TableCell>
-                      <IconButton size="small" onClick={() => handleView(s.id)}><Visibility /></IconButton>
-                      {hasPermission(user?.role, 'students:edit') && (
-                        <IconButton size="small" onClick={() => handleOpenDialog(s)}><Edit /></IconButton>
-                      )}
-                      {hasPermission(user?.role, 'students:delete') && (
-                        <Button size="small" color="error" startIcon={<Delete />} onClick={() => handleDelete(s.id)} sx={{ minWidth: 50 }}>حذف</Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={total}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={(_, p) => setPage(p)}
-          onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setPage(0); }}
-          labelRowsPerPage="عدد الصفوف"
-        />
-      </Paper>
+      {loading ? (
+        <Box sx={{ textAlign: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : students.length === 0 ? (
+        <EmptyState message="لا يوجد طلاب" />
+      ) : (
+        groupedStudents.map((group) => {
+          const classesForGrade = classesByGrade[group.label] || [];
+          return (
+            <Accordion key={group.label} defaultExpanded sx={{ mb: 2 }}>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography variant="h6" fontWeight="bold">
+                  {group.label}
+                  <Chip label={`${group.students.length} طالب`} size="small" sx={{ mr: 1.5 }} />
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails sx={{ p: 0 }}>
+                <TableContainer>
+                  <Table sx={{ minWidth: 650 }} dir="rtl" size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>الرقم</TableCell>
+                        <TableCell>الاسم</TableCell>
+                        <TableCell>اختيار الفصل</TableCell>
+                        <TableCell>الحالة</TableCell>
+                        <TableCell>الإجراءات</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {group.students.map((s: any) => (
+                        <TableRow key={s.id}>
+                          <TableCell>{s.student_id}</TableCell>
+                          <TableCell>{s.first_name} {s.last_name}</TableCell>
+                          <TableCell sx={{ minWidth: 200 }}>
+                            <Select
+                              native
+                              fullWidth size="small"
+                              value={s.class_id ? String(s.class_id) : ''}
+                              disabled={enrollingId === s.id}
+                              onChange={(e) => handleEnroll(s.id, e.target.value)}
+                            >
+                              <option value="">بدون فصل</option>
+                              {(classesForGrade.length > 0 ? classesForGrade : classes).map((c: any) => (
+                                <option key={c.id} value={c.id}>{c.class_name}</option>
+                              ))}
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Chip label={s.status === 'active' ? 'نشط' : s.status === 'graduated' ? 'متخرج' : 'غير نشط'}
+                              color={s.status === 'active' ? 'success' : s.status === 'graduated' ? 'info' : 'default'} size="small" />
+                          </TableCell>
+                          <TableCell>
+                            <IconButton size="small" onClick={() => handleView(s.id)}><Visibility /></IconButton>
+                            {hasPermission(user?.role, 'students:edit') && (
+                              <IconButton size="small" onClick={() => handleOpenDialog(s)}><Edit /></IconButton>
+                            )}
+                            {hasPermission(user?.role, 'students:delete') && (
+                              <Button size="small" color="error" startIcon={<Delete />} onClick={() => handleDelete(s.id)} sx={{ minWidth: 50 }}>حذف</Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </AccordionDetails>
+            </Accordion>
+          );
+        })
+      )}
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{isEdit ? 'تعديل الطالب' : 'إضافة طالب جديد'}</DialogTitle>
