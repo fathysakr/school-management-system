@@ -49,8 +49,9 @@ export default function StudentsPage() {
       const res = await api.get(`/students?page=${page + 1}&limit=${rowsPerPage}${schoolParam}`, token);
       setStudents(res.students || []);
       setTotal(res.pagination?.total || 0);
-    } catch {
-      setError('فشل في جلب البيانات');
+    } catch (err: any) {
+      console.error('fetchStudents error:', err?.message || err);
+      setError('فشل في جلب البيانات' + (err?.message ? ` (${err.message})` : ''));
     } finally {
       setLoading(false);
     }
