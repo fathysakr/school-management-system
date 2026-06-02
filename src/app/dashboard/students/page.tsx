@@ -21,6 +21,7 @@ export default function StudentsPage() {
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrollingId, setEnrollingId] = useState<number | null>(null);
+  const [bulkGrade, setBulkGrade] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [viewDialog, setViewDialog] = useState(false);
   const [importDialog, setImportDialog] = useState(false);
@@ -192,6 +193,22 @@ export default function StudentsPage() {
       fetchStudents();
     } catch (err: any) {
       setError('فشل في تحديث المرحلة: ' + (err?.message || ''));
+    }
+  };
+
+  const handleBulkSetGrade = async (grade: string) => {
+    if (!token || !grade) return;
+    const ungraded = students.filter((s: any) => !s.grade);
+    setEnrollingId(-1);
+    try {
+      await Promise.all(ungraded.map((s: any) => api.put(`/students/${s.id}`, { grade }, token)));
+      setBulkGrade('');
+      setSuccess(`تم تعيين مرحلة "${grade}" لـ ${ungraded.length} طالب`);
+      fetchStudents();
+    } catch (err: any) {
+      setError('فشل في تعيين المرحلة: ' + (err?.message || ''));
+    } finally {
+      setEnrollingId(null);
     }
   };
 
@@ -543,10 +560,26 @@ export default function StudentsPage() {
           return (
             <Accordion key={group.label} defaultExpanded sx={{ mb: 2 }}>
               <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography variant="h6" fontWeight="bold">
-                  {group.label}
-                  <Chip label={`${group.students.length} طالب`} size="small" sx={{ mr: 1.5 }} />
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', ml: 1 }}>
+                  <Typography variant="h6" fontWeight="bold">
+                    {group.label}
+                    <Chip label={`${group.students.length} طالب`} size="small" sx={{ mr: 1.5 }} />
+                  </Typography>
+                  {group.label === 'بدون مرحلة' && gradeList.length > 0 && (
+                    <Box sx={{ display: 'flex', gap: 0.5, mr: 'auto' }}>
+                      <Select native size="small" value={bulkGrade} onChange={(e) => setBulkGrade(e.target.value)} sx={{ minWidth: 140 }}>
+                        <option value="">تعيين مرحلة للجميع...</option>
+                        {gradeList.map((g: string) => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </Select>
+                      <Button size="small" variant="contained" disabled={!bulkGrade || enrollingId === -1}
+                        onClick={() => handleBulkSetGrade(bulkGrade)}>
+                        {enrollingId === -1 ? <CircularProgress size={16} /> : 'تطبيق'}
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
               </AccordionSummary>
               <AccordionDetails sx={{ p: 0 }}>
                 <TableContainer>
