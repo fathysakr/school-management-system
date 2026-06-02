@@ -224,9 +224,12 @@ export default function StudentsPage() {
       let rows = XLSX.utils.sheet_to_json(sheet, { defval: '' }) as Record<string, string>[];
 
       const ts = Date.now();
+      const fileName = file.name || '';
+      const fileSchool = fileName.includes('متوسط') ? 'middle' : fileName.includes('ثانوي') ? 'high' : '';
+
       let mapped = rows.map((row, i) => {
         const rawSchool = String(row['المرحلة'] || row['school'] || '');
-        const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : '';
+        const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : fileSchool;
         return {
           student_id: String(row['رقم الطالب'] || row['student_id'] || `STU${ts}${i}`),
           first_name: String(row['الاسم الأول'] || row['first_name'] || ''),
@@ -239,7 +242,7 @@ export default function StudentsPage() {
           parent_email: String(row['بريد ولي الأمر'] || row['parent_email'] || ''),
           address: String(row['العنوان'] || row['address'] || ''),
           enrollment_date: String(row['تاريخ القيد'] || row['enrollment_date'] || new Date().toISOString().split('T')[0]),
-          semester: String(row['الفصل الدراسي'] || row['semester'] || ''),
+          semester: String(row['الفصل الدراسي'] || row['semester'] || row['فصل الطالب'] || ''),
           school,
         };
       }).filter(r => r.first_name && r.last_name);
@@ -250,7 +253,7 @@ export default function StudentsPage() {
         if (arrRows.length > 1) {
           mapped = arrRows.slice(1).map((row, i) => {
             const rawSchool = String(row[10] || '');
-            const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : '';
+            const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : fileSchool;
             const phones = (row[6] || '').split('/').map((s: string) => s.trim()).filter(Boolean);
             return {
               student_id: String(row[0] || `STU${ts}${i}`),
@@ -271,8 +274,36 @@ export default function StudentsPage() {
         }
       }
 
+      // Strategy 3: simplified 3-column format (رقم الطالب, اسم الطالب, فصل الطالب)
       if (mapped.length === 0) {
-        setError('لا توجد بيانات صالحة في الملف. تأكد من أن الأعمدة تحتوي على: رقم الطالب، الاسم الأول، الاسم الأخير');
+        const arrRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
+        if (arrRows.length > 1) {
+          mapped = arrRows.slice(1).map((row, i) => {
+            const fullName = String(row[1] || '').trim();
+            const spaceIdx = fullName.indexOf(' ');
+            const firstName = spaceIdx > 0 ? fullName.substring(0, spaceIdx).trim() : fullName;
+            const lastName = spaceIdx > 0 ? fullName.substring(spaceIdx + 1).trim() : '';
+            return {
+              student_id: String(row[0] || `STU${ts}${i}`),
+              first_name: firstName,
+              last_name: lastName,
+              email: '',
+              phone: '',
+              date_of_birth: '',
+              parent_phones: [],
+              parent_phone: '',
+              parent_email: '',
+              address: '',
+              enrollment_date: new Date().toISOString().split('T')[0],
+              semester: String(row[2] || ''),
+              school: fileSchool || 'middle',
+            };
+          }).filter(r => r.first_name && r.last_name);
+        }
+      }
+
+      if (mapped.length === 0) {
+        setError('لا توجد بيانات صالحة في الملف. تأكد من الصيغة: إما الأعمدة الكاملة أو 3 أعمدة (رقم الطالب، اسم الطالب، فصل الطالب)');
         return;
       }
 
@@ -507,16 +538,17 @@ export default function StudentsPage() {
               <CloudUpload sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
               <Typography variant="h6" gutterBottom>اختر ملف Excel</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                الأعمدة المطلوبة: رقم الطالب، الاسم الأول، الاسم الأخير
+                الصيغة المبسطة: 3 أعمدة (رقم الطالب، اسم الطالب، فصل الطالب)
+                <br />المرحلة تُستخرج من اسم الملف (مثلاً: طلاب_متوسطة.xlsx)
               </Typography>
               <Button variant="contained" onClick={() => fileInputRef.current?.click()}>اختيار ملف</Button>
               <Box sx={{ mt: 3 }}>
                 <Button size="small" onClick={() => {
-                  exportToExcel(['رقم الطالب','الاسم الأول','الاسم الأخير','البريد الإلكتروني','الهاتف','تاريخ الميلاد','هواتف ولي الأمر','بريد ولي الأمر','العنوان','تاريخ القيد','المرحلة','الفصل الدراسي'],
-                    [['STU001','أحمد','محمد','ahmed@example.com','0555555555','2010-01-15','0555555551','parent@example.com','الرياض','2024-09-01','ثانوية','الفصل الأول'],
-                    ['STU002','خالد','عمر','khaled@example.com','0555555556','2011-03-20','0555555552','parent2@example.com','جدة','2024-09-01','متوسطة','الفصل الأول']],
+                  exportToExcel(['رقم الطالب','اسم الطالب','فصل الطالب'],
+                    [['STU001','أحمد محمد','الفصل الأول'],
+                    ['STU002','خالد عمر','الفصل الأول']],
                     'نموذج_استيراد', 'import_template.xlsx');
-                }}>تحميل نموذج ملف</Button>
+                }}>تحميل نموذج ملف مبسط</Button>
               </Box>
             </Box>
           )}
