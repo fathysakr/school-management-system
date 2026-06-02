@@ -36,7 +36,7 @@ export default function StudentsPage() {
     phone: '', date_of_birth: '', address: '',
     parent_email: '', parent_phone: '', parent_phones: [''] as string[],
     enrollment_date: new Date().toISOString().split('T')[0],
-    semester: '', class_id: '',
+    semester: '', class_id: '', grade: '',
   });
   const [isEdit, setIsEdit] = useState(false);
   const [importTab, setImportTab] = useState(0);
@@ -85,6 +85,7 @@ export default function StudentsPage() {
         enrollment_date: student.enrollment_date || '',
         semester: student.semester || '',
         class_id: student.class_id ? String(student.class_id) : '',
+        grade: student.grade || '',
       });
     } else {
       setIsEdit(false);
@@ -93,7 +94,7 @@ export default function StudentsPage() {
         phone: '', date_of_birth: '', address: '',
         parent_email: '', parent_phone: '', parent_phones: [''],
         enrollment_date: new Date().toISOString().split('T')[0],
-        semester: '', class_id: '',
+        semester: '', class_id: '', grade: '',
       });
     }
     setOpenDialog(true);
@@ -184,6 +185,16 @@ export default function StudentsPage() {
     setGenerating(false);
   };
 
+  const handleUpdateGrade = async (studentId: number, grade: string) => {
+    if (!token) return;
+    try {
+      await api.put(`/students/${studentId}`, { grade }, token);
+      fetchStudents();
+    } catch (err: any) {
+      setError('فشل في تحديث المرحلة: ' + (err?.message || ''));
+    }
+  };
+
   const handleEnroll = async (studentId: number, classId: string) => {
     if (!token) return;
     setEnrollingId(studentId);
@@ -208,6 +219,12 @@ export default function StudentsPage() {
     return map;
   }, [classes]);
 
+  const gradeList = useMemo(() => {
+    const grades = new Set<string>();
+    classes.forEach((c: any) => { if (c.grade) grades.add(c.grade); });
+    return Array.from(grades);
+  }, [classes]);
+
   const groupedStudents = useMemo(() => {
     const gradeOrder = [
       'الصف الأول الثانوي', 'الصف الثاني الثانوي', 'الصف الثالث الثانوي',
@@ -216,16 +233,13 @@ export default function StudentsPage() {
     const groups: { label: string; students: any[] }[] = [];
 
     gradeOrder.forEach(g => {
-      const gStudents = students.filter((s: any) => s.class_grade === g);
+      const gStudents = students.filter((s: any) => s.grade === g);
       if (gStudents.length > 0) groups.push({ label: g, students: gStudents });
     });
 
-    const unassigned = students.filter((s: any) => !s.class_grade);
+    const unassigned = students.filter((s: any) => !s.grade);
     if (unassigned.length > 0) {
-      const highUnassigned = unassigned.filter((s: any) => s.school === 'high');
-      const middleUnassigned = unassigned.filter((s: any) => s.school !== 'high');
-      if (highUnassigned.length > 0) groups.push({ label: 'ثانوية - بدون فصل', students: highUnassigned });
-      if (middleUnassigned.length > 0) groups.push({ label: 'متوسطة - بدون فصل', students: middleUnassigned });
+      groups.push({ label: 'بدون مرحلة', students: unassigned });
     }
     return groups;
   }, [students]);
@@ -525,7 +539,7 @@ export default function StudentsPage() {
         <EmptyState message="لا يوجد طلاب" />
       ) : (
         groupedStudents.map((group) => {
-          const classesForGrade = classesByGrade[group.label] || [];
+          const allGradesInGroup = group.label === 'بدون مرحلة' ? gradeList : [group.label];
           return (
             <Accordion key={group.label} defaultExpanded sx={{ mb: 2 }}>
               <AccordionSummary expandIcon={<ExpandMore />}>
@@ -536,50 +550,65 @@ export default function StudentsPage() {
               </AccordionSummary>
               <AccordionDetails sx={{ p: 0 }}>
                 <TableContainer>
-                  <Table sx={{ minWidth: 650 }} dir="rtl" size="small">
+                  <Table sx={{ minWidth: 750 }} dir="rtl" size="small">
                     <TableHead>
                       <TableRow>
                         <TableCell>الرقم</TableCell>
                         <TableCell>الاسم</TableCell>
-                        <TableCell>اختيار الفصل</TableCell>
+                        <TableCell>المرحلة</TableCell>
+                        <TableCell>الفصل</TableCell>
                         <TableCell>الحالة</TableCell>
                         <TableCell>الإجراءات</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {group.students.map((s: any) => (
-                        <TableRow key={s.id}>
-                          <TableCell>{s.student_id}</TableCell>
-                          <TableCell>{s.first_name} {s.last_name}</TableCell>
-                          <TableCell sx={{ minWidth: 200 }}>
-                            <Select
-                              native
-                              fullWidth size="small"
-                              value={s.class_id ? String(s.class_id) : ''}
-                              disabled={enrollingId === s.id}
-                              onChange={(e) => handleEnroll(s.id, e.target.value)}
-                            >
-                              <option value="">بدون فصل</option>
-                              {(classesForGrade.length > 0 ? classesForGrade : classes).map((c: any) => (
-                                <option key={c.id} value={c.id}>{c.class_name}</option>
-                              ))}
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Chip label={s.status === 'active' ? 'نشط' : s.status === 'graduated' ? 'متخرج' : 'غير نشط'}
-                              color={s.status === 'active' ? 'success' : s.status === 'graduated' ? 'info' : 'default'} size="small" />
-                          </TableCell>
-                          <TableCell>
-                            <IconButton size="small" onClick={() => handleView(s.id)}><Visibility /></IconButton>
-                            {hasPermission(user?.role, 'students:edit') && (
-                              <IconButton size="small" onClick={() => handleOpenDialog(s)}><Edit /></IconButton>
-                            )}
-                            {hasPermission(user?.role, 'students:delete') && (
-                              <Button size="small" color="error" startIcon={<Delete />} onClick={() => handleDelete(s.id)} sx={{ minWidth: 50 }}>حذف</Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {group.students.map((s: any) => {
+                        const availableClasses = s.grade ? (classesByGrade[s.grade] || []) : classes;
+                        return (
+                          <TableRow key={s.id}>
+                            <TableCell>{s.student_id}</TableCell>
+                            <TableCell>{s.first_name} {s.last_name}</TableCell>
+                            <TableCell sx={{ minWidth: 160 }}>
+                              <Select
+                                native fullWidth size="small"
+                                value={s.grade || ''}
+                                onChange={(e) => handleUpdateGrade(s.id, e.target.value)}
+                              >
+                                <option value="">اختر المرحلة</option>
+                                {allGradesInGroup.map((g: string) => (
+                                  <option key={g} value={g}>{g}</option>
+                                ))}
+                              </Select>
+                            </TableCell>
+                            <TableCell sx={{ minWidth: 140 }}>
+                              <Select
+                                native fullWidth size="small"
+                                value={s.class_id ? String(s.class_id) : ''}
+                                disabled={enrollingId === s.id}
+                                onChange={(e) => handleEnroll(s.id, e.target.value)}
+                              >
+                                <option value="">بدون فصل</option>
+                                {availableClasses.map((c: any) => (
+                                  <option key={c.id} value={c.id}>{c.class_name}</option>
+                                ))}
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Chip label={s.status === 'active' ? 'نشط' : s.status === 'graduated' ? 'متخرج' : 'غير نشط'}
+                                color={s.status === 'active' ? 'success' : s.status === 'graduated' ? 'info' : 'default'} size="small" />
+                            </TableCell>
+                            <TableCell>
+                              <IconButton size="small" onClick={() => handleView(s.id)}><Visibility /></IconButton>
+                              {hasPermission(user?.role, 'students:edit') && (
+                                <IconButton size="small" onClick={() => handleOpenDialog(s)}><Edit /></IconButton>
+                              )}
+                              {hasPermission(user?.role, 'students:delete') && (
+                                <Button size="small" color="error" startIcon={<Delete />} onClick={() => handleDelete(s.id)} sx={{ minWidth: 50 }}>حذف</Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -638,10 +667,18 @@ export default function StudentsPage() {
             </Grid>
             <Grid item xs={12}><TextField fullWidth label="العنوان" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} /></Grid>
             <Grid item xs={12} sm={6}><TextField fullWidth label="الفصل الدراسي" value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })} placeholder="مثال: الفصل الأول" /></Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
+              <TextField select fullWidth label="المرحلة" value={formData.grade} onChange={(e) => setFormData({ ...formData, grade: e.target.value })} SelectProps={{ native: true }}>
+                <option value="">اختر المرحلة</option>
+                {gradeList.map((g: string) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
               <TextField select fullWidth label="الفصل" value={formData.class_id} onChange={(e) => setFormData({ ...formData, class_id: e.target.value })} SelectProps={{ native: true }}>
                 <option value="">بدون فصل</option>
-                {classes.map((c: any) => (
+                {classes.filter((c: any) => !formData.grade || c.grade === formData.grade).map((c: any) => (
                   <option key={c.id} value={c.id}>{c.class_name} - {c.grade}</option>
                 ))}
               </TextField>

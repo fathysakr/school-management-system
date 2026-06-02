@@ -62,7 +62,7 @@ export async function PUT(
 
     const allowedFields = [
       'first_name', 'last_name', 'email', 'phone',
-      'address', 'parent_email', 'parent_phone', 'parent_phones', 'school', 'status', 'semester'
+      'address', 'parent_email', 'parent_phone', 'parent_phones', 'school', 'status', 'semester', 'grade'
     ];
 
     const updates: string[] = [];
