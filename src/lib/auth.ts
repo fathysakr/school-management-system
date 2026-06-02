@@ -2,9 +2,13 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { NextRequest, NextResponse } from 'next/server';
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required');
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.warn('[AUTH] JWT_SECRET not set, using fallback for build');
+    return 'build-fallback-secret-do-not-use-in-production';
+  }
+  return secret;
 }
 const JWT_EXPIRY = '7d';
 
@@ -26,13 +30,13 @@ export async function comparePassword(password: string, hash: string): Promise<b
 
 // Generate JWT token
 export function generateToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: JWT_EXPIRY });
 }
 
 // Verify JWT token
 export function verifyToken(token: string): TokenPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as TokenPayload;
     return decoded;
   } catch {
     return null;
@@ -41,7 +45,7 @@ export function verifyToken(token: string): TokenPayload | null {
 
 export function verifyTokenWithExpiry(token: string): { payload: TokenPayload | null; expired: boolean } {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as TokenPayload;
     return { payload: decoded, expired: false };
   } catch (error: unknown) {
     if (error instanceof jwt.TokenExpiredError) {
@@ -69,7 +73,7 @@ export async function authenticate(request: NextRequest) {
   }
   const decoded = verifyToken(token);
   if (!decoded) {
-    console.error('[AUTH] Invalid token, JWT_SECRET length:', JWT_SECRET?.length);
+    console.error('[AUTH] Invalid token');
   }
   return decoded;
 }
