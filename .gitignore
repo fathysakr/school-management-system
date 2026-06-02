@@ -3,7 +3,7 @@ node_modules/
 .env.local
 .env
 *.db
-data/
+/data/
 
 .vercel
 
