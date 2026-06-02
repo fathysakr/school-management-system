@@ -6,3 +6,6 @@ node_modules/
 data/
 
 .vercel
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
