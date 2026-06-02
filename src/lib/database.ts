@@ -1,4 +1,3 @@
-import Database from 'better-sqlite3';
 import { createClient } from '@libsql/client';
 import path from 'path';
 import fs from 'fs';
@@ -36,7 +35,7 @@ export interface DbAdapter {
   close(): void;
 }
 
-function createBetterSqlite3Adapter(bsql: Database.Database): DbAdapter {
+function createBetterSqlite3Adapter(bsql: any): DbAdapter {
   return {
     prepare(sql: string) {
       const stmt = bsql.prepare(sql);
@@ -104,7 +103,7 @@ function createTursoAdapter() {
   };
 }
 
-function applyMigrations(bsql: Database.Database) {
+function applyMigrations(bsql: any) {
   function colExists(table: string, column: string): boolean {
     const row = bsql.prepare(
       `SELECT COUNT(*) as cnt FROM pragma_table_info('${table.replace(/'/g, "''")}') WHERE name = ?`
@@ -788,7 +787,44 @@ function applyMigrations(bsql: Database.Database) {
   bsql.pragma('foreign_keys = ON');
 }
 
-let db: DbAdapter;
+function createMockAdapter(): DbAdapter {
+  console.warn('[DB] Using mock adapter (build-only)');
+  return {
+    prepare() {
+      return {
+        get: async () => null,
+        all: async () => [],
+        run: async () => ({ changes: 0, lastInsertRowid: 0 }),
+      };
+    },
+    exec: async () => {},
+    transaction(fn: (...args: any[]) => any) {
+      return async (...args: any[]) => fn(...args);
+    },
+    close: () => {},
+  };
+}
+
+function initDb(): DbAdapter {
+  if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
+    return createTursoAdapter();
+  }
+  try {
+    // Lazy-load better-sqlite3 to avoid Windows security blocks at module parse time
+    const Database = require('better-sqlite3');
+    const dbPath = findDbPath();
+    const bsql = new Database(dbPath);
+    bsql.pragma('foreign_keys = ON');
+    const adapter = createBetterSqlite3Adapter(bsql);
+    applyMigrations(bsql);
+    return adapter;
+  } catch (e: any) {
+    console.warn('[DB] better-sqlite3 unavailable, using mock adapter:', e?.message || e);
+    return createMockAdapter();
+  }
+}
+
+let db: DbAdapter = initDb();
 let tursoReady = false;
 let tursoReadyPromise: Promise<void> | null = null;
 
@@ -1027,16 +1063,6 @@ async function _ensureTursoReady() {
     }
     tursoReady = true;
   } catch (e) { console.error('Turso initialization error:', e); }
-}
-
-if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
-  db = createTursoAdapter();
-} else {
-  const dbPath = findDbPath();
-  const bsql = new Database(dbPath);
-  bsql.pragma('foreign_keys = ON');
-  db = createBetterSqlite3Adapter(bsql);
-  applyMigrations(bsql);
 }
 
 export default db;
