@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
       token
     });
   } catch (error) {
-    console.error('Login error:', error);
-    return serverError('فشل تسجيل الدخول');
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('Login error:', errMsg, error instanceof Error ? error.stack : '');
+    return serverError('فشل تسجيل الدخول: ' + errMsg);
   }
 }
