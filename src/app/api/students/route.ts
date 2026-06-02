@@ -39,14 +39,12 @@ export async function GET(request: NextRequest) {
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
+    const joinClause = 'LEFT JOIN enrollments e ON s.id = e.student_id AND e.status = \'active\' LEFT JOIN classes c ON c.id = e.class_id';
+
     if (classId) {
       whereClause += ' AND e.class_id = ?';
       params.push(parseInt(classId));
     }
-
-    const joinClause = classId
-      ? 'LEFT JOIN enrollments e ON s.id = e.student_id'
-      : '';
 
     // Count
     const countQuery = `SELECT COUNT(DISTINCT s.id) as total FROM students s ${joinClause} ${whereClause}`;
@@ -54,10 +52,11 @@ export async function GET(request: NextRequest) {
 
     // Data
     const query = `
-      SELECT DISTINCT s.*
+      SELECT s.*, c.id as class_id, c.class_name, c.grade as class_grade
       FROM students s
       ${joinClause}
       ${whereClause}
+      GROUP BY s.id
       ORDER BY s.last_name, s.first_name
       LIMIT ? OFFSET ?
     `;
@@ -142,19 +141,28 @@ export async function POST(request: NextRequest) {
       semester || ''
     );
 
-    // Auto-enroll in class if class_name + grade provided
-    const class_name = body.class_name || '';
-    const grade = body.grade || '';
-    if (class_name && grade) {
+    // Auto-enroll in class if class_id, or class_name + grade provided
+    let targetClassId: number | null = null;
+    if (body.class_id) {
+      targetClassId = parseInt(body.class_id);
+    } else if (body.class_name && body.grade) {
+      const cn = body.class_name || '';
+      const gr = body.grade || '';
       try {
-        let classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name = ? AND grade = ? AND status = ?').get(class_name, grade, 'active') as any;
+        let classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name = ? AND grade = ? AND status = ?').get(cn, gr, 'active') as any;
         if (!classRow) {
-          classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name LIKE ? AND grade = ? AND status = ? LIMIT 1').get(`${class_name}/%`, grade, 'active') as any;
+          classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name LIKE ? AND grade = ? AND status = ? LIMIT 1').get(`${cn}/%`, gr, 'active') as any;
         }
+        if (classRow) targetClassId = classRow.id;
+      } catch (e) { console.error('Auto-enroll lookup error:', e); }
+    }
+    if (targetClassId) {
+      try {
+        const classRow = await db.prepare('SELECT capacity FROM classes WHERE id = ? AND status = ?').get(targetClassId, 'active') as any;
         if (classRow) {
-          const cnt = (await db.prepare('SELECT COUNT(*) as count FROM enrollments WHERE class_id = ? AND status = ?').get(classRow.id, 'active') as any)?.count || 0;
+          const cnt = (await db.prepare('SELECT COUNT(*) as count FROM enrollments WHERE class_id = ? AND status = ?').get(targetClassId, 'active') as any)?.count || 0;
           if (cnt < classRow.capacity) {
-            await db.prepare("INSERT OR IGNORE INTO enrollments (student_id, class_id, enrollment_date, status) VALUES (?, ?, date('now'), 'active')").run(result.lastInsertRowid, classRow.id);
+            await db.prepare("INSERT OR IGNORE INTO enrollments (student_id, class_id, enrollment_date, status) VALUES (?, ?, date('now'), 'active')").run(result.lastInsertRowid, targetClassId);
           }
         }
       } catch (e) { console.error('Auto-enroll error:', e); }

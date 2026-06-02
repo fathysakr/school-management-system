@@ -26,7 +26,13 @@ export async function GET(
       schoolParams.push(schoolFilter.school);
     }
 
-    const student = await db.prepare(`SELECT * FROM students WHERE id = ? ${schoolClause}`).get(...schoolParams);
+    const student = await db.prepare(`
+      SELECT s.*, c.id as class_id, c.class_name, c.grade as class_grade
+      FROM students s
+      LEFT JOIN enrollments e ON s.id = e.student_id AND e.status = 'active'
+      LEFT JOIN classes c ON c.id = e.class_id
+      WHERE s.id = ? ${schoolClause}
+    `).get(...schoolParams);
     if (!student) return notFound('الطالب غير موجود');
 
     return success({ student });
@@ -108,6 +114,23 @@ export async function PUT(
 
     const query = `UPDATE students SET ${updates.join(', ')} WHERE id = ?`;
     await db.prepare(query).run(...values);
+
+    // Update enrollment if class_id provided
+    if ('class_id' in body) {
+      const newClassId = body.class_id ? parseInt(body.class_id) : null;
+      // Remove old active enrollment
+      await db.prepare('UPDATE enrollments SET status = ? WHERE student_id = ? AND status = ?').run('dropped', id, 'active');
+      // Create new enrollment
+      if (newClassId) {
+        const classRow = await db.prepare('SELECT capacity FROM classes WHERE id = ? AND status = ?').get(newClassId, 'active') as any;
+        if (classRow) {
+          const cnt = (await db.prepare('SELECT COUNT(*) as count FROM enrollments WHERE class_id = ? AND status = ?').get(newClassId, 'active') as any)?.count || 0;
+          if (cnt < classRow.capacity) {
+            await db.prepare("INSERT OR IGNORE INTO enrollments (student_id, class_id, enrollment_date, status) VALUES (?, ?, date('now'), 'active')").run(id, newClassId);
+          }
+        }
+      }
+    }
 
     return success({ message: 'Student updated successfully' });
   } catch (error) {

@@ -18,6 +18,7 @@ export default function StudentsPage() {
   const { user, token, selectedSchool } = useAuth();
   const schoolParam = selectedSchool && selectedSchool !== 'all' ? `&school=${selectedSchool}` : '';
   const [students, setStudents] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -37,7 +38,7 @@ export default function StudentsPage() {
     phone: '', date_of_birth: '', address: '',
     parent_email: '', parent_phone: '', parent_phones: [''] as string[],
     enrollment_date: new Date().toISOString().split('T')[0],
-    semester: '',
+    semester: '', class_id: '',
   });
   const [isEdit, setIsEdit] = useState(false);
   const [importTab, setImportTab] = useState(0);
@@ -46,9 +47,13 @@ export default function StudentsPage() {
   const fetchStudents = async () => {
     if (!token) return;
     try {
-      const res = await api.get(`/students?page=${page + 1}&limit=${rowsPerPage}${schoolParam}`, token);
-      setStudents(res.students || []);
-      setTotal(res.pagination?.total || 0);
+      const [studentsRes, classesRes] = await Promise.all([
+        api.get(`/students?page=${page + 1}&limit=${rowsPerPage}${schoolParam}`, token),
+        api.get(`/classes?page=1&limit=500${schoolParam}`, token),
+      ]);
+      setStudents(studentsRes.students || []);
+      setTotal(studentsRes.pagination?.total || 0);
+      setClasses(classesRes.classes || []);
     } catch (err: any) {
       console.error('fetchStudents error:', err?.message || err);
       setError('فشل في جلب البيانات' + (err?.message ? ` (${err.message})` : ''));
@@ -82,6 +87,7 @@ export default function StudentsPage() {
         parent_phones: parsePhones(student),
         enrollment_date: student.enrollment_date || '',
         semester: student.semester || '',
+        class_id: student.class_id ? String(student.class_id) : '',
       });
     } else {
       setIsEdit(false);
@@ -90,7 +96,7 @@ export default function StudentsPage() {
         phone: '', date_of_birth: '', address: '',
         parent_email: '', parent_phone: '', parent_phones: [''],
         enrollment_date: new Date().toISOString().split('T')[0],
-        semester: '',
+        semester: '', class_id: '',
       });
     }
     setOpenDialog(true);
@@ -102,11 +108,13 @@ export default function StudentsPage() {
     setError('');
     setSuccess('');
     const phones = formData.parent_phones.filter(p => p.trim());
-    const payload = {
+    const payload: Record<string, unknown> = {
       ...formData,
       parent_phones: phones,
       parent_phone: phones[0] || '',
+      class_id: formData.class_id || undefined,
     };
+    if (!payload.class_id) delete payload.class_id;
     try {
       if (isEdit && selectedStudent) {
         await api.put(`/students/${selectedStudent.id}`, payload, token);
@@ -479,15 +487,16 @@ export default function StudentsPage() {
                 <TableCell>هواتف ولي الأمر</TableCell>
                 <TableCell>المرحلة</TableCell>
                 <TableCell>الفصل الدراسي</TableCell>
+                <TableCell>الفصل</TableCell>
                 <TableCell>الحالة</TableCell>
                 <TableCell>الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={8} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} align="center"><CircularProgress /></TableCell></TableRow>
               ) : students.length === 0 ? (
-                <TableRow><TableCell colSpan={8} align="center"><EmptyState message={loading ? '' : 'لا يوجد طلاب'} /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} align="center"><EmptyState message={loading ? '' : 'لا يوجد طلاب'} /></TableCell></TableRow>
               ) : (
                 students.map((s) => (
                   <TableRow key={s.id}>
@@ -512,6 +521,11 @@ export default function StudentsPage() {
                         color={s.school === 'high' ? 'warning' : 'info'} />
                     </TableCell>
                     <TableCell>{s.semester || '-'}</TableCell>
+                    <TableCell>
+                      {s.class_name
+                        ? <Chip label={s.class_name} size="small" color="primary" variant="outlined" />
+                        : '-'}
+                    </TableCell>
                     <TableCell>
                       <Chip label={s.status === 'active' ? 'نشط' : s.status === 'graduated' ? 'متخرج' : 'غير نشط'}
                         color={s.status === 'active' ? 'success' : s.status === 'graduated' ? 'info' : 'default'} size="small" />
@@ -592,6 +606,14 @@ export default function StudentsPage() {
             </Grid>
             <Grid item xs={12}><TextField fullWidth label="العنوان" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} /></Grid>
             <Grid item xs={12} sm={6}><TextField fullWidth label="الفصل الدراسي" value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })} placeholder="مثال: الفصل الأول" /></Grid>
+            <Grid item xs={12}>
+              <TextField select fullWidth label="الفصل" value={formData.class_id} onChange={(e) => setFormData({ ...formData, class_id: e.target.value })} SelectProps={{ native: true }}>
+                <option value="">بدون فصل</option>
+                {classes.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.class_name} - {c.grade}</option>
+                ))}
+              </TextField>
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
@@ -605,7 +627,7 @@ export default function StudentsPage() {
         <DialogContent>
           {selectedStudent && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
-              {[['الرقم', selectedStudent.student_id], ['الاسم', `${selectedStudent.first_name} ${selectedStudent.last_name}`], ['البريد', selectedStudent.email || '-'], ['المرحلة', selectedStudent.school === 'high' ? 'ثانوية' : 'متوسطة'], ['الفصل الدراسي', selectedStudent.semester || '-'], ['بريد ولي الأمر', selectedStudent.parent_email || '-'], ['الحالة', selectedStudent.status === 'active' ? 'نشط' : selectedStudent.status === 'graduated' ? 'متخرج' : 'غير نشط']].map(([label, value]) => (
+              {[['الرقم', selectedStudent.student_id], ['الاسم', `${selectedStudent.first_name} ${selectedStudent.last_name}`], ['البريد', selectedStudent.email || '-'], ['المرحلة', selectedStudent.school === 'high' ? 'ثانوية' : 'متوسطة'], ['الفصل الدراسي', selectedStudent.semester || '-'], ['الفصل', selectedStudent.class_name ? `${selectedStudent.class_name} (${selectedStudent.class_grade})` : '-'], ['بريد ولي الأمر', selectedStudent.parent_email || '-'], ['الحالة', selectedStudent.status === 'active' ? 'نشط' : selectedStudent.status === 'graduated' ? 'متخرج' : 'غير نشط']].map(([label, value]) => (
                 <Box key={label} sx={{ display: 'flex', borderBottom: 1, borderColor: 'divider', pb: 1 }}>
                   <Typography fontWeight="bold" sx={{ minWidth: 130 }}>{label}:</Typography>
                   <Typography>{value}</Typography>
