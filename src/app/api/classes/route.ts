@@ -60,8 +60,8 @@ export async function GET(request: NextRequest) {
     const countResult = await db.prepare(countQuery).get(...params) as any;
 
     const subjectsSubquery = teacherFilterId
-      ? `(SELECT GROUP_CONCAT(DISTINCT s.subject, '، ') FROM schedules s WHERE s.class_id = c.id AND s.status = 'active' AND s.teacher_id = ?)`
-      : `(SELECT GROUP_CONCAT(DISTINCT s.subject, '، ') FROM schedules s WHERE s.class_id = c.id AND s.status = 'active')`;
+      ? `(SELECT GROUP_CONCAT(subject, '، ') FROM (SELECT DISTINCT s.subject FROM schedules s WHERE s.class_id = c.id AND s.status = 'active' AND s.teacher_id = ?))`
+      : `(SELECT GROUP_CONCAT(subject, '، ') FROM (SELECT DISTINCT s.subject FROM schedules s WHERE s.class_id = c.id AND s.status = 'active'))`;
 
     // Data
     const query = `
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get classes error:', error);
-    return serverError(`Get classes error: ${error instanceof Error ? error.message : String(error)}`);
+    return serverError('فشل في جلب الفصول');
   }
 }
 
