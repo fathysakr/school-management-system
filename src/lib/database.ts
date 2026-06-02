@@ -1036,6 +1036,8 @@ async function _ensureTursoReady() {
     try { await db.exec(`ALTER TABLE subjects ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL`); } catch {}
 
     try { await db.exec(`ALTER TABLE students ADD COLUMN semester TEXT DEFAULT ''`); } catch {}
+    try { await db.exec(`ALTER TABLE students ADD COLUMN parent_phones TEXT DEFAULT '[]'`); } catch {}
+    try { await db.exec(`ALTER TABLE students ADD COLUMN school TEXT DEFAULT 'middle'`); } catch {}
 
     try {
       await db.exec(`CREATE TABLE IF NOT EXISTS classes (
