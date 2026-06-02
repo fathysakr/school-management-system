@@ -225,104 +225,132 @@ export default function StudentsPage() {
     try {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
       const ts = Date.now();
       const fileName = file.name || '';
       const fileSchool = fileName.includes('متوسط') ? 'middle' : fileName.includes('ثانوي') ? 'high' : '';
 
-      // Strategy 1: read with headers as keys (first row = Arabic/English column names)
-      let rows = XLSX.utils.sheet_to_json(sheet, { defval: '' }) as Record<string, string>[];
-      // Check if first row keys contain recognizable column headers
-      const firstRowKeys = rows.length > 0 ? Object.keys(rows[0]) : [];
-      const hasRecognizableHeaders = firstRowKeys.some(k =>
-        ['رقم الطالب','اسم الطالب','الاسم الأول','الاسم الأخير','student_id','first_name','last_name',
-         'الفصل','اسم الطالب','رقم الطالب','data','name'].includes(k)
-      );
+      function parseSheet(sheet: XLSX.WorkSheet): any[] {
+        let result: any[] = [];
 
-      let mapped: any[] = [];
+        // Strategy 1: read with headers as keys (first row = Arabic/English column names)
+        let rows = XLSX.utils.sheet_to_json(sheet, { defval: '' }) as Record<string, string>[];
+        const firstRowKeys = rows.length > 0 ? Object.keys(rows[0]) : [];
+        const hasRecognizableHeaders = firstRowKeys.some(k =>
+          ['رقم الطالب','اسم الطالب','الاسم الأول','الاسم الأخير','student_id','first_name','last_name',
+           'الفصل','اسم الطالب','رقم الطالب','data','name'].includes(k)
+        );
 
-      if (hasRecognizableHeaders && firstRowKeys.length >= 2) {
-        mapped = rows.map((row, i) => {
-          const rawSchool = String(row['المرحلة'] || row['school'] || '');
-          const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : fileSchool;
+        if (hasRecognizableHeaders && firstRowKeys.length >= 2) {
+          result = rows.map((row, i) => {
+            const rawSchool = String(row['المرحلة'] || row['school'] || '');
+            const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : fileSchool;
 
-          let first_name = String(row['الاسم الأول'] || row['first_name'] || '');
-          let last_name = String(row['الاسم الأخير'] || row['last_name'] || '');
+            let first_name = String(row['الاسم الأول'] || row['first_name'] || '');
+            let last_name = String(row['الاسم الأخير'] || row['last_name'] || '');
 
-          // If full name column exists and first/last are empty, split it
-          if ((!first_name || !last_name) && (row['اسم الطالب'] || row['full_name'] || row['name'])) {
-            const fullName = String(row['اسم الطالب'] || row['full_name'] || row['name'] || '').trim();
-            const spaceIdx = fullName.indexOf(' ');
-            first_name = spaceIdx > 0 ? fullName.substring(0, spaceIdx).trim() : fullName;
-            last_name = spaceIdx > 0 ? fullName.substring(spaceIdx + 1).trim() : '';
+            if ((!first_name || !last_name) && (row['اسم الطالب'] || row['full_name'] || row['name'])) {
+              const fullName = String(row['اسم الطالب'] || row['full_name'] || row['name'] || '').trim();
+              const spaceIdx = fullName.indexOf(' ');
+              first_name = spaceIdx > 0 ? fullName.substring(0, spaceIdx).trim() : fullName;
+              last_name = spaceIdx > 0 ? fullName.substring(spaceIdx + 1).trim() : '';
+            }
+
+            let semester = String(row['الفصل الدراسي'] || row['semester'] || row['فصل الطالب'] || '');
+            let student_id = String(row['رقم الطالب'] || row['student_id'] || row['id'] || row['الرقم'] || `STU${ts}${i}`);
+
+            return {
+              student_id,
+              first_name,
+              last_name,
+              email: String(row['البريد الإلكتروني'] || row['email'] || ''),
+              phone: String(row['الهاتف'] || row['phone'] || ''),
+              date_of_birth: String(row['تاريخ الميلاد'] || row['date_of_birth'] || ''),
+              parent_phones: String(row['هواتف ولي الأمر'] || row['parent_phones'] || '').split('/').map((s: string) => s.trim()).filter(Boolean),
+              parent_phone: String(row['هاتف ولي الأمر'] || row['parent_phone'] || ''),
+              parent_email: String(row['بريد ولي الأمر'] || row['parent_email'] || ''),
+              address: String(row['العنوان'] || row['address'] || ''),
+              enrollment_date: String(row['تاريخ القيد'] || row['enrollment_date'] || new Date().toISOString().split('T')[0]),
+              semester,
+              school,
+            };
+          }).filter((r: any) => r.first_name && r.last_name);
+        }
+
+        // Strategy 2: Noor system multi-row header format
+        if (result.length === 0) {
+          const arrRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
+          let headerRowIdx = -1;
+          for (let r = 0; r < Math.min(arrRows.length, 30); r++) {
+            const row = arrRows[r];
+            const rowStr = row.join('|');
+            if ((rowStr.includes('الفصل') || rowStr.includes('اسم الطالب')) && rowStr.includes('رقم الطالب')) {
+              headerRowIdx = r;
+              break;
+            }
           }
+          if (headerRowIdx >= 0) {
+            const headerRow = arrRows[headerRowIdx];
+            const colIdx = (label: string) => {
+              for (let c = 0; c < headerRow.length; c++) {
+                if (String(headerRow[c] || '').trim() === label) return c;
+              }
+              return -1;
+            };
+            const classCol = colIdx('الفصل');
+            const nameCol = colIdx('اسم الطالب');
+            const idCol = colIdx('رقم الطالب');
 
-          // For Noor-style headers (الفصل, اسم الطالب, رقم الطالب)
-          let semester = String(row['الفصل الدراسي'] || row['semester'] || row['فصل الطالب'] || '');
-          let student_id = String(row['رقم الطالب'] || row['student_id'] || row['id'] || row['الرقم'] || `STU${ts}${i}`);
+            if (nameCol >= 0 && idCol >= 0) {
+              const gradeFromFile =
+                fileName.includes('أول') ? 'الصف الأول الثانوي' :
+                fileName.includes('ثاني') ? 'الصف الثاني الثانوي' :
+                fileName.includes('ثالث') ? 'الصف الثالث الثانوي' :
+                fileName.includes('أولى') ? 'الصف الأول الثانوي' : '';
+              const schoolFromFile = fileName.includes('ثانوي') ? 'high' : fileSchool;
 
-          return {
-            student_id,
-            first_name,
-            last_name,
-            email: String(row['البريد الإلكتروني'] || row['email'] || ''),
-            phone: String(row['الهاتف'] || row['phone'] || ''),
-            date_of_birth: String(row['تاريخ الميلاد'] || row['date_of_birth'] || ''),
-            parent_phones: String(row['هواتف ولي الأمر'] || row['parent_phones'] || '').split('/').map((s: string) => s.trim()).filter(Boolean),
-            parent_phone: String(row['هاتف ولي الأمر'] || row['parent_phone'] || ''),
-            parent_email: String(row['بريد ولي الأمر'] || row['parent_email'] || ''),
-            address: String(row['العنوان'] || row['address'] || ''),
-            enrollment_date: String(row['تاريخ القيد'] || row['enrollment_date'] || new Date().toISOString().split('T')[0]),
-            semester,
-            school,
-          };
-        }).filter((r: any) => r.first_name && r.last_name);
-      }
-
-      // Strategy 2: Noor system multi-row header format
-      if (mapped.length === 0) {
-        const arrRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
-        // Scan rows to find the header row containing "الفصل" and "اسم الطالب"
-        let headerRowIdx = -1;
-        for (let r = 0; r < Math.min(arrRows.length, 30); r++) {
-          const row = arrRows[r];
-          const rowStr = row.join('|');
-          if ((rowStr.includes('الفصل') || rowStr.includes('اسم الطالب')) && rowStr.includes('رقم الطالب')) {
-            headerRowIdx = r;
-            break;
+              result = arrRows.slice(headerRowIdx + 1).map((row, i) => {
+                const fullName = String(row[nameCol] || '').trim();
+                const spaceIdx = fullName.indexOf(' ');
+                const firstName = spaceIdx > 0 ? fullName.substring(0, spaceIdx).trim() : fullName;
+                const lastName = spaceIdx > 0 ? fullName.substring(spaceIdx + 1).trim() : '';
+                const classNum = classCol >= 0 ? String(row[classCol] || '').trim() : '';
+                return {
+                  student_id: String(row[idCol] || `STU${ts}${i}`),
+                  first_name: firstName,
+                  last_name: lastName,
+                  email: '',
+                  phone: '',
+                  date_of_birth: '',
+                  parent_phones: [] as string[],
+                  parent_phone: '',
+                  parent_email: '',
+                  address: '',
+                  enrollment_date: new Date().toISOString().split('T')[0],
+                  semester: '',
+                  school: schoolFromFile || 'high',
+                  _noor_class: classNum,
+                  _noor_grade: gradeFromFile,
+                };
+              }).filter((r: any) => r.first_name && r.last_name);
+            }
           }
         }
-        if (headerRowIdx >= 0) {
-          const headerRow = arrRows[headerRowIdx];
-          // Find column indices by matching header text (ignore empty cells from merged cells)
-          const colIdx = (label: string) => {
-            for (let c = 0; c < headerRow.length; c++) {
-              if (String(headerRow[c] || '').trim() === label) return c;
-            }
-            return -1;
-          };
-          const classCol = colIdx('الفصل');
-          const nameCol = colIdx('اسم الطالب');
-          const idCol = colIdx('رقم الطالب');
 
-          if (nameCol >= 0 && idCol >= 0) {
-            // Extract grade from file name or cell content
-            const gradeFromFile =
-              fileName.includes('أول') ? 'الصف الأول الثانوي' :
-              fileName.includes('ثاني') ? 'الصف الثاني الثانوي' :
-              fileName.includes('ثالث') ? 'الصف الثالث الثانوي' :
-              fileName.includes('أولى') ? 'الصف الأول الثانوي' : '';
-            const schoolFromFile = fileName.includes('ثانوي') ? 'high' : fileSchool;
-
-            mapped = arrRows.slice(headerRowIdx + 1).map((row, i) => {
-              const fullName = String(row[nameCol] || '').trim();
+        // Strategy 3: simplified 3-column position-based format
+        if (result.length === 0) {
+          const arrRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
+          const colCount = arrRows.length > 0 ? arrRows[0].length : 0;
+          if (colCount <= 4 && arrRows.length > 1) {
+            result = arrRows.slice(1).map((row, i) => {
+              const fullName = String(row[1] || '').trim();
               const spaceIdx = fullName.indexOf(' ');
               const firstName = spaceIdx > 0 ? fullName.substring(0, spaceIdx).trim() : fullName;
               const lastName = spaceIdx > 0 ? fullName.substring(spaceIdx + 1).trim() : '';
-              const classNum = classCol >= 0 ? String(row[classCol] || '').trim() : '';
+              const rawSchool = String(row[3] || '').trim();
+              const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : fileSchool || 'high';
               return {
-                student_id: String(row[idCol] || `STU${ts}${i}`),
+                student_id: String(row[0] || `STU${ts}${i}`),
                 first_name: firstName,
                 last_name: lastName,
                 email: '',
@@ -333,74 +361,48 @@ export default function StudentsPage() {
                 parent_email: '',
                 address: '',
                 enrollment_date: new Date().toISOString().split('T')[0],
-                semester: '',
-                school: schoolFromFile || 'high',
-                _noor_class: classNum,
-                _noor_grade: gradeFromFile,
+                semester: String(row[2] || ''),
+                school,
               };
-            }).filter((r: any) => r.first_name && r.last_name);
+            }).filter(r => r.first_name && r.last_name);
           }
         }
+
+        // Strategy 4: full 12-column position-based format
+        if (result.length === 0) {
+          const arrRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
+          const colCount = arrRows.length > 0 ? arrRows[0].length : 0;
+          if (colCount > 4 && arrRows.length > 1) {
+            result = arrRows.slice(1).map((row, i) => {
+              const rawSchool = String(row[10] || '');
+              const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : fileSchool || 'high';
+              const phones = (row[6] || '').split('/').map((s: string) => s.trim()).filter(Boolean);
+              return {
+                student_id: String(row[0] || `STU${ts}${i}`),
+                first_name: String(row[1] || ''),
+                last_name: String(row[2] || ''),
+                email: String(row[3] || ''),
+                phone: String(row[4] || ''),
+                date_of_birth: String(row[5] || ''),
+                parent_phones: phones,
+                parent_phone: phones[0] || '',
+                parent_email: String(row[7] || ''),
+                address: String(row[8] || ''),
+                enrollment_date: String(row[9] || new Date().toISOString().split('T')[0]),
+                semester: String(row[11] || ''),
+                school,
+              };
+            }).filter(r => r.first_name && r.last_name);
+          }
+        }
+
+        return result;
       }
 
-      // Strategy 3: simplified 3-column position-based format (رقم الطالب, اسم الطالب, فصل الطالب)
-      if (mapped.length === 0) {
-        const arrRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
-        const colCount = arrRows.length > 0 ? arrRows[0].length : 0;
-        if (colCount <= 4 && arrRows.length > 1) {
-          mapped = arrRows.slice(1).map((row, i) => {
-            const fullName = String(row[1] || '').trim();
-            const spaceIdx = fullName.indexOf(' ');
-            const firstName = spaceIdx > 0 ? fullName.substring(0, spaceIdx).trim() : fullName;
-            const lastName = spaceIdx > 0 ? fullName.substring(spaceIdx + 1).trim() : '';
-            // If row has 4 columns, 4th is school (متوسطة/ثانوية)
-            const rawSchool = String(row[3] || '').trim();
-            const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : fileSchool || 'high';
-            return {
-              student_id: String(row[0] || `STU${ts}${i}`),
-              first_name: firstName,
-              last_name: lastName,
-              email: '',
-              phone: '',
-              date_of_birth: '',
-              parent_phones: [] as string[],
-              parent_phone: '',
-              parent_email: '',
-              address: '',
-              enrollment_date: new Date().toISOString().split('T')[0],
-              semester: String(row[2] || ''),
-              school,
-            };
-          }).filter(r => r.first_name && r.last_name);
-        }
-      }
-
-      // Strategy 4: full 12-column position-based format
-      if (mapped.length === 0) {
-        const arrRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
-        const colCount = arrRows.length > 0 ? arrRows[0].length : 0;
-        if (colCount > 4 && arrRows.length > 1) {
-          mapped = arrRows.slice(1).map((row, i) => {
-            const rawSchool = String(row[10] || '');
-            const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : fileSchool || 'high';
-            const phones = (row[6] || '').split('/').map((s: string) => s.trim()).filter(Boolean);
-            return {
-              student_id: String(row[0] || `STU${ts}${i}`),
-              first_name: String(row[1] || ''),
-              last_name: String(row[2] || ''),
-              email: String(row[3] || ''),
-              phone: String(row[4] || ''),
-              date_of_birth: String(row[5] || ''),
-              parent_phones: phones,
-              parent_phone: phones[0] || '',
-              parent_email: String(row[7] || ''),
-              address: String(row[8] || ''),
-              enrollment_date: String(row[9] || new Date().toISOString().split('T')[0]),
-              semester: String(row[11] || ''),
-              school,
-            };
-          }).filter(r => r.first_name && r.last_name);
-        }
+      let mapped: any[] = [];
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        mapped = mapped.concat(parseSheet(sheet));
       }
 
       if (mapped.length === 0) {
