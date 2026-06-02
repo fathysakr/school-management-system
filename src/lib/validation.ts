@@ -94,9 +94,9 @@ export function validateStudent(data: any): ValidationResult {
     errors.push({ field: 'last_name', message: 'الاسم الأخير مطلوب' });
   }
 
-  if (!data.date_of_birth || !isValidDate(data.date_of_birth)) {
+  if (data.date_of_birth && !isValidDate(data.date_of_birth)) {
     errors.push({ field: 'date_of_birth', message: 'تاريخ ميلاد صحيح مطلوب' });
-  } else {
+  } else if (data.date_of_birth) {
     const age = getAge(data.date_of_birth);
     if (age < 4 || age > 25) {
       errors.push({ field: 'date_of_birth', message: 'عمر الطالب يجب أن يكون بين 4 و 25 سنة' });

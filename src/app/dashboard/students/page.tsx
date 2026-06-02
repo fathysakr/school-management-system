@@ -215,6 +215,12 @@ export default function StudentsPage() {
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const effectiveToken = token || localStorage.getItem('token');
+    if (!effectiveToken) {
+      setError('الرجاء تسجيل الدخول أولاً');
+      return;
+    }
     try {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
@@ -247,37 +253,11 @@ export default function StudentsPage() {
         };
       }).filter(r => r.first_name && r.last_name);
 
-      // Strategy 2: fallback to column-position reading
+      // Strategy 2: simplified 3-column format (رقم الطالب, اسم الطالب, فصل الطالب)
       if (mapped.length === 0) {
         const arrRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
-        if (arrRows.length > 1) {
-          mapped = arrRows.slice(1).map((row, i) => {
-            const rawSchool = String(row[10] || '');
-            const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : fileSchool;
-            const phones = (row[6] || '').split('/').map((s: string) => s.trim()).filter(Boolean);
-            return {
-              student_id: String(row[0] || `STU${ts}${i}`),
-              first_name: String(row[1] || ''),
-              last_name: String(row[2] || ''),
-              email: String(row[3] || ''),
-              phone: String(row[4] || ''),
-              date_of_birth: String(row[5] || ''),
-              parent_phones: phones,
-              parent_phone: phones[0] || '',
-              parent_email: String(row[7] || ''),
-              address: String(row[8] || ''),
-              enrollment_date: String(row[9] || new Date().toISOString().split('T')[0]),
-              semester: String(row[11] || ''),
-              school,
-            };
-          }).filter(r => r.first_name && r.last_name);
-        }
-      }
-
-      // Strategy 3: simplified 3-column format (رقم الطالب, اسم الطالب, فصل الطالب)
-      if (mapped.length === 0) {
-        const arrRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
-        if (arrRows.length > 1) {
+        const colCount = arrRows.length > 0 ? arrRows[0].length : 0;
+        if (colCount <= 3 && arrRows.length > 1) {
           mapped = arrRows.slice(1).map((row, i) => {
             const fullName = String(row[1] || '').trim();
             const spaceIdx = fullName.indexOf(' ');
@@ -302,6 +282,34 @@ export default function StudentsPage() {
         }
       }
 
+      // Strategy 3: full 12-column position-based format
+      if (mapped.length === 0) {
+        const arrRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
+        const colCount = arrRows.length > 0 ? arrRows[0].length : 0;
+        if (colCount > 3 && arrRows.length > 1) {
+          mapped = arrRows.slice(1).map((row, i) => {
+            const rawSchool = String(row[10] || '');
+            const school = rawSchool === 'ثانوية' || rawSchool === 'high' ? 'high' : rawSchool === 'متوسطة' || rawSchool === 'middle' ? 'middle' : fileSchool;
+            const phones = (row[6] || '').split('/').map((s: string) => s.trim()).filter(Boolean);
+            return {
+              student_id: String(row[0] || `STU${ts}${i}`),
+              first_name: String(row[1] || ''),
+              last_name: String(row[2] || ''),
+              email: String(row[3] || ''),
+              phone: String(row[4] || ''),
+              date_of_birth: String(row[5] || ''),
+              parent_phones: phones,
+              parent_phone: phones[0] || '',
+              parent_email: String(row[7] || ''),
+              address: String(row[8] || ''),
+              enrollment_date: String(row[9] || new Date().toISOString().split('T')[0]),
+              semester: String(row[11] || ''),
+              school,
+            };
+          }).filter(r => r.first_name && r.last_name);
+        }
+      }
+
       if (mapped.length === 0) {
         setError('لا توجد بيانات صالحة في الملف. تأكد من الصيغة: إما الأعمدة الكاملة أو 3 أعمدة (رقم الطالب، اسم الطالب، فصل الطالب)');
         return;
@@ -316,10 +324,12 @@ export default function StudentsPage() {
       let lastError = '';
       for (const student of mapped) {
         try {
-          await api.post('/students', student, token);
+          await api.post('/students', student, effectiveToken);
           successCount++;
         } catch (err: any) {
-          lastError = err?.message || lastError;
+          const msg = err?.message || '';
+          lastError = msg || lastError;
+          console.error(`Import student ${student.student_id} failed:`, msg);
           failCount++;
         }
       }
