@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get classes error:', error);
-    return serverError('فشل في جلب الفصول');
+    return serverError(`Get classes error: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
