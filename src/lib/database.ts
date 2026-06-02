@@ -1,4 +1,5 @@
 import { createClient } from '@libsql/client';
+import bcrypt from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
 
@@ -884,6 +885,143 @@ async function _ensureTursoReady() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    await db.exec(`PRAGMA foreign_keys=OFF`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS teachers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      teacher_id TEXT UNIQUE NOT NULL,
+      user_id INTEGER UNIQUE,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      date_of_birth DATE,
+      email TEXT UNIQUE,
+      phone TEXT,
+      address TEXT,
+      specialization TEXT,
+      photo_url TEXT,
+      school TEXT DEFAULT 'middle' CHECK (school IN ('middle', 'high')),
+      status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('admin','middle_supervisor','high_supervisor','middle_teacher','high_teacher','middle_counselor','high_counselor','middle_principal','high_principal','middle_monitor','high_monitor','middle_admin_staff','high_admin_staff')),
+      status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+      custom_permissions TEXT,
+      teacher_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS students (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id TEXT UNIQUE NOT NULL,
+      user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE SET NULL,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      date_of_birth DATE NOT NULL,
+      email TEXT,
+      phone TEXT,
+      address TEXT,
+      parent_email TEXT,
+      parent_phone TEXT,
+      photo_url TEXT,
+      enrollment_date DATE,
+      semester TEXT DEFAULT '',
+      school TEXT DEFAULT 'middle' CHECK (school IN ('middle', 'high')),
+      status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'graduated')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS enrollments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+      enrollment_date DATE DEFAULT CURRENT_DATE,
+      status TEXT DEFAULT 'active' CHECK (status IN ('active', 'dropped', 'graduated')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(student_id, class_id)
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS attendance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+      attendance_date DATE NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'late', 'excused')),
+      remarks TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(student_id, class_id, attendance_date)
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS grades (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+      subject TEXT NOT NULL,
+      assessment_type TEXT NOT NULL CHECK (assessment_type IN ('test', 'quiz', 'assignment', 'midterm', 'final')),
+      score REAL NOT NULL,
+      total_score REAL DEFAULT 100,
+      weight REAL DEFAULT 1,
+      assessment_date DATE,
+      remarks TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS announcements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      target_audience TEXT NOT NULL CHECK (target_audience IN ('all', 'teachers', 'students', 'parents', 'class')),
+      class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+      created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+      status TEXT DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+      published_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS leave_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      leave_type TEXT NOT NULL CHECK (leave_type IN ('sick', 'personal', 'emergency', 'annual')),
+      start_date DATE NOT NULL,
+      end_date DATE NOT NULL,
+      reason TEXT,
+      status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+      approved_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      approved_date DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS teacher_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      teacher_id INTEGER NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+      student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+      report_type TEXT NOT NULL CHECK (report_type IN ('activity', 'positive', 'behavioral', 'academic_deficiency')),
+      title TEXT,
+      content TEXT NOT NULL,
+      date DATE DEFAULT CURRENT_DATE,
+      status TEXT DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.exec(`CREATE TABLE IF NOT EXISTS schedules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+      teacher_id INTEGER NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+      subject TEXT NOT NULL,
+      day_of_week TEXT NOT NULL CHECK (day_of_week IN ('sunday', 'monday', 'tuesday', 'wednesday', 'thursday')),
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      room_number TEXT,
+      status TEXT DEFAULT 'active' CHECK (status IN ('active', 'cancelled')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.exec(`PRAGMA foreign_keys=ON`);
+
     try { await db.exec(`ALTER TABLE users ADD COLUMN teacher_id INTEGER`); } catch {}
     try { await db.exec(`UPDATE users SET teacher_id = (SELECT id FROM teachers WHERE teachers.user_id = users.id) WHERE EXISTS (SELECT 1 FROM teachers WHERE teachers.user_id = users.id)`); } catch {}
 
@@ -975,9 +1113,11 @@ async function _ensureTursoReady() {
     await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('3/أ','الصف الثالث المتوسط','أ',${msTid},'601',30,'active'),('3/ب','الصف الثالث المتوسط','ب',${msTid},'602',30,'active'),('3/ت','الصف الثالث المتوسط','ت',${msTid},'603',30,'active'),('3/ث','الصف الثالث المتوسط','ث',${msTid},'604',30,'active'),('3/ج','الصف الثالث المتوسط','ج',${msTid},'605',30,'active'),('3/ح','الصف الثالث المتوسط','ح',${msTid},'606',30,'active')`);
     await db.exec(`PRAGMA foreign_keys=ON`);
 
-    const h = { admin:'$2a$04$QpWlATKSbm.yJD5MRt7FquL2XIrvb0foaijQRZGJvEDpCyYlWLfsm', teacher:'$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u' };
+    const seedAdminEmail = process.env.ADMIN_EMAIL || 'admin@school.com';
+    const seedAdminPass = process.env.ADMIN_PASSWORD ? await bcrypt.hash(process.env.ADMIN_PASSWORD, 10) : '$2a$10$Kc1v.vgFEho5SKGmtIMppOc6u9usmVQB5ITSrHzjm3VcduBo.s1..';
+    const h = { teacher:'$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u' };
     const users: [string, string, string][] = [
-      ['admin@school.com', h.admin, 'admin'],
+      [seedAdminEmail, seedAdminPass, 'admin'],
       ['middle.teacher@school.com', h.teacher, 'middle_teacher'],
       ['high.teacher@school.com', h.teacher, 'high_teacher'],
     ];
