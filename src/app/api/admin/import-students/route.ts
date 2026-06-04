@@ -20,7 +20,13 @@ export async function POST(request: NextRequest) {
       classKeys.add(key);
       const sectionLetter = s.class_name.split('/')[1];
       try {
-        await db.prepare(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status, school) VALUES (?,?,?,NULL,'',40,'active',?)`).run(s.class_name, s.grade, sectionLetter, s.school || 'high');
+        const existingClass = await db.prepare("SELECT id FROM classes WHERE class_name = ? AND grade = ? AND status = ?").get(s.class_name, s.grade, 'active');
+        if (!existingClass) {
+          const firstTeacher = await db.prepare("SELECT id FROM teachers LIMIT 1").get() as any;
+          if (firstTeacher) {
+            await db.prepare(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status, school) VALUES (?,?,?,?,'',40,'active',?)`).run(s.class_name, s.grade, sectionLetter, firstTeacher.id, s.school || 'high');
+          }
+        }
       } catch {}
     }
 
