@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
@@ -192,6 +192,11 @@ export default function ReportsPage() {
   };
 
   useEffect(() => { fetchReports(); }, [token, currentType, selectedClass, selectedStudent, selectedTeacher]);
+
+  const dialogStudents = useMemo(() => {
+    if (!formData.class_id) return allStudents;
+    return allStudents.filter((s: any) => String(s.class_id) === String(formData.class_id));
+  }, [allStudents, formData.class_id]);
 
   const handleOpenDialog = (report?: any) => {
     if (report) {
@@ -544,7 +549,7 @@ export default function ReportsPage() {
               <FormControl fullWidth>
                 <InputLabel>الطالب</InputLabel>
                 <Select value={formData.student_id} label="الطالب" onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}>
-                  {students.map((s) => <MenuItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</MenuItem>)}
+                  {dialogStudents.map((s) => <MenuItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>
