@@ -486,9 +486,21 @@ export default function StudentsPage() {
       let successCount = 0;
       let failCount = 0;
       let lastError = '';
+      const existingByStudentId: Record<string, any> = {};
+      students.forEach((s: any) => { if (s.student_id) existingByStudentId[s.student_id] = s; });
       for (const student of mapped) {
         try {
-          await api.post('/students', student, effectiveToken);
+          const existing = existingByStudentId[student.student_id];
+          if (existing) {
+            const payload: Record<string, unknown> = { grade: student.grade || '', class_name: student.class_name || '' };
+            if (!payload.grade) delete payload.grade;
+            if (!payload.class_name) delete payload.class_name;
+            if (Object.keys(payload).length > 0) {
+              await api.put(`/students/${existing.id}`, payload, effectiveToken);
+            }
+          } else {
+            await api.post('/students', student, effectiveToken);
+          }
           successCount++;
         } catch (err: any) {
           const msg = err?.message || '';

@@ -115,18 +115,29 @@ export async function PUT(
     const query = `UPDATE students SET ${updates.join(', ')} WHERE id = ?`;
     await db.prepare(query).run(...values);
 
-    // Update enrollment if class_id provided
+    // Update enrollment if class_id, or class_name + grade provided
+    let targetClassId: number | null = null;
     if ('class_id' in body) {
-      const newClassId = body.class_id ? parseInt(body.class_id) : null;
-      // Remove old active enrollment
+      targetClassId = body.class_id ? parseInt(body.class_id) : null;
+    } else if (body.class_name && body.grade) {
+      const cn = body.class_name || '';
+      const gr = body.grade || '';
+      try {
+        let classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name = ? AND grade = ? AND status = ?').get(cn, gr, 'active') as any;
+        if (!classRow) {
+          classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name LIKE ? AND grade = ? AND status = ? LIMIT 1').get(`${cn}/%`, gr, 'active') as any;
+        }
+        if (classRow) targetClassId = classRow.id;
+      } catch (e) { console.error('Auto-enroll lookup error:', e); }
+    }
+    if (targetClassId !== null) {
       await db.prepare('UPDATE enrollments SET status = ? WHERE student_id = ? AND status = ?').run('dropped', id, 'active');
-      // Create new enrollment
-      if (newClassId) {
-        const classRow = await db.prepare('SELECT capacity FROM classes WHERE id = ? AND status = ?').get(newClassId, 'active') as any;
+      if (targetClassId) {
+        const classRow = await db.prepare('SELECT capacity FROM classes WHERE id = ? AND status = ?').get(targetClassId, 'active') as any;
         if (classRow) {
-          const cnt = (await db.prepare('SELECT COUNT(*) as count FROM enrollments WHERE class_id = ? AND status = ?').get(newClassId, 'active') as any)?.count || 0;
+          const cnt = (await db.prepare('SELECT COUNT(*) as count FROM enrollments WHERE class_id = ? AND status = ?').get(targetClassId, 'active') as any)?.count || 0;
           if (cnt < classRow.capacity) {
-            await db.prepare("INSERT OR IGNORE INTO enrollments (student_id, class_id, enrollment_date, status) VALUES (?, ?, date('now'), 'active')").run(id, newClassId);
+            await db.prepare("INSERT OR IGNORE INTO enrollments (student_id, class_id, enrollment_date, status) VALUES (?, ?, date('now'), 'active')").run(id, targetClassId);
           }
         }
       }
