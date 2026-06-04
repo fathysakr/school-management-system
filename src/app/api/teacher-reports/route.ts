@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const params: any[] = [status];
 
     const schoolFilter = getSchoolFilter(user.role, searchParams.get('school') || undefined);
-    if (schoolFilter.grade) { query += ' AND c.grade = ?'; params.push(schoolFilter.grade); }
+    if (schoolFilter.grade) { query += ' AND INSTR(c.grade, ?) > 0'; params.push(schoolFilter.grade); }
 
     if (teacher_id) { query += ' AND r.teacher_id = ?'; params.push(parseInt(teacher_id)); }
     if (student_id) { query += ' AND r.student_id = ?'; params.push(parseInt(student_id)); }
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       WHERE r.status = ?
     `;
     const countParams: any[] = [status];
-    if (schoolFilter.grade) { countQuery += ' AND c.grade = ?'; countParams.push(schoolFilter.grade); }
+    if (schoolFilter.grade) { countQuery += ' AND INSTR(c.grade, ?) > 0'; countParams.push(schoolFilter.grade); }
     if (teacher_id) { countQuery += ' AND r.teacher_id = ?'; countParams.push(parseInt(teacher_id)); }
     if (student_id) { countQuery += ' AND r.student_id = ?'; countParams.push(parseInt(student_id)); }
     if (class_id) { countQuery += ' AND r.class_id = ?'; countParams.push(parseInt(class_id)); }

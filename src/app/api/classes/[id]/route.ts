@@ -22,8 +22,8 @@ export async function GET(
     let gradeClause = '';
     const queryParams: any[] = [id];
     if (schoolFilter.grade) {
-      gradeClause = ' AND c.grade = ?';
-      queryParams.push(schoolFilter.grade);
+      gradeClause = ' AND c.grade LIKE ?';
+      queryParams.push(`%${schoolFilter.grade}%`);
     }
 
     const classData = await db.prepare(`

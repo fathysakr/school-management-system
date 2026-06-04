@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
 
     const schoolFilter = getSchoolFilter(user.role, searchParams.get('school') || undefined);
     const schoolJoin = schoolFilter.grade ? ' JOIN classes c ON g.class_id = c.id' : '';
-    const schoolWhere = schoolFilter.grade ? ' AND c.grade = ?' : '';
-    const schoolParams: any[] = schoolFilter.grade ? [schoolFilter.grade] : [];
+    const schoolWhere = schoolFilter.grade ? ' AND c.grade LIKE ?' : '';
+    const schoolParams: any[] = schoolFilter.grade ? [`%${schoolFilter.grade}%`] : [];
 
     if (transcript === 'true' && student_id) {
       const student = await db.prepare('SELECT * FROM students WHERE id = ?').get(parseInt(student_id));

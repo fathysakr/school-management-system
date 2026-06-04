@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const params: any[] = [];
 
     const schoolFilter = getSchoolFilter(user.role, searchParams.get('school') || undefined);
-    if (schoolFilter.grade) { query += ' AND c.grade = ?'; params.push(schoolFilter.grade); }
+    if (schoolFilter.grade) { query += ' AND c.grade LIKE ?'; params.push(`%${schoolFilter.grade}%`); }
 
     if (class_id) { query += ' AND s.class_id = ?'; params.push(parseInt(class_id)); }
     if (teacher_id) { query += ' AND s.teacher_id = ?'; params.push(parseInt(teacher_id)); }
