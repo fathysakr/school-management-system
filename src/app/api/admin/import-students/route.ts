@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
             await db.prepare(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status, school) VALUES (?,?,?,?,'',40,'active',?)`).run(s.class_name, s.grade, sectionLetter, firstTeacher.id, s.school || 'high');
           }
         }
-      } catch {}
+      } catch (e) { console.error('Class creation error:', e); }
     }
 
     for (const s of students) {
