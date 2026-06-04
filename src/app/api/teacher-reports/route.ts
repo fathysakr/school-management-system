@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     if (!hasPermission(user.role, 'reports:create')) return forbidden();
 
     const body = await request.json();
-    const { teacher_id, student_id, class_id, report_type, title, content, date } = body;
+    const { teacher_id: bodyTeacherId, student_id, class_id, report_type, title, content, date } = body;
 
     if (!student_id || !class_id || !report_type || !content) {
       return badRequest('الحقول المطلوبة: معرف الطالب والفصل ونوع التقرير والمحتوى');
@@ -96,13 +96,20 @@ export async function POST(request: NextRequest) {
       return badRequest('نوع التقرير غير صالح');
     }
 
+    // Resolve teacher_id: use provided value or look up from authenticated user
+    let teacher_id = bodyTeacherId ? parseInt(bodyTeacherId) : NaN;
+    if (isNaN(teacher_id) || !teacher_id) {
+      const userRecord = await db.prepare('SELECT teacher_id FROM users WHERE id = ?').get(user.id) as any;
+      teacher_id = userRecord?.teacher_id || 0;
+    }
+
     const stmt = db.prepare(`
       INSERT INTO teacher_reports (teacher_id, student_id, class_id, report_type, title, content, date, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
     `);
 
     const result = await stmt.run(
-      parseInt(teacher_id || '0'),
+      teacher_id,
       parseInt(student_id),
       parseInt(class_id),
       report_type,
@@ -122,7 +129,7 @@ export async function POST(request: NextRequest) {
       ).all(...targetRoles) as any[];
 
       const student = await db.prepare('SELECT first_name, last_name FROM students WHERE id = ?').get(parseInt(student_id)) as any;
-      const teacher = await db.prepare('SELECT first_name, last_name FROM teachers WHERE id = ?').get(parseInt(teacher_id || '0')) as any;
+      const teacher = await db.prepare('SELECT first_name, last_name FROM teachers WHERE id = ?').get(teacher_id) as any;
       const studentName = student ? `${student.first_name} ${student.last_name}` : '';
       const teacherName = teacher ? `${teacher.first_name} ${teacher.last_name}` : '';
 
