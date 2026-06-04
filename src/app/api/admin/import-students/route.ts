@@ -26,16 +26,19 @@ export async function POST(request: NextRequest) {
 
     for (const s of students) {
       try {
-        const existing = await db.prepare("SELECT id FROM students WHERE student_id = ?").get(s.student_id);
+        const existing = await db.prepare("SELECT id, grade FROM students WHERE student_id = ?").get(s.student_id);
         let studentId: number;
         if (!existing) {
-          const r = await db.prepare(`INSERT INTO students (student_id, first_name, last_name, date_of_birth, enrollment_date, school, semester, status) VALUES (?,?,?,?,?,?,?,?)`).run(
-            s.student_id, s.first_name, s.last_name, s.date_of_birth || '2007-01-01', s.enrollment_date || '2024-09-01', s.school || 'high', s.semester || '', 'active'
+          const r = await db.prepare(`INSERT INTO students (student_id, first_name, last_name, date_of_birth, enrollment_date, school, semester, status, grade) VALUES (?,?,?,?,?,?,?,?,?)`).run(
+            s.student_id, s.first_name, s.last_name, s.date_of_birth || '2007-01-01', s.enrollment_date || '2024-09-01', s.school || 'high', s.semester || '', 'active', s.grade || ''
           );
           studentId = r.lastInsertRowid as number;
           created++;
         } else {
           studentId = existing.id;
+          if (!existing.grade && s.grade) {
+            await db.prepare("UPDATE students SET grade = ? WHERE id = ?").run(s.grade, existing.id);
+          }
         }
 
         const cls = await db.prepare("SELECT id FROM classes WHERE class_name = ? AND grade = ?").get(s.class_name, s.grade);

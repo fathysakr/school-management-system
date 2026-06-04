@@ -31,6 +31,7 @@ export default function StudentsPage() {
   const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [distributing, setDistributing] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     student_id: '', first_name: '', last_name: '', email: '',
@@ -184,6 +185,23 @@ export default function StudentsPage() {
       setError('فشل إنشاء الطلاب');
     }
     setGenerating(false);
+  };
+
+  const handleDistribute = async () => {
+    if (!token) return;
+    setDistributing(true);
+    try {
+      const res = await api.post('/admin/import-students', {}, token);
+      setSuccess(
+        res.created !== undefined
+          ? `تم توزيع ${res.enrolled || 0} طالب على الفصول (${res.created || 0} جديد، ${res.errors || 0} خطأ)`
+          : 'تم توزيع الطلاب على الفصول'
+      );
+      fetchStudents();
+    } catch (err: any) {
+      setError('فشل توزيع الطلاب: ' + (err?.message || ''));
+    }
+    setDistributing(false);
   };
 
   const handleBulkSetGrade = async (grade: string) => {
@@ -530,6 +548,11 @@ export default function StudentsPage() {
           {hasPermission(user?.role, 'students:create') && (
             <Button variant="outlined" startIcon={<AutoAwesome />} onClick={handleGenerate} disabled={generating}>
               {generating ? <CircularProgress size={18} /> : 'إنشاء عينة'}
+            </Button>
+          )}
+          {user?.role === 'admin' && (
+            <Button variant="outlined" startIcon={<AutoAwesome />} onClick={handleDistribute} disabled={distributing}>
+              {distributing ? <CircularProgress size={18} /> : 'وزع على الفصول'}
             </Button>
           )}
           {user?.role === 'admin' && (
