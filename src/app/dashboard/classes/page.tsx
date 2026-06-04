@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, IconButton, Chip, Alert, CircularProgress,
-  TablePagination, Select, MenuItem, InputLabel, FormControl, Grid
+  TablePagination, Select, MenuItem, InputLabel, FormControl, Grid,
+  Tabs, Tab
 } from '@mui/material';
 import { Add, Edit, Delete, People, Close, FileDownload, FileUpload, Download } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
@@ -25,6 +26,7 @@ export default function ClassesPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
+  const [gradeTab, setGradeTab] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [enrollDialog, setEnrollDialog] = useState(false);
   const [selectedClass, setSelectedClass] = useState<any>(null);
@@ -42,7 +44,7 @@ export default function ClassesPage() {
   const fetchClasses = async () => {
     if (!token) return;
     try {
-      const res = await api.get(`/classes?page=${page + 1}&limit=${rowsPerPage}${schoolParam}`, token);
+      const res = await api.get(`/classes?page=1&limit=500${schoolParam}`, token);
       setClasses(res.classes || []);
       setTotal(res.pagination?.total || 0);
     } catch {
@@ -60,7 +62,34 @@ export default function ClassesPage() {
     } catch {}
   };
 
-  useEffect(() => { fetchClasses(); fetchTeachers(); }, [token, page, rowsPerPage]);
+  useEffect(() => { fetchClasses(); fetchTeachers(); }, [token]);
+
+  const gradeGroups = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    classes.forEach((c: any) => {
+      const gr = c.grade || 'بدون مرحلة';
+      if (!map[gr]) map[gr] = [];
+      map[gr].push(c);
+    });
+    const gradeOrder = [
+      'الصف الأول الثانوي', 'الصف الثاني الثانوي', 'الصف الثالث الثانوي',
+      'الصف الأول المتوسط', 'الصف الثاني المتوسط', 'الصف الثالث المتوسط',
+    ];
+    const keys = Object.keys(map).sort((a, b) => {
+      const ai = gradeOrder.indexOf(a);
+      const bi = gradeOrder.indexOf(b);
+      if (ai >= 0 && bi >= 0) return ai - bi;
+      if (ai >= 0) return -1;
+      if (bi >= 0) return 1;
+      return a.localeCompare(b);
+    });
+    return { map, keys };
+  }, [classes]);
+
+  const filteredClasses = useMemo(() => {
+    const key = gradeGroups.keys[gradeTab];
+    return key ? (gradeGroups.map[key] || []) : [];
+  }, [gradeGroups, gradeTab]);
 
   const fetchStudents = async () => {
     if (!token) return;
@@ -240,73 +269,80 @@ export default function ClassesPage() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}<IconButton size="small" onClick={() => setError('')}><Close fontSize="small" /></IconButton></Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}<IconButton size="small" onClick={() => setSuccess('')}><Close fontSize="small" /></IconButton></Alert>}
 
-      <Paper sx={{ overflow: 'auto' }}>
-        <TableContainer>
-          <Table sx={{ minWidth: 700 }} dir="rtl">
-            <TableHead>
-              <TableRow>
-                <TableCell>اسم الفصل</TableCell>
-                <TableCell>المرحلة</TableCell>
-                <TableCell>القسم</TableCell>
-                <TableCell>المعلم</TableCell>
-                <TableCell>المواد</TableCell>
-                <TableCell>القاعة</TableCell>
-                <TableCell>السعة</TableCell>
-                <TableCell>الطلاب</TableCell>
-                <TableCell>الحالة</TableCell>
-                <TableCell>الإجراءات</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-                {loading ? (
-                <TableRow><TableCell colSpan={10} align="center"><CircularProgress /></TableCell></TableRow>
-              ) : classes.length === 0 ? (
-                <TableRow><TableCell colSpan={10} align="center"><EmptyState message="لا يوجد فصول" /></TableCell></TableRow>
-              ) : (
-                classes.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell>{c.class_name}</TableCell>
-                    <TableCell>{c.grade}</TableCell>
-                    <TableCell>{c.section || '-'}</TableCell>
-                    <TableCell>{c.teacher_name || '-'}</TableCell>
-                    <TableCell>{c.subjects || '-'}</TableCell>
-                    <TableCell>{c.room_number || '-'}</TableCell>
-                    <TableCell>{c.capacity}</TableCell>
-                    <TableCell>{c.student_count || 0}</TableCell>
-                    <TableCell>
-                      <Chip label={c.status === 'active' ? 'نشط' : 'غير نشط'}
-                        color={c.status === 'active' ? 'success' : 'default'} size="small" />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        {hasPermission(user?.role, 'classes:edit') && (
-                          <IconButton size="small" color="info" onClick={() => handleOpenEnroll(c)} title="إدارة الطلاب"><People /></IconButton>
-                        )}
-                        {hasPermission(user?.role, 'classes:edit') && (
-                          <IconButton size="small" onClick={() => handleOpenDialog(c)} title="تعديل"><Edit /></IconButton>
-                        )}
-                        {hasPermission(user?.role, 'classes:delete') && (
-                          <IconButton size="small" color="error" onClick={() => handleDelete(c.id)} title="حذف"><Delete /></IconButton>
-                        )}
-                      </Box>
-                    </TableCell>
+      {loading ? (
+        <Box sx={{ textAlign: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : (
+        <>
+          <Tabs value={gradeTab} onChange={(_, v) => setGradeTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+            {gradeGroups.keys.map((key: string) => (
+              <Tab key={key} label={`${key} (${gradeGroups.map[key].length})`} />
+            ))}
+          </Tabs>
+          <Paper sx={{ overflow: 'auto' }}>
+            <TableContainer>
+              <Table sx={{ minWidth: 700 }} dir="rtl">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>اسم الفصل</TableCell>
+                    <TableCell>القسم</TableCell>
+                    <TableCell>المعلم</TableCell>
+                    <TableCell>المواد</TableCell>
+                    <TableCell>القاعة</TableCell>
+                    <TableCell>السعة</TableCell>
+                    <TableCell>الطلاب</TableCell>
+                    <TableCell>الحالة</TableCell>
+                    <TableCell>الإجراءات</TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={total}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={(_, p) => setPage(p)}
-          onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setPage(0); }}
-          labelRowsPerPage="عدد الصفوف"
-        />
-      </Paper>
+                </TableHead>
+                <TableBody>
+                  {filteredClasses.length === 0 ? (
+                    <TableRow><TableCell colSpan={9} align="center"><EmptyState message="لا يوجد فصول في هذه المرحلة" /></TableCell></TableRow>
+                  ) : (
+                    filteredClasses.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((c: any) => (
+                      <TableRow key={c.id}>
+                        <TableCell>{c.class_name}</TableCell>
+                        <TableCell>{c.section || '-'}</TableCell>
+                        <TableCell>{c.teacher_name || '-'}</TableCell>
+                        <TableCell>{c.subjects || '-'}</TableCell>
+                        <TableCell>{c.room_number || '-'}</TableCell>
+                        <TableCell>{c.capacity}</TableCell>
+                        <TableCell>{c.student_count || 0}</TableCell>
+                        <TableCell>
+                          <Chip label={c.status === 'active' ? 'نشط' : 'غير نشط'}
+                            color={c.status === 'active' ? 'success' : 'default'} size="small" />
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 0.5 }}>
+                            {hasPermission(user?.role, 'classes:edit') && (
+                              <IconButton size="small" color="info" onClick={() => handleOpenEnroll(c)} title="إدارة الطلاب"><People /></IconButton>
+                            )}
+                            {hasPermission(user?.role, 'classes:edit') && (
+                              <IconButton size="small" onClick={() => handleOpenDialog(c)} title="تعديل"><Edit /></IconButton>
+                            )}
+                            {hasPermission(user?.role, 'classes:delete') && (
+                              <IconButton size="small" color="error" onClick={() => handleDelete(c.id)} title="حذف"><Delete /></IconButton>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={filteredClasses.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={(_, p) => setPage(p)}
+              onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setPage(0); }}
+              labelRowsPerPage="عدد الصفوف"
+            />
+          </Paper>
+        </>
+      )}
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{isEdit ? 'تعديل الفصل' : 'إنشاء فصل جديد'}</DialogTitle>
