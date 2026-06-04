@@ -186,16 +186,6 @@ export default function StudentsPage() {
     setGenerating(false);
   };
 
-  const handleUpdateGrade = async (studentId: number, grade: string) => {
-    if (!token) return;
-    try {
-      await api.put(`/students/${studentId}`, { grade }, token);
-      fetchStudents();
-    } catch (err: any) {
-      setError('فشل في تحديث المرحلة: ' + (err?.message || ''));
-    }
-  };
-
   const handleBulkSetGrade = async (grade: string) => {
     if (!token || !grade) return;
     const ungraded = students.filter((s: any) => !s.grade);
@@ -216,7 +206,9 @@ export default function StudentsPage() {
     if (!token) return;
     setEnrollingId(studentId);
     try {
+      const selectedClass = classes.find((c: any) => String(c.id) === classId);
       const payload: Record<string, unknown> = { class_id: classId || undefined };
+      if (selectedClass) payload.grade = selectedClass.grade;
       await api.put(`/students/${studentId}`, payload, token);
       await fetchStudents();
     } catch (err: any) {
@@ -225,16 +217,6 @@ export default function StudentsPage() {
       setEnrollingId(null);
     }
   };
-
-  const classesByGrade = useMemo(() => {
-    const map: Record<string, any[]> = {};
-    classes.forEach((c: any) => {
-      const key = c.grade || 'other';
-      if (!map[key]) map[key] = [];
-      map[key].push(c);
-    });
-    return map;
-  }, [classes]);
 
   const gradeList = useMemo(() => {
     const grades = new Set<string>();
@@ -556,7 +538,6 @@ export default function StudentsPage() {
         <EmptyState message="لا يوجد طلاب" />
       ) : (
         groupedStudents.map((group) => {
-          const allGradesInGroup = group.label === 'بدون مرحلة' ? gradeList : [group.label];
           return (
             <Accordion key={group.label} defaultExpanded sx={{ mb: 2 }}>
               <AccordionSummary expandIcon={<ExpandMore />}>
@@ -588,44 +569,29 @@ export default function StudentsPage() {
                       <TableRow>
                         <TableCell>الرقم</TableCell>
                         <TableCell>الاسم</TableCell>
-                        <TableCell>المرحلة</TableCell>
                         <TableCell>الفصل</TableCell>
                         <TableCell>الحالة</TableCell>
                         <TableCell>الإجراءات</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {group.students.map((s: any) => {
-                        const availableClasses = s.grade ? (classesByGrade[s.grade] || []) : classes;
-                        return (
-                          <TableRow key={s.id}>
-                            <TableCell>{s.student_id}</TableCell>
-                            <TableCell>{s.first_name} {s.last_name}</TableCell>
-                            <TableCell sx={{ minWidth: 160 }}>
-                              <Select
-                                native fullWidth size="small"
-                                value={s.grade || ''}
-                                onChange={(e) => handleUpdateGrade(s.id, e.target.value)}
-                              >
-                                <option value="">اختر المرحلة</option>
-                                {allGradesInGroup.map((g: string) => (
-                                  <option key={g} value={g}>{g}</option>
-                                ))}
-                              </Select>
-                            </TableCell>
-                            <TableCell sx={{ minWidth: 140 }}>
-                              <Select
-                                native fullWidth size="small"
-                                value={s.class_id ? String(s.class_id) : ''}
-                                disabled={enrollingId === s.id}
-                                onChange={(e) => handleEnroll(s.id, e.target.value)}
-                              >
-                                <option value="">بدون فصل</option>
-                                {availableClasses.map((c: any) => (
-                                  <option key={c.id} value={c.id}>{c.class_name}</option>
-                                ))}
-                              </Select>
-                            </TableCell>
+                      {group.students.map((s: any) => (
+                        <TableRow key={s.id}>
+                          <TableCell>{s.student_id}</TableCell>
+                          <TableCell>{s.first_name} {s.last_name}</TableCell>
+                          <TableCell sx={{ minWidth: 220 }}>
+                            <Select
+                              native fullWidth size="small"
+                              value={s.class_id ? String(s.class_id) : ''}
+                              disabled={enrollingId === s.id}
+                              onChange={(e) => handleEnroll(s.id, e.target.value)}
+                            >
+                              <option value="">بدون فصل</option>
+                              {classes.map((c: any) => (
+                                <option key={c.id} value={c.id}>{c.class_name} ({c.grade})</option>
+                              ))}
+                            </Select>
+                          </TableCell>
                             <TableCell>
                               <Chip label={s.status === 'active' ? 'نشط' : s.status === 'graduated' ? 'متخرج' : 'غير نشط'}
                                 color={s.status === 'active' ? 'success' : s.status === 'graduated' ? 'info' : 'default'} size="small" />
@@ -640,8 +606,7 @@ export default function StudentsPage() {
                               )}
                             </TableCell>
                           </TableRow>
-                        );
-                      })}
+                        ))}
                     </TableBody>
                   </Table>
                 </TableContainer>
