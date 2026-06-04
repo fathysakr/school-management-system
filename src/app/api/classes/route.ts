@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     // Validate
     const validation = validateClass(body);
     if (!validation.valid) {
-      return badRequest(`Validation failed: ${validation.errors[0].message}`);
+      return badRequest(`فشل التحقق من صحة البيانات: ${validation.errors[0].message}`);
     }
 
     // Check teacher exists

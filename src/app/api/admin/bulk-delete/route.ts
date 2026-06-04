@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const { action } = await request.json() as { action?: string };
 
     if (!action || !ACTIONS.includes(action as BulkAction)) {
-      return badRequest('Invalid action. Valid actions: ' + ACTIONS.join(', '));
+      return badRequest('إجراء غير صالح. الإجراءات المتاحة: ' + ACTIONS.join(', '));
     }
 
     const run = db.transaction(async (act: BulkAction) => {

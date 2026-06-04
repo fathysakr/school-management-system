@@ -21,8 +21,8 @@ export async function PUT(
       'UPDATE leave_requests SET status = ?, approved_by = ?, approved_date = datetime("now") WHERE id = ?'
     ).run(status, approved_by || user.id, id);
     return success({ message: 'تم تحديث حالة الإجازة' });
-  } catch {
-    return serverError('فشل في تحديث الإجازة');
+  } catch (e) {
+    console.error('Update leave error:', e); return serverError('فشل في تحديث الإجازة');
   }
 }
 
@@ -41,7 +41,7 @@ export async function DELETE(
     if (existing.user_id !== user.id && !hasPermission(user.role, 'settings:edit')) return forbidden();
     await db.prepare('DELETE FROM leave_requests WHERE id = ?').run(id);
     return success({ message: 'تم حذف طلب الإجازة' });
-  } catch {
-    return serverError('فشل في حذف الإجازة');
+  } catch (e) {
+    console.error('Delete leave error:', e); return serverError('فشل في حذف الإجازة');
   }
 }

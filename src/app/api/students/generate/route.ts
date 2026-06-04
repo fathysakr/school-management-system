@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, created: created.length, count, message: `تم إنشاء ${created.length} طالب` });
-  } catch {
-    return NextResponse.json({ error: 'فشل إنشاء الطلاب' }, { status: 500 });
+  } catch (e) {
+    console.error('Generate students error:', e); return NextResponse.json({ error: 'فشل إنشاء الطلاب' }, { status: 500 });
   }
 }

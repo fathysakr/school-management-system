@@ -48,7 +48,7 @@ export async function GET(
     return success({ class: classData, students });
   } catch (error) {
     console.error('Get class error:', error);
-    return serverError('Failed to fetch class');
+    return serverError('فشل في جلب بيانات الفصل');
   }
 }
 

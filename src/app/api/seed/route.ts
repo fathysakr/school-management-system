@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     if (user.role !== 'admin') return unauthorized();
     const results: string[] = [];
 
-    try { await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`); results.push('تم إضافة عمود grade'); } catch { results.push('عمود grade موجود'); }
+    try { await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`); results.push('تم إضافة عمود grade'); } catch { console.warn('Column grade already exists'); results.push('عمود grade موجود'); }
 
     let totalSubjects = 0;
     await db.exec("DELETE FROM subjects WHERE grade IS NOT NULL");
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
     results.push('تم تعيين التخصصات للمعلمين');
 
     return NextResponse.json({ success: true, results });
-  } catch {
-    return NextResponse.json({ success: false, error: 'فشلت عملية البذر' }, { status: 500 });
+  } catch (e) {
+    console.error('Seed error:', e); return NextResponse.json({ success: false, error: 'فشلت عملية البذر' }, { status: 500 });
   }
 }

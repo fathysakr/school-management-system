@@ -16,7 +16,7 @@ function schoolToGrade(school: string): string | null {
 function getTeacherSubjectNames(specialization: string | null): string[] {
   if (!specialization) return [];
   if (specialization.startsWith('[')) {
-    try { return JSON.parse(specialization).map((item: any) => item.n); } catch { return []; }
+    try { return JSON.parse(specialization).map((item: any) => item.n); } catch (e) { console.error('Parse specialization error:', e); return []; }
   }
   return specialization.split(',').map((s: string) => s.trim());
 }

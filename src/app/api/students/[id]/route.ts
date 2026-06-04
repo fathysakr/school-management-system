@@ -72,7 +72,7 @@ export async function PUT(
       if (field in body && body[field] !== undefined && body[field] !== null) {
         if (field === 'parent_phones') {
           if (!Array.isArray(body[field])) {
-            return badRequest('parent_phones must be an array');
+            return badRequest('هواتف ولي الأمر يجب أن تكون مصفوفة');
           }
           values.push(JSON.stringify(body[field].filter(Boolean)));
         } else if (field.includes('name') || field.includes('address')) {
@@ -81,13 +81,13 @@ export async function PUT(
         } else if (field.includes('email')) {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (body[field] && !emailRegex.test(body[field])) {
-            return badRequest(`Invalid ${field} format`);
+            return badRequest(`صيغة ${field} غير صالحة`);
           }
           values.push(body[field]);
         } else if (field.includes('phone')) {
           const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
           if (body[field] && !phoneRegex.test(body[field])) {
-            return badRequest(`Invalid ${field} format`);
+            return badRequest(`صيغة ${field} غير صالحة`);
           }
           values.push(body[field]);
         } else {

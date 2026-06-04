@@ -90,6 +90,6 @@ export async function GET(request: NextRequest) {
     return success({ user: dbUser });
   } catch (error) {
     console.error('Profile fetch error:', error);
-    return serverError('Failed to fetch profile');
+    return serverError('فشل في جلب الملف الشخصي');
   }
 }

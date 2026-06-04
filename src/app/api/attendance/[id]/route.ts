@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return success({ attendance: record });
   } catch (error) {
     console.error('Get attendance error:', error);
-    return serverError('Failed to fetch attendance record');
+    return serverError('فشل في جلب سجل الحضور');
   }
 }
 

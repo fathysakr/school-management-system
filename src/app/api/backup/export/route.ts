@@ -22,9 +22,7 @@ export async function GET(request: NextRequest) {
       try {
         const rows = await db.prepare(`SELECT * FROM "${table}"`).all() as any[];
         backup[table] = rows.map((r: any) => ({ ...r }));
-      } catch {
-        backup[table] = [];
-      }
+      } catch (e) { console.error(`Backup export ${table} error:`, e); backup[table] = []; }
     }
 
     const blob = new TextEncoder().encode(JSON.stringify({ version: 1, exported_at: new Date().toISOString(), data: backup }, null, 2));

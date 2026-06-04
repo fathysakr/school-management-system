@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const roleDefault = rolePermissions[targetUser.role as keyof typeof rolePermissions] || [];
     let customPermissions: string[] | null = null;
     if (targetUser.custom_permissions) {
-      try { customPermissions = JSON.parse(targetUser.custom_permissions); } catch { customPermissions = null; }
+      try { customPermissions = JSON.parse(targetUser.custom_permissions); } catch (e) { console.error('Parse permissions error:', e); customPermissions = null; }
     }
 
     return success({

@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     const totalScore = total_score || 100;
     if (!isValidScore(score, totalScore)) {
-      return badRequest(`Score must be between 0 and ${totalScore}`);
+      return badRequest(`الدرجة يجب أن تكون بين 0 و ${totalScore}`);
     }
 
     // Verify student and class
@@ -138,7 +138,7 @@ export async function PUT(request: NextRequest) {
 
     if (score !== undefined) {
       if (!isValidScore(score, grade.total_score)) {
-        return badRequest(`Score must be between 0 and ${grade.total_score}`);
+        return badRequest(`الدرجة يجب أن تكون بين 0 و ${grade.total_score}`);
       }
       updates.push('score = ?');
       values.push(score);

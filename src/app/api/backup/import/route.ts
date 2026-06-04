@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       if (!backup[table]) continue;
       try {
         await db.prepare(`DELETE FROM "${table}"`).run();
-      } catch {}
+      } catch (e) { console.error(`Backup import delete ${table} error:`, e); }
     }
 
     for (const table of IMPORT_ORDER) {
