@@ -25,7 +25,6 @@ export default function ClassesPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [total, setTotal] = useState(0);
   const [gradeTab, setGradeTab] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [enrollDialog, setEnrollDialog] = useState(false);
@@ -46,7 +45,6 @@ export default function ClassesPage() {
     try {
       const res = await api.get(`/classes?page=1&limit=500${schoolParam}`, token);
       setClasses(res.classes || []);
-      setTotal(res.pagination?.total || 0);
     } catch {
       setError('فشل في جلب البيانات');
     } finally {
