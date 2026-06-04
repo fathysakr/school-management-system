@@ -119,15 +119,26 @@ export async function PUT(
     let targetClassId: number | null = null;
     if ('class_id' in body) {
       targetClassId = body.class_id ? parseInt(body.class_id) : null;
-    } else if (body.class_name && body.grade) {
-      const cn = body.class_name || '';
-      const gr = body.grade || '';
+    } else if (body.class_name) {
+      const cn = String(body.class_name || '').trim();
+      const gr = String(body.grade || '').trim();
       try {
-        let classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name = ? AND grade = ? AND status = ?').get(cn, gr, 'active') as any;
-        if (!classRow) {
-          classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name LIKE ? AND grade = ? AND status = ? LIMIT 1').get(`${cn}/%`, gr, 'active') as any;
+        if (cn && gr) {
+          let classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name = ? AND grade = ? AND status = ?').get(cn, gr, 'active') as any;
+          if (!classRow) {
+            classRow = await db.prepare('SELECT id, capacity FROM classes WHERE class_name LIKE ? AND grade = ? AND status = ? LIMIT 1').get(`${cn}/%`, gr, 'active') as any;
+          }
+          if (classRow) targetClassId = classRow.id;
         }
-        if (classRow) targetClassId = classRow.id;
+        if (!targetClassId && cn) {
+          const classRow = await db.prepare('SELECT id, grade, capacity FROM classes WHERE class_name = ? AND status = ? LIMIT 1').get(cn, 'active') as any;
+          if (classRow) {
+            targetClassId = classRow.id;
+            if (!body.grade) {
+              await db.prepare('UPDATE students SET grade = ? WHERE id = ?').run(classRow.grade, id);
+            }
+          }
+        }
       } catch (e) { console.error('Auto-enroll lookup error:', e); }
     }
     if (targetClassId !== null) {
