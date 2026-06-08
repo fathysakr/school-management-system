@@ -13,7 +13,7 @@ import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
 
 const statusLabels: Record<string, string> = {
-  present: 'حاضر', absent: 'غائب', late: 'متأخر', excused: 'استئذان',
+  present: 'حاضر', absent: 'غائب', late: 'متأخر', excused: 'استئذان', escape: 'هروب',
 };
 
 export default function AttendancePage() {
@@ -236,7 +236,8 @@ export default function AttendancePage() {
                                 sx={{
                                   bgcolor: attendanceMap[s.id] === 'present' ? '#e8f5e9' :
                                            attendanceMap[s.id] === 'absent' ? '#ffebee' :
-                                           attendanceMap[s.id] === 'late' ? '#fff3e0' : '#e3f2fd',
+                                           attendanceMap[s.id] === 'late' ? '#fff3e0' :
+                                           attendanceMap[s.id] === 'escape' ? '#ffebee' : '#e3f2fd',
                                   fontWeight: 600,
                                 }}
                               >
@@ -299,7 +300,7 @@ export default function AttendancePage() {
                     <TableCell>{r.attendance_date}</TableCell>
                     <TableCell>
                       <Chip label={statusLabels[r.status] || r.status}
-                        color={r.status === 'present' ? 'success' : r.status === 'absent' ? 'error' : r.status === 'late' ? 'warning' : 'info'} size="small" />
+                        color={r.status === 'present' ? 'success' : r.status === 'absent' ? 'error' : r.status === 'late' ? 'warning' : r.status === 'escape' ? 'error' : 'info'} size="small" />
                     </TableCell>
                     <TableCell>{r.remarks || '-'}</TableCell>
                     {(canEditAttendance || canDeleteAttendance) && (

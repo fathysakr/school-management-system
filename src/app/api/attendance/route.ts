@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
-import { hasPermission, getSchoolFilter } from '@/lib/permissions';
+import { hasPermission, getSchoolFilter, getSchoolStage } from '@/lib/permissions';
+import { notifyUsers } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
       return badRequest('معرف الطالب والفصل والتاريخ والحالة مطلوبة');
     }
 
-    if (!['present', 'absent', 'late', 'excused'].includes(status)) {
+    if (!['present', 'absent', 'late', 'excused', 'escape'].includes(status)) {
       return badRequest('حالة الحضور غير صالحة');
     }
 
@@ -87,6 +88,11 @@ export async function POST(request: NextRequest) {
         'UPDATE attendance SET status = ?, remarks = ?, updated_at = CURRENT_TIMESTAMP WHERE student_id = ? AND class_id = ? AND attendance_date = ?'
       ).run(status, remarks ? sanitizeString(remarks) : null, student_id, class_id, attendance_date);
 
+      // If escape, notify supervisor and counselor
+      if (status === 'escape') {
+        notifyEscapeAlert(student_id, class_id, attendance_date);
+      }
+
       return success({ message: 'Attendance updated successfully' });
     } else {
       // Insert
@@ -102,6 +108,11 @@ export async function POST(request: NextRequest) {
         status,
         remarks ? sanitizeString(remarks) : null
       );
+
+      // If escape, notify supervisor and counselor
+      if (status === 'escape') {
+        notifyEscapeAlert(student_id, class_id, attendance_date);
+      }
 
       return success({
         message: 'Attendance recorded successfully',
@@ -139,7 +150,7 @@ export async function PUT(request: NextRequest) {
       const { student_id, status, remarks } = record;
 
       if (!student_id || !status) continue;
-      if (!['present', 'absent', 'late', 'excused'].includes(status)) continue;
+      if (!['present', 'absent', 'late', 'excused', 'escape'].includes(status)) continue;
 
       const student = await db.prepare('SELECT id FROM students WHERE id = ?').get(student_id);
       if (!student) {
@@ -161,6 +172,9 @@ export async function PUT(request: NextRequest) {
             'INSERT INTO attendance (student_id, class_id, attendance_date, status, remarks) VALUES (?, ?, ?, ?, ?)'
           ).run(student_id, class_id, attendance_date, status, remarks ? sanitizeString(remarks) : null);
         }
+        if (status === 'escape') {
+          notifyEscapeAlert(student_id, class_id, attendance_date);
+        }
         successCount++;
       } catch (err) {
         errorCount++;
@@ -173,5 +187,32 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Bulk attendance error:', error);
     return serverError('فشل في معالجة الحضور');
+  }
+}
+
+// Helper: notify supervisor & counselor about escape
+async function notifyEscapeAlert(student_id: number, class_id: number, attendance_date: string) {
+  try {
+    const student = await db.prepare("SELECT first_name, last_name FROM students WHERE id = ?").get(student_id) as any;
+    const cls = await db.prepare("SELECT class_name, grade FROM classes WHERE id = ?").get(class_id) as any;
+    if (!student || !cls) return;
+
+    const isSecondary = cls.grade?.includes('ثانوي');
+    const supervisorRole = isSecondary ? 'high_supervisor' : 'middle_supervisor';
+    const counselorRole = isSecondary ? 'high_counselor' : 'middle_counselor';
+
+    const title = 'تنبيه هروب طالب';
+    const message = `الطالب ${student.first_name} ${student.last_name} من فصل ${cls.class_name} سجل هروب في تاريخ ${attendance_date}`;
+
+    const targetUsers = await db.prepare(
+      "SELECT id FROM users WHERE role IN (?, ?)"
+    ).all(supervisorRole, counselorRole) as any[];
+
+    for (const u of targetUsers) {
+      const { createNotification } = await import('@/lib/notifications');
+      await createNotification(u.id, title, message, 'urgent', '/dashboard/attendance');
+    }
+  } catch (err) {
+    console.error('Escape notification error:', err);
   }
 }

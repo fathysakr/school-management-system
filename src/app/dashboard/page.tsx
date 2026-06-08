@@ -232,17 +232,20 @@ export default function DashboardPage() {
 
           {/* Detailed Attendance */}
           <Grid container spacing={2.5} sx={{ mb: 3 }}>
-            <Grid item xs={6} sm={3}>
+            <Grid item xs={6} sm={2.4}>
               <MiniStat label="حاضر" value={teacherStats.presentCount || 0} color="#2e7d32" />
             </Grid>
-            <Grid item xs={6} sm={3}>
+            <Grid item xs={6} sm={2.4}>
               <MiniStat label="غائب" value={teacherStats.absentCount || 0} color="#d32f2f" />
             </Grid>
-            <Grid item xs={6} sm={3}>
+            <Grid item xs={6} sm={2.4}>
               <MiniStat label="متأخر" value={teacherStats.lateCount || 0} color="#ed6c02" />
             </Grid>
-            <Grid item xs={6} sm={3}>
-              <MiniStat label="بعذر" value={teacherStats.excusedCount || 0} color="#0288d1" />
+            <Grid item xs={6} sm={2.4}>
+              <MiniStat label="استئذان" value={teacherStats.excusedCount || 0} color="#0288d1" />
+            </Grid>
+            <Grid item xs={6} sm={2.4}>
+              <MiniStat label="هروب" value={teacherStats.escapeCount || 0} color="#d32f2f" />
             </Grid>
           </Grid>
 
@@ -310,17 +313,20 @@ export default function DashboardPage() {
 
           {/* Detailed Attendance */}
           <Grid container spacing={2.5} sx={{ mb: 3 }}>
-            <Grid item xs={6} sm={3}>
+            <Grid item xs={6} sm={2.4}>
               <MiniStat label="حاضر" value={stats.presentCount || 0} color="#2e7d32" />
             </Grid>
-            <Grid item xs={6} sm={3}>
+            <Grid item xs={6} sm={2.4}>
               <MiniStat label="غائب" value={stats.absentCount || 0} color="#d32f2f" />
             </Grid>
-            <Grid item xs={6} sm={3}>
+            <Grid item xs={6} sm={2.4}>
               <MiniStat label="متأخر" value={stats.lateCount || 0} color="#ed6c02" />
             </Grid>
-            <Grid item xs={6} sm={3}>
-              <MiniStat label="بعذر" value={stats.excusedCount || 0} color="#0288d1" />
+            <Grid item xs={6} sm={2.4}>
+              <MiniStat label="استئذان" value={stats.excusedCount || 0} color="#0288d1" />
+            </Grid>
+            <Grid item xs={6} sm={2.4}>
+              <MiniStat label="هروب" value={stats.escapeCount || 0} color="#d32f2f" />
             </Grid>
           </Grid>
         </>

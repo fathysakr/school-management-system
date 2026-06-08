@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json();
     const { status, remarks } = body;
 
-    if (!status || !['present', 'absent', 'late', 'excused'].includes(status)) {
+    if (!status || !['present', 'absent', 'late', 'excused', 'escape'].includes(status)) {
       return badRequest('حالة الحضور غير صالحة');
     }
 
@@ -62,6 +62,24 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     values.push(parseInt(params.id));
     await db.prepare(`UPDATE attendance SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
+
+    if (status === 'escape') {
+      const recordData = record as any;
+      const { createNotification } = await import('@/lib/notifications');
+      const student = await db.prepare("SELECT first_name, last_name FROM students WHERE id = ?").get(recordData.student_id) as any;
+      const cls = await db.prepare("SELECT class_name, grade FROM classes WHERE id = ?").get(recordData.class_id) as any;
+      if (student && cls) {
+        const isSecondary = cls.grade?.includes('ثانوي');
+        const supervisorRole = isSecondary ? 'high_supervisor' : 'middle_supervisor';
+        const counselorRole = isSecondary ? 'high_counselor' : 'middle_counselor';
+        const title = 'تنبيه هروب طالب';
+        const message = `الطالب ${student.first_name} ${student.last_name} من فصل ${cls.class_name} سجل هروب في تاريخ ${recordData.attendance_date}`;
+        const targetUsers = await db.prepare("SELECT id FROM users WHERE role IN (?, ?)").all(supervisorRole, counselorRole) as any[];
+        for (const u of targetUsers) {
+          await createNotification(u.id, title, message, 'urgent', '/dashboard/attendance');
+        }
+      }
+    }
 
     return success({ message: 'Attendance record updated successfully' });
   } catch (error) {

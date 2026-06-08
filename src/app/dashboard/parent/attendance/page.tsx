@@ -11,11 +11,11 @@ import {
 import { ArrowBack, EventNote } from '@mui/icons-material';
 
 const statusLabels: Record<string, string> = {
-  present: 'حاضر', absent: 'غائب', late: 'متأخر', excused: 'معذر',
+  present: 'حاضر', absent: 'غائب', late: 'متأخر', excused: 'معذر', escape: 'هروب',
 };
 
 const statusColors: Record<string, string> = {
-  present: '#2e7d32', absent: '#d32f2f', late: '#ed6c02', excused: '#0288d1',
+  present: '#2e7d32', absent: '#d32f2f', late: '#ed6c02', excused: '#0288d1', escape: '#d32f2f',
 };
 
 export default function ParentAttendancePage() {
