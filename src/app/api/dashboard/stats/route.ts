@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     let teacherStats = null;
     const isTeacher = user.role === 'middle_teacher' || user.role === 'high_teacher';
     if (isTeacher) {
-      const teacherRec = await db.prepare('SELECT t.id FROM teachers t JOIN users u ON u.teacher_id = t.id WHERE u.id = ?').get(user.id) as any;
+      const teacherRec = await db.prepare('SELECT COALESCE(u.teacher_id, t.id) as id FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ?').get(user.id) as any;
       if (teacherRec) {
         const tid = teacherRec.id;
         const classFilter = "(c.teacher_id = ? OR c.id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = 'active'))";

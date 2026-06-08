@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const allTeachers = await db.prepare(
       `SELECT t.id, t.first_name, t.last_name, t.specialization, t.school
        FROM teachers t
-       LEFT JOIN users u ON u.teacher_id = t.id
+       LEFT JOIN users u ON u.teacher_id = t.id OR u.id = t.user_id
        WHERE t.status = 'active'
          AND (u.id IS NULL OR u.role LIKE '%teacher%')`
     ).all() as any[];

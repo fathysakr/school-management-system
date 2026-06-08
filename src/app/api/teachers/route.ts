@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
              u.role as user_role
       FROM teachers t
       LEFT JOIN classes c ON t.id = c.teacher_id
-      LEFT JOIN users u ON u.teacher_id = t.id
+      LEFT JOIN users u ON u.teacher_id = t.id OR u.id = t.user_id
       ${whereClause}
       GROUP BY t.id
       ORDER BY t.last_name, t.first_name
