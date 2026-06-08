@@ -20,6 +20,17 @@ export async function POST(req: NextRequest) {
       )
     `);
 
+    try { await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`); } catch {}
+    try { await db.exec(`ALTER TABLE subjects ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL`); } catch {}
+
+    await db.exec(`CREATE TABLE IF NOT EXISTS subject_classes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      subject_id INTEGER NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+      class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+      sessions_per_week INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(subject_id, class_id)
+    )`);
+
     const existing = await db.prepare("SELECT COUNT(*) as cnt FROM subjects").get();
     if ((existing as any).cnt === 0) {
       await db.exec(`

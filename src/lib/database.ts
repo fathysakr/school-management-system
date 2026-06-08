@@ -1128,6 +1128,14 @@ async function _ensureTursoReady() {
     await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('3/أ','الصف الثالث المتوسط','أ',${msTid},'601',30,'active'),('3/ب','الصف الثالث المتوسط','ب',${msTid},'602',30,'active'),('3/ت','الصف الثالث المتوسط','ت',${msTid},'603',30,'active'),('3/ث','الصف الثالث المتوسط','ث',${msTid},'604',30,'active'),('3/ج','الصف الثالث المتوسط','ج',${msTid},'605',30,'active'),('3/ح','الصف الثالث المتوسط','ح',${msTid},'606',30,'active')`);
     await db.exec(`PRAGMA foreign_keys=ON`);
 
+    try { await db.exec(`CREATE TABLE IF NOT EXISTS subject_classes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      subject_id INTEGER NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+      class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+      sessions_per_week INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(subject_id, class_id)
+    )`); } catch {}
+
     const seedAdminEmail = process.env.ADMIN_EMAIL || 'admin@school.com';
     const seedAdminPass = process.env.ADMIN_PASSWORD ? await bcrypt.hash(process.env.ADMIN_PASSWORD, 10) : '$2a$10$Kc1v.vgFEho5SKGmtIMppOc6u9usmVQB5ITSrHzjm3VcduBo.s1..';
     const h = { teacher:'$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u' };

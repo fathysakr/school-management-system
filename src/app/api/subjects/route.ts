@@ -12,15 +12,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const school = searchParams.get('school');
     const grade = searchParams.get('grade');
-    let sql = 'SELECT s.*, t.first_name as teacher_first, t.last_name as teacher_last FROM subjects s LEFT JOIN teachers t ON s.teacher_id = t.id';
+    const sql = 'SELECT s.*, t.first_name as teacher_first, t.last_name as teacher_last FROM subjects s LEFT JOIN teachers t ON s.teacher_id = t.id';
     const params: string[] = [];
     const clauses: string[] = [];
     if (school) { clauses.push('s.school = ?'); params.push(school); }
     if (grade) { clauses.push('s.grade LIKE ?'); params.push(`%${grade}%`); }
-    if (clauses.length) sql += ' WHERE ' + clauses.join(' AND ');
-    sql += ' ORDER BY s.name';
-    const subjects = await db.prepare(sql).all(...params);
-    return success({ subjects });
+    let finalSql = sql;
+    if (clauses.length) finalSql += ' WHERE ' + clauses.join(' AND ');
+    finalSql += ' ORDER BY s.name';
+    const subjects = await db.prepare(finalSql).all(...params) as any[];
+
+    const subjectsWithClasses = await Promise.all(subjects.map(async (s) => {
+      const rows = await db.prepare('SELECT class_id FROM subject_classes WHERE subject_id = ?').all(s.id) as any[];
+      return { ...s, class_ids: rows.map((r: any) => r.class_id) };
+    }));
+    return success({ subjects: subjectsWithClasses });
   } catch (error: any) {
     console.error('Get subjects error:', error);
     return serverError('فشل في جلب المواد');
@@ -48,7 +54,15 @@ export async function POST(request: NextRequest) {
       body.grade || null,
       teacher_id ? parseInt(teacher_id) : null
     );
-    return success({ message: 'تم إضافة المادة', id: result.lastInsertRowid }, 201);
+    const subjectId = result.lastInsertRowid;
+
+    if (Array.isArray(body.class_ids) && body.class_ids.length) {
+      const insert = await db.prepare('INSERT OR IGNORE INTO subject_classes (subject_id, class_id, sessions_per_week) VALUES (?, ?, ?)');
+      for (const classId of body.class_ids) {
+        await insert.run(subjectId, classId, body.sessions_per_week || 0);
+      }
+    }
+    return success({ message: 'تم إضافة المادة', id: subjectId }, 201);
   } catch (error: any) {
     console.error('Create subject error:', error);
     return serverError('فشل في إنشاء المادة');
@@ -78,6 +92,16 @@ export async function PUT(request: NextRequest) {
     if (updates.length === 0) return badRequest('لا توجد حقول للتحديث');
     values.push(parseInt(id));
     await db.prepare(`UPDATE subjects SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+
+    if ('class_ids' in body) {
+      await db.prepare('DELETE FROM subject_classes WHERE subject_id = ?').run(parseInt(id));
+      if (Array.isArray(body.class_ids) && body.class_ids.length) {
+        const insert = await db.prepare('INSERT OR IGNORE INTO subject_classes (subject_id, class_id, sessions_per_week) VALUES (?, ?, ?)');
+        for (const classId of body.class_ids) {
+          await insert.run(parseInt(id), classId, body.sessions_per_week || 0);
+        }
+      }
+    }
     return success({ message: 'تم تحديث المادة' });
   } catch (error: any) {
     console.error('Update subject error:', error);
@@ -94,6 +118,7 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return badRequest('معرف المادة مطلوب');
+    await db.prepare('DELETE FROM subject_classes WHERE subject_id = ?').run(parseInt(id));
     await db.prepare('DELETE FROM subjects WHERE id = ?').run(parseInt(id));
     return success({ message: 'تم حذف المادة' });
   } catch (error: any) {

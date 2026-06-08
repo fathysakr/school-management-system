@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import {
   Box, Paper, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Select, MenuItem, FormControl, InputLabel, Chip, CircularProgress, Alert,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton,
+  Checkbox, ListItemText, OutlinedInput
 } from '@mui/material';
 import { Add, Delete, Edit, Book } from '@mui/icons-material';
 import { api } from '@/lib/api';
@@ -11,11 +12,12 @@ import { api } from '@/lib/api';
 export default function SubjectsManagement() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const teachingTeachers = teachers.filter((t: any) => !t.user_role || t.user_role.includes('teacher'));
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', school: 'high', grade: '', sessions_per_week: 3, teacher_id: '' });
+  const [form, setForm] = useState({ name: '', school: 'high', grade: '', sessions_per_week: 3, teacher_id: '', class_ids: [] as number[] });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [schoolFilter, setSchoolFilter] = useState('high');
@@ -31,6 +33,9 @@ export default function SubjectsManagement() {
     api.get('/teachers?limit=500', token).then((t: any) => {
       if (!cancelled) setTeachers(t.teachers || []);
     }).catch(() => {});
+    api.get(`/classes?limit=500`, token).then((c: any) => {
+      if (!cancelled) setClasses(c.classes || []);
+    }).catch(() => {});
     setLoading(false);
   };
 
@@ -38,13 +43,13 @@ export default function SubjectsManagement() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: '', school: schoolFilter, grade: '', sessions_per_week: 3, teacher_id: '' });
+    setForm({ name: '', school: schoolFilter, grade: '', sessions_per_week: 3, teacher_id: '', class_ids: [] });
     setDialogOpen(true);
   };
 
   const openEdit = (sub: any) => {
     setEditing(sub);
-    setForm({ name: sub.name, school: sub.school, grade: sub.grade || '', sessions_per_week: sub.sessions_per_week, teacher_id: sub.teacher_id ? String(sub.teacher_id) : '' });
+    setForm({ name: sub.name, school: sub.school, grade: sub.grade || '', sessions_per_week: sub.sessions_per_week, teacher_id: sub.teacher_id ? String(sub.teacher_id) : '', class_ids: sub.class_ids || [] });
     setDialogOpen(true);
   };
 
@@ -55,9 +60,9 @@ export default function SubjectsManagement() {
     const token = localStorage.getItem('token');
     try {
       if (editing) {
-        await api.put(`/subjects?id=${editing.id}`, form, token);
+        await api.put(`/subjects?id=${editing.id}`, { ...form }, token);
       } else {
-        await api.post('/subjects', form, token);
+        await api.post('/subjects', { ...form }, token);
       }
       setMessage(editing ? 'تم تحديث المادة' : 'تم إضافة المادة');
       setDialogOpen(false);
@@ -78,6 +83,12 @@ export default function SubjectsManagement() {
       setMessage(e?.message || 'فشل الحذف');
     }
   };
+
+  const filteredClasses = classes.filter((c: any) => {
+    if (form.grade && c.grade !== form.grade) return false;
+    if (c.school !== form.school) return false;
+    return true;
+  });
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
 
@@ -101,18 +112,24 @@ export default function SubjectsManagement() {
               <TableCell>الصف</TableCell>
               <TableCell>عدد الحصص</TableCell>
               <TableCell>المعلم المكلف</TableCell>
+              <TableCell>الفصول</TableCell>
               <TableCell>إجراءات</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {subjects.map((s: any) => {
               const teacher = teachers.find((t: any) => t.id === s.teacher_id);
+              const classNames = (s.class_ids || []).map((cid: number) => {
+                const c = classes.find((cl: any) => cl.id === cid);
+                return c ? `${c.class_name} (${c.grade})` : '';
+              }).filter(Boolean).join('، ');
               return (
                 <TableRow key={s.id}>
                   <TableCell>{s.name}</TableCell>
                   <TableCell>{s.grade || (s.school === 'high' ? 'ثانوي' : 'متوسط')}</TableCell>
                   <TableCell>{s.sessions_per_week}</TableCell>
                   <TableCell>{teacher ? `${teacher.first_name} ${teacher.last_name}` : '—'}</TableCell>
+                  <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{classNames || '—'}</TableCell>
                   <TableCell>
                     <IconButton size="small" onClick={() => openEdit(s)}><Edit fontSize="small" /></IconButton>
                     <IconButton size="small" color="error" onClick={() => del(s.id)}><Delete fontSize="small" /></IconButton>
@@ -131,14 +148,14 @@ export default function SubjectsManagement() {
             <TextField label="اسم المادة" fullWidth value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <FormControl fullWidth>
               <InputLabel>المرحلة</InputLabel>
-              <Select value={form.school} label="المرحلة" onChange={(e) => setForm({ ...form, school: e.target.value })}>
+              <Select value={form.school} label="المرحلة" onChange={(e) => setForm({ ...form, school: e.target.value, grade: '', class_ids: [] })}>
                 <MenuItem value="high">ثانوي</MenuItem>
                 <MenuItem value="middle">متوسط</MenuItem>
               </Select>
             </FormControl>
             <FormControl fullWidth>
               <InputLabel>الصف</InputLabel>
-              <Select value={form.grade} label="الصف" onChange={(e) => setForm({ ...form, grade: e.target.value })}>
+              <Select value={form.grade} label="الصف" onChange={(e) => setForm({ ...form, grade: e.target.value, class_ids: [] })}>
                 <MenuItem value="">بدون (جميع الصفوف)</MenuItem>
                 {form.school === 'high' ? (
                   <>
@@ -155,6 +172,32 @@ export default function SubjectsManagement() {
                 )}
               </Select>
             </FormControl>
+            {filteredClasses.length > 0 && (
+              <FormControl fullWidth>
+                <InputLabel>الفصول</InputLabel>
+                <Select
+                  multiple
+                  value={form.class_ids}
+                  label="الفصول"
+                  onChange={(e) => setForm({ ...form, class_ids: e.target.value as number[] })}
+                  input={<OutlinedInput label="الفصول" />}
+                  renderValue={(selected) => {
+                    const names = (selected as number[]).map((id) => {
+                      const c = classes.find((cl: any) => cl.id === id);
+                      return c ? `${c.class_name}${c.section ? '-' + c.section : ''}` : '';
+                    });
+                    return names.join('، ');
+                  }}
+                >
+                  {filteredClasses.map((c: any) => (
+                    <MenuItem key={c.id} value={c.id}>
+                      <Checkbox checked={form.class_ids.includes(c.id)} />
+                      <ListItemText primary={`${c.class_name}${c.section ? ' (' + c.section + ')' : ''}`} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
             <TextField label="عدد الحصص الأسبوعية" type="number" fullWidth value={form.sessions_per_week}
               onChange={(e) => setForm({ ...form, sessions_per_week: parseInt(e.target.value) || 0 })}
               inputProps={{ min: 0, max: 10 }} />
