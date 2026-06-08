@@ -49,7 +49,7 @@ export default function SubjectsManagement() {
 
   const openEdit = (sub: any) => {
     setEditing(sub);
-    setForm({ name: sub.name, school: sub.school, grade: sub.grade || '', sessions_per_week: sub.sessions_per_week, teacher_id: sub.teacher_id ? String(sub.teacher_id) : '', class_ids: sub.class_ids || [] });
+    setForm({ name: sub.name, school: sub.school, grade: sub.grade || '', sessions_per_week: sub.sessions_per_week, teacher_id: sub.teacher_id ? String(sub.teacher_id) : '', class_ids: (sub.class_ids || []).map((id: any) => Number(id)) });
     setDialogOpen(true);
   };
 
@@ -179,19 +179,23 @@ export default function SubjectsManagement() {
                   multiple
                   value={form.class_ids}
                   label="الفصول"
-                  onChange={(e) => setForm({ ...form, class_ids: e.target.value as number[] })}
+                  onChange={(e) => {
+                    const val = e.target.value as number[];
+                    setForm({ ...form, class_ids: val.map((v) => Number(v)) });
+                  }}
                   input={<OutlinedInput label="الفصول" />}
                   renderValue={(selected) => {
-                    const names = (selected as number[]).map((id) => {
+                    const ids = (selected as number[]);
+                    const names = ids.map((id) => {
                       const c = classes.find((cl: any) => cl.id === id);
                       return c ? `${c.class_name}${c.section ? '-' + c.section : ''}` : '';
                     });
-                    return names.join('، ');
+                    return names.join('، ') || 'اختر الفصول';
                   }}
                 >
                   {filteredClasses.map((c: any) => (
                     <MenuItem key={c.id} value={c.id}>
-                      <Checkbox checked={form.class_ids.includes(c.id)} />
+                      <Checkbox checked={form.class_ids.some((id: number) => id === c.id)} />
                       <ListItemText primary={`${c.class_name}${c.section ? ' (' + c.section + ')' : ''}`} />
                     </MenuItem>
                   ))}
