@@ -856,7 +856,11 @@ async function ensureTursoReady() {
   if (tursoReady) return;
   if (!process.env.TURSO_DB_URL || !process.env.TURSO_DB_TOKEN) return;
   if (tursoReadyPromise) return tursoReadyPromise;
-  const p = _ensureTursoReady();
+  const p = _ensureTursoReady().then(() => {
+    tursoReady = true;
+  }).catch((e) => {
+    console.error('Turso initialization error:', e);
+  });
   tursoReadyPromise = p;
   return p;
 }
