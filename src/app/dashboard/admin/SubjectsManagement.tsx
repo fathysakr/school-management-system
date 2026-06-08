@@ -61,6 +61,28 @@ export default function SubjectsManagement() {
     try {
       if (editing) {
         await api.put(`/subjects?id=${editing.id}`, { ...form }, token);
+        // Sync teachers.specialization for the assigned teacher
+        if (form.teacher_id) {
+          const teacherRes = await api.get(`/teachers?limit=500`, token).catch(() => null);
+          if (teacherRes?.teachers) {
+            const teacher = teacherRes.teachers.find((t: any) => String(t.id) === form.teacher_id);
+            if (teacher) {
+              const spec = teacher.specialization || '[]';
+              let specArr = [];
+              try { specArr = JSON.parse(spec); } catch { specArr = []; }
+              const existingIdx = specArr.findIndex((item: any) => item.n === form.name);
+              const entry: any = { n: form.name };
+              if (form.sessions_per_week) entry.s = form.sessions_per_week;
+              if (form.class_ids.length) entry.classes = form.class_ids;
+              if (existingIdx >= 0) {
+                specArr[existingIdx] = { ...specArr[existingIdx], ...entry };
+              } else {
+                specArr.push(entry);
+              }
+              await api.put(`/teachers/${teacher.id}`, { specialization: JSON.stringify(specArr) }, token);
+            }
+          }
+        }
       } else {
         await api.post('/subjects', { ...form }, token);
       }

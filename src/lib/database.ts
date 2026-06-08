@@ -889,7 +889,7 @@ async function _ensureTursoReady() {
       school TEXT NOT NULL CHECK (school IN ('middle', 'high')),
       sessions_per_week INTEGER NOT NULL DEFAULT 3,
       grade TEXT,
-      teacher_id INTEGER,
+      teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
     await db.exec(`CREATE TABLE IF NOT EXISTS management_positions (

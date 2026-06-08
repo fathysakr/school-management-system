@@ -98,6 +98,19 @@ export default function TeacherAssignments() {
     try {
       const token = localStorage.getItem('token');
       await api.put(`/teachers/${selectedTeacher.id}`, { specialization: buildSpec() }, token);
+
+      // Sync: for each selected subject, update subjects.teacher_id and subject_classes
+      for (const subId of selectedSubjectIds) {
+        const sub = subjects.find((s: any) => s.id === subId);
+        if (!sub) continue;
+        const classIds = subjectClasses[subId] || [];
+        await api.put(`/subjects?id=${subId}`, {
+          teacher_id: String(selectedTeacher.id),
+          class_ids: classIds,
+          sessions_per_week: subjectSessions[subId] ?? sub.sessions_per_week,
+        }, token).catch(() => {});
+      }
+
       const prevHomeRoom = classes.find((c: any) => c.teacher_id === selectedTeacher.id);
       if (homeRoom) {
         await api.put(`/classes/${homeRoom}`, { teacher_id: selectedTeacher.id }, token);
