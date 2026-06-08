@@ -112,9 +112,16 @@ export default function DashboardPage() {
     try {
       const statsPromise = api.get(`/dashboard/stats${schoolParam ? '?' + schoolParam.replace('&', '') : ''}`, token).catch(() => null);
       const announcementsPromise = api.get(`/announcements${schoolParam ? '?' + schoolParam.replace('&', '') : ''}`, token).catch(() => null);
-      const schedulesPromise = api.get(`/schedules?day=${todayKey}${schoolParam}`, token).catch(() => null);
 
-      const [statsRes, announcementsRes, schedulesRes] = await Promise.all([statsPromise, announcementsPromise, schedulesPromise]);
+      const [statsRes, announcementsRes] = await Promise.all([statsPromise, announcementsPromise]);
+
+      // Schedules: teacher gets filtered by teacher_id, others get all
+      let schedulesRes = null;
+      if (statsRes?.teacherStats?.teacherId && isTeacher) {
+        schedulesRes = await api.get(`/schedules?day=${todayKey}&teacher_id=${statsRes.teacherStats.teacherId}`, token).catch(() => null);
+      } else {
+        schedulesRes = await api.get(`/schedules?day=${todayKey}${schoolParam}`, token).catch(() => null);
+      }
 
       if (statsRes) {
         setStats(statsRes.stats || {});
@@ -683,7 +690,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Your Permissions */}
-          {user?.role && (
+          {user?.role && !isTeacher && (
             <Card sx={{ borderRadius: 3 }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
