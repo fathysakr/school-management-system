@@ -25,7 +25,7 @@ export default function AttendancePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [filters, setFilters] = useState({ class_id: '', date: new Date().toISOString().split('T')[0] });
+  const [filters, setFilters] = useState({ class_id: '', date: new Date().toISOString().split('T')[0], period: 1 });
   const [students, setStudents] = useState<any[]>([]);
   const [attendanceMap, setAttendanceMap] = useState<Record<number, string>>({});
   const [editDialog, setEditDialog] = useState(false);
@@ -43,16 +43,18 @@ export default function AttendancePage() {
       const params = new URLSearchParams();
       if (filters.class_id) params.set('class_id', filters.class_id);
       if (filters.date) params.set('date', filters.date);
+      params.set('period', String(filters.period));
       params.set('limit', '5000');
       const res = await api.get(`/attendance?${params.toString()}${schoolParam}`, token);
       const rows = (res.attendance || []).map((r: any) => [
         `${r.student_first || ''} ${r.student_last || ''}`.trim() || `طالب #${r.student_id}`,
         r.class_name || `فصل #${r.class_id}`,
         r.attendance_date,
+        `الحصة ${r.period || 1}`,
         statusLabels[r.status] || r.status,
         r.remarks || '',
       ]);
-      exportToExcel(['الطالب','الفصل','التاريخ','الحالة','ملاحظات'], rows, 'الحضور', 'attendance_صفوة_الرواد.xlsx');
+      exportToExcel(['الطالب','الفصل','التاريخ','الحصة','الحالة','ملاحظات'], rows, 'الحضور', 'attendance.xlsx');
       setSuccess('تم تصدير البيانات بنجاح');
     } catch {
       setError('فشل في تصدير البيانات');
@@ -65,6 +67,7 @@ export default function AttendancePage() {
       const params = new URLSearchParams();
       if (filters.class_id) params.set('class_id', filters.class_id);
       if (filters.date) params.set('date', filters.date);
+      params.set('period', String(filters.period));
       const res = await api.get(`/attendance?${params.toString()}${schoolParam}`, token);
       setRecords(res.attendance || []);
     } catch {
@@ -82,7 +85,7 @@ export default function AttendancePage() {
     } catch {}
   };
 
-  useEffect(() => { fetchAttendance(); fetchClasses(); }, [token, filters.class_id, filters.date]);
+  useEffect(() => { fetchAttendance(); fetchClasses(); }, [token, filters.class_id, filters.date, filters.period]);
 
   // Load students when class_id changes and populate attendance map
   useEffect(() => {
@@ -134,6 +137,7 @@ export default function AttendancePage() {
       await api.put('/attendance', {
         class_id: parseInt(filters.class_id),
         attendance_date: filters.date,
+        period: filters.period,
         records: recordsToSave,
       }, token);
       setSuccess('تم تسجيل الحضور بنجاح');
@@ -187,7 +191,7 @@ export default function AttendancePage() {
 
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={5}>
+          <Grid item xs={12} sm={4}>
             <FormControl fullWidth>
               <InputLabel>الفصل</InputLabel>
               <Select value={filters.class_id} label="الفصل" onChange={(e) => setFilters({ ...filters, class_id: e.target.value })}>
@@ -196,8 +200,18 @@ export default function AttendancePage() {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12} sm={3}>
             <TextField fullWidth label="التاريخ" type="date" value={filters.date} onChange={(e) => setFilters({ ...filters, date: e.target.value })} InputLabelProps={{ shrink: true }} />
+          </Grid>
+          <Grid item xs={12} sm={2}>
+            <FormControl fullWidth>
+              <InputLabel>الحصة</InputLabel>
+              <Select value={filters.period} label="الحصة" onChange={(e) => setFilters({ ...filters, period: e.target.value as number })}>
+                {Array.from({ length: 7 }, (_, i) => (
+                  <MenuItem key={i + 1} value={i + 1}>الحصة {i + 1}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={12} sm={3}>
             <Button variant="contained" fullWidth startIcon={<Refresh />} onClick={fetchAttendance}>تحديث</Button>
@@ -283,14 +297,15 @@ export default function AttendancePage() {
           <TableContainer>
             <Table dir="rtl">
               <TableHead>
-                <TableRow>
-                  <TableCell>الطالب</TableCell>
-                  <TableCell>الفصل</TableCell>
-                  <TableCell>التاريخ</TableCell>
-                  <TableCell>الحالة</TableCell>
-                  <TableCell>ملاحظات</TableCell>
-                  {(canEditAttendance || canDeleteAttendance) && <TableCell>الإجراءات</TableCell>}
-                </TableRow>
+                  <TableRow>
+                    <TableCell>الطالب</TableCell>
+                    <TableCell>الفصل</TableCell>
+                    <TableCell>التاريخ</TableCell>
+                    <TableCell>الحصة</TableCell>
+                    <TableCell>الحالة</TableCell>
+                    <TableCell>ملاحظات</TableCell>
+                    {(canEditAttendance || canDeleteAttendance) && <TableCell>الإجراءات</TableCell>}
+                  </TableRow>
               </TableHead>
               <TableBody>
                 {records.map((r) => (
@@ -298,6 +313,7 @@ export default function AttendancePage() {
                     <TableCell>{r.student_first ? `${r.student_first} ${r.student_last}` : `طالب #${r.student_id}`}</TableCell>
                     <TableCell>{r.class_name || `فصل #${r.class_id}`}</TableCell>
                     <TableCell>{r.attendance_date}</TableCell>
+                    <TableCell>{r.period || 1}</TableCell>
                     <TableCell>
                       <Chip label={statusLabels[r.status] || r.status}
                         color={r.status === 'present' ? 'success' : r.status === 'absent' ? 'error' : r.status === 'late' ? 'warning' : r.status === 'escape' ? 'error' : 'info'} size="small" />

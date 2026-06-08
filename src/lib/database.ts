@@ -699,6 +699,36 @@ function applyMigrations(bsql: any) {
         )`; }
       })()
     },
+    {
+      name: '023_attendance_period',
+      sql: (() => {
+        if (colExists('attendance', 'period')) return 'SELECT 1';
+        return `
+          PRAGMA foreign_keys=OFF;
+          CREATE TABLE IF NOT EXISTS attendance_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            class_id INTEGER NOT NULL,
+            attendance_date DATE NOT NULL,
+            period INTEGER NOT NULL DEFAULT 1,
+            status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'late', 'excused', 'escape')),
+            remarks TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(student_id, class_id, attendance_date, period),
+            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+            FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+          );
+          INSERT INTO attendance_new (id, student_id, class_id, attendance_date, period, status, remarks, created_at, updated_at)
+            SELECT id, student_id, class_id, attendance_date, 1, status, remarks, created_at, updated_at FROM attendance;
+          DROP TABLE attendance;
+          ALTER TABLE attendance_new RENAME TO attendance;
+          CREATE INDEX IF NOT EXISTS idx_attendance_class_id ON attendance(class_id);
+          CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(attendance_date);
+          PRAGMA foreign_keys=ON;
+        `;
+      })()
+    },
   ];
 
   for (const migration of migrations) {
@@ -980,12 +1010,44 @@ async function _ensureTursoReady() {
       student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
       class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
       attendance_date DATE NOT NULL,
+      period INTEGER NOT NULL DEFAULT 1,
       status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'late', 'excused', 'escape')),
       remarks TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(student_id, class_id, attendance_date)
+      UNIQUE(student_id, class_id, attendance_date, period)
     )`);
+
+    // Migrate existing attendance tables that lack period column
+    try {
+      const attCols = await db.prepare("PRAGMA table_info(attendance)").all() as any[];
+      const periodCol = attCols.find((c: any) => c.name === 'period');
+      if (!periodCol) {
+        await db.exec(`DROP TABLE IF EXISTS attendance_old`);
+        await db.exec(`PRAGMA foreign_keys=OFF`);
+        await db.exec(`CREATE TABLE attendance_old AS SELECT * FROM attendance`);
+        await db.exec(`DROP TABLE IF EXISTS attendance`);
+        await db.exec(`CREATE TABLE attendance (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+          class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+          attendance_date DATE NOT NULL,
+          period INTEGER NOT NULL DEFAULT 1,
+          status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'late', 'excused', 'escape')),
+          remarks TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(student_id, class_id, attendance_date, period)
+        )`);
+        await db.exec(`INSERT OR IGNORE INTO attendance (id, student_id, class_id, attendance_date, period, status, remarks, created_at, updated_at)
+          SELECT id, student_id, class_id, attendance_date, 1, status, remarks, created_at, updated_at FROM attendance_old`);
+        await db.exec(`DROP TABLE IF EXISTS attendance_old`);
+        await db.exec(`PRAGMA foreign_keys=ON`);
+        await db.exec(`CREATE INDEX IF NOT EXISTS idx_t_attendance_class_id ON attendance(class_id)`);
+        await db.exec(`CREATE INDEX IF NOT EXISTS idx_t_attendance_date ON attendance(attendance_date)`);
+      }
+    } catch {}
+
     await db.exec(`CREATE TABLE IF NOT EXISTS grades (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,

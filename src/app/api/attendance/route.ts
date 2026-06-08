@@ -2,8 +2,8 @@ import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
-import { hasPermission, getSchoolFilter, getSchoolStage } from '@/lib/permissions';
-import { notifyUsers } from '@/lib/notifications';
+import { hasPermission, getSchoolFilter } from '@/lib/permissions';
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const student_id = searchParams.get('student_id');
     const class_id = searchParams.get('class_id');
     const date = searchParams.get('date');
+    const period = searchParams.get('period');
 
     let query = 'SELECT a.* FROM attendance a JOIN classes c ON a.class_id = c.id WHERE 1=1';
     const params: any[] = [];
@@ -41,7 +42,12 @@ export async function GET(request: NextRequest) {
       params.push(date);
     }
 
-    query += ' ORDER BY a.attendance_date DESC, a.student_id';
+    if (period) {
+      query += ' AND a.period = ?';
+      params.push(parseInt(period));
+    }
+
+    query += ' ORDER BY a.attendance_date DESC, a.period, a.student_id';
 
     const records = await db.prepare(query).all(...params);
 
@@ -60,7 +66,8 @@ export async function POST(request: NextRequest) {
     if (!hasPermission(user.role, 'attendance:create')) return forbidden();
 
     const body = await request.json();
-    const { student_id, class_id, attendance_date, status, remarks } = body;
+    const { student_id, class_id, attendance_date, period, status, remarks } = body;
+    const periodVal = period ? parseInt(period) : 1;
 
     if (!student_id || !class_id || !attendance_date || !status) {
       return badRequest('معرف الطالب والفصل والتاريخ والحالة مطلوبة');
@@ -77,16 +84,16 @@ export async function POST(request: NextRequest) {
     const classData = await db.prepare('SELECT id FROM classes WHERE id = ?').get(class_id);
     if (!classData) return badRequest('الفصل غير موجود');
 
-    // Check if record exists
+    // Check if record exists for same student+class+date+period
     const existing = await db.prepare(
-      'SELECT id FROM attendance WHERE student_id = ? AND class_id = ? AND attendance_date = ?'
-    ).get(student_id, class_id, attendance_date);
+      'SELECT id FROM attendance WHERE student_id = ? AND class_id = ? AND attendance_date = ? AND period = ?'
+    ).get(student_id, class_id, attendance_date, periodVal);
 
     if (existing) {
       // Update
       await db.prepare(
-        'UPDATE attendance SET status = ?, remarks = ?, updated_at = CURRENT_TIMESTAMP WHERE student_id = ? AND class_id = ? AND attendance_date = ?'
-      ).run(status, remarks ? sanitizeString(remarks) : null, student_id, class_id, attendance_date);
+        'UPDATE attendance SET status = ?, remarks = ?, updated_at = CURRENT_TIMESTAMP WHERE student_id = ? AND class_id = ? AND attendance_date = ? AND period = ?'
+      ).run(status, remarks ? sanitizeString(remarks) : null, student_id, class_id, attendance_date, periodVal);
 
       // If escape, notify supervisor and counselor
       if (status === 'escape') {
@@ -97,14 +104,15 @@ export async function POST(request: NextRequest) {
     } else {
       // Insert
       const stmt = db.prepare(`
-        INSERT INTO attendance (student_id, class_id, attendance_date, status, remarks)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO attendance (student_id, class_id, attendance_date, period, status, remarks)
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
 
       const result = await stmt.run(
         student_id,
         class_id,
         attendance_date,
+        periodVal,
         status,
         remarks ? sanitizeString(remarks) : null
       );
@@ -134,7 +142,8 @@ export async function PUT(request: NextRequest) {
     if (!hasPermission(user.role, 'attendance:create')) return forbidden();
 
     const body = await request.json();
-    const { class_id, attendance_date, records } = body;
+    const { class_id, attendance_date, period, records } = body;
+    const periodVal = period ? parseInt(period) : 1;
 
     if (!class_id || !attendance_date || !Array.isArray(records)) {
       return badRequest('معرف الفصل والتاريخ وسجل الحضور مطلوبة');
@@ -159,18 +168,18 @@ export async function PUT(request: NextRequest) {
       }
 
       const existing = await db.prepare(
-        'SELECT id FROM attendance WHERE student_id = ? AND class_id = ? AND attendance_date = ?'
-      ).get(student_id, class_id, attendance_date);
+        'SELECT id FROM attendance WHERE student_id = ? AND class_id = ? AND attendance_date = ? AND period = ?'
+      ).get(student_id, class_id, attendance_date, periodVal);
 
       try {
         if (existing) {
           await db.prepare(
-            'UPDATE attendance SET status = ?, remarks = ? WHERE student_id = ? AND class_id = ? AND attendance_date = ?'
-          ).run(status, remarks ? sanitizeString(remarks) : null, student_id, class_id, attendance_date);
+            'UPDATE attendance SET status = ?, remarks = ? WHERE student_id = ? AND class_id = ? AND attendance_date = ? AND period = ?'
+          ).run(status, remarks ? sanitizeString(remarks) : null, student_id, class_id, attendance_date, periodVal);
         } else {
           await db.prepare(
-            'INSERT INTO attendance (student_id, class_id, attendance_date, status, remarks) VALUES (?, ?, ?, ?, ?)'
-          ).run(student_id, class_id, attendance_date, status, remarks ? sanitizeString(remarks) : null);
+            'INSERT INTO attendance (student_id, class_id, attendance_date, period, status, remarks) VALUES (?, ?, ?, ?, ?, ?)'
+          ).run(student_id, class_id, attendance_date, periodVal, status, remarks ? sanitizeString(remarks) : null);
         }
         if (status === 'escape') {
           notifyEscapeAlert(student_id, class_id, attendance_date);
