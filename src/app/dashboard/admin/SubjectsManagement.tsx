@@ -22,14 +22,16 @@ export default function SubjectsManagement() {
 
   const loadData = () => {
     const token = localStorage.getItem('token');
-    Promise.all([
-      api.get(`/subjects?school=${schoolFilter}`, token),
-      api.get('/teachers?limit=500', token),
-    ]).then(([s, t]: any[]) => {
-      setSubjects(s.subjects || []);
-      setTeachers(t.teachers || []);
-    }).catch(() => setMessage('فشل تحميل البيانات'))
-    .finally(() => setLoading(false));
+    let cancelled = false;
+    api.get(`/subjects?school=${schoolFilter}`, token).then((s: any) => {
+      if (!cancelled) setSubjects(s.subjects || []);
+    }).catch(() => {
+      if (!cancelled) setMessage('فشل تحميل البيانات');
+    });
+    api.get('/teachers?limit=500', token).then((t: any) => {
+      if (!cancelled) setTeachers(t.teachers || []);
+    }).catch(() => {});
+    setLoading(false);
   };
 
   useEffect(() => { loadData() }, [schoolFilter]);
