@@ -81,14 +81,14 @@ export async function GET(request: NextRequest) {
       const teacherRec = await db.prepare('SELECT COALESCE(u.teacher_id, t.id) as id FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ?').get(user.id) as any;
       if (teacherRec?.id) {
         const tid = teacherRec.id;
-        const classFilter = "(c.teacher_id = ? OR c.id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = 'active'))";
+        const classFilter = "(c.teacher_id = ? OR c.id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = 'active') OR c.id IN (SELECT sc.class_id FROM subject_classes sc JOIN subjects s ON sc.subject_id = s.id WHERE s.teacher_id = ?))";
         const [myClasses, myStudents, myAttendance, myGradeStats, myPendingSubs, mySubjects] = await Promise.all([
-          db.prepare(`SELECT COUNT(*) as c FROM classes WHERE status = 'active' AND (teacher_id = ? OR id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = 'active'))`).get(tid, tid),
-          db.prepare(`SELECT COUNT(DISTINCT e.student_id) as c FROM enrollments e JOIN classes c ON e.class_id = c.id WHERE e.status = 'active' AND ${classFilter}`).get(tid, tid),
-          db.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN a.status='present' THEN 1 ELSE 0 END) as present, SUM(CASE WHEN a.status='absent' THEN 1 ELSE 0 END) as absent, SUM(CASE WHEN a.status='late' THEN 1 ELSE 0 END) as late, SUM(CASE WHEN a.status='excused' THEN 1 ELSE 0 END) as excused FROM attendance a JOIN classes c ON a.class_id = c.id WHERE ${classFilter}`).get(tid, tid),
-          db.prepare(`SELECT AVG(g.score*1.0/g.total_score*100) as avg_score, COUNT(*) as total FROM grades g JOIN classes c ON g.class_id = c.id WHERE ${classFilter}`).get(tid, tid),
+          db.prepare(`SELECT COUNT(*) as c FROM classes WHERE status = 'active' AND (teacher_id = ? OR id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = 'active') OR id IN (SELECT sc.class_id FROM subject_classes sc JOIN subjects s ON sc.subject_id = s.id WHERE s.teacher_id = ?))`).get(tid, tid, tid),
+          db.prepare(`SELECT COUNT(DISTINCT e.student_id) as c FROM enrollments e JOIN classes c ON e.class_id = c.id WHERE e.status = 'active' AND ${classFilter}`).get(tid, tid, tid),
+          db.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN a.status='present' THEN 1 ELSE 0 END) as present, SUM(CASE WHEN a.status='absent' THEN 1 ELSE 0 END) as absent, SUM(CASE WHEN a.status='late' THEN 1 ELSE 0 END) as late, SUM(CASE WHEN a.status='excused' THEN 1 ELSE 0 END) as excused FROM attendance a JOIN classes c ON a.class_id = c.id WHERE ${classFilter}`).get(tid, tid, tid),
+          db.prepare(`SELECT AVG(g.score*1.0/g.total_score*100) as avg_score, COUNT(*) as total FROM grades g JOIN classes c ON g.class_id = c.id WHERE ${classFilter}`).get(tid, tid, tid),
           db.prepare("SELECT COUNT(*) as c FROM substitutions WHERE substitute_teacher_id = ? AND status = 'pending'").get(tid),
-          db.prepare("SELECT COUNT(DISTINCT subject) as c FROM schedules WHERE teacher_id = ? AND status = 'active'").get(tid),
+          db.prepare("SELECT COUNT(*) as c FROM (SELECT s.subject FROM schedules s WHERE s.teacher_id = ? AND s.status = 'active' UNION SELECT s2.name FROM subjects s2 WHERE s2.teacher_id = ?)").get(tid, tid),
         ]);
         const myAttendanceRate = myAttendance.total > 0 ? Math.round((myAttendance.present / myAttendance.total) * 100) : 0;
         const myAvgScore = myGradeStats.avg_score ? Math.round(myGradeStats.avg_score) : 0;

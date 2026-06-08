@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
       const teacher = await db.prepare('SELECT COALESCE(u.teacher_id, t.id) as id FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ?').get(user.id) as any;
       if (teacher?.id) {
         teacherFilterId = teacher.id;
-        whereClause += ' AND (c.teacher_id = ? OR c.id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = \'active\'))';
-        params.push(teacher.id, teacher.id);
+        whereClause += ' AND (c.teacher_id = ? OR c.id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = \'active\') OR c.id IN (SELECT sc.class_id FROM subject_classes sc JOIN subjects s ON sc.subject_id = s.id WHERE s.teacher_id = ?))';
+        params.push(teacher.id, teacher.id, teacher.id);
       }
     } else if (teacherId) {
       whereClause += ' AND c.teacher_id = ?';
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     const countResult = await db.prepare(countQuery).get(...params) as any;
 
     const subjectsSubquery = teacherFilterId
-      ? `(SELECT GROUP_CONCAT(subject, '، ') FROM (SELECT DISTINCT s.subject FROM schedules s WHERE s.class_id = c.id AND s.status = 'active' AND s.teacher_id = ?))`
+      ? `(SELECT GROUP_CONCAT(subj, '، ') FROM (SELECT DISTINCT s.subject as subj FROM schedules s WHERE s.class_id = c.id AND s.status = 'active' AND s.teacher_id = ? UNION SELECT DISTINCT s2.name as subj FROM subjects s2 JOIN subject_classes sc2 ON sc2.subject_id = s2.id WHERE sc2.class_id = c.id AND s2.teacher_id = ?))`
       : `(SELECT GROUP_CONCAT(subject, '، ') FROM (SELECT DISTINCT s.subject FROM schedules s WHERE s.class_id = c.id AND s.status = 'active'))`;
 
     // Data
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       LIMIT ? OFFSET ?
     `;
 
-    const queryParams = teacherFilterId ? [...params, teacherFilterId, limit, offset] : [...params, limit, offset];
+    const queryParams = teacherFilterId ? [...params, teacherFilterId, teacherFilterId, limit, offset] : [...params, limit, offset];
 
     const classes = await db.prepare(query).all(...queryParams);
 
