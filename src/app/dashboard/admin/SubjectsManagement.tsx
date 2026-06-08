@@ -86,8 +86,8 @@ export default function SubjectsManagement() {
 
   const filteredClasses = classes.filter((c: any) => {
     if (form.grade && c.grade !== form.grade) return false;
-    if (c.school !== form.school) return false;
-    return true;
+    const cSchool = c.grade?.includes('ثانوي') ? 'high' : 'middle';
+    return cSchool === form.school;
   });
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
