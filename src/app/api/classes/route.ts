@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       LIMIT ? OFFSET ?
     `;
 
-    const queryParams = teacherFilterId ? [...params, teacherFilterId, teacherFilterId, limit, offset] : [...params, limit, offset];
+    const queryParams = teacherFilterId ? [teacherFilterId, teacherFilterId, ...params, limit, offset] : [...params, limit, offset];
 
     const classes = await db.prepare(query).all(...queryParams);
 
