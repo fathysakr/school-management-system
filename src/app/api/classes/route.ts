@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     let teacherFilterId: number | null = null;
     if (isTeacher) {
       const teacher = await db.prepare('SELECT COALESCE(u.teacher_id, t.id) as id FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ?').get(user.id) as any;
-      if (teacher) {
+      if (teacher?.id) {
         teacherFilterId = teacher.id;
         whereClause += ' AND (c.teacher_id = ? OR c.id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = \'active\'))';
         params.push(teacher.id, teacher.id);
