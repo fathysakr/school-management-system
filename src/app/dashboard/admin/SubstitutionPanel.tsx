@@ -28,14 +28,15 @@ export default function SubstitutionPanel() {
   const loadData = () => {
     if (!token) return;
     setLoading(true);
-    Promise.all([
-      api.get('/teachers?page=1&limit=100', token),
-      api.get('/substitutions?limit=500', token),
-    ]).then(([t, s]: any[]) => {
-      setTeachers(t.teachers || []);
-      setAllSubs(s.substitutions || []);
+    let cancelled = false;
+    api.get('/teachers?page=1&limit=100', token).then((t: any) => {
+      if (!cancelled) setTeachers(t.teachers || []);
+    }).catch(() => {});
+    api.get('/substitutions?limit=500', token).then((s: any) => {
+      if (!cancelled) setAllSubs(s.substitutions || []);
     }).catch(() => setError('فشل تحميل البيانات'))
-    .finally(() => setLoading(false));
+    .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   };
   useEffect(() => { loadData() }, []);
 

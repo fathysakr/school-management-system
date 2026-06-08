@@ -27,17 +27,18 @@ export default function TeacherAssignments() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    Promise.all([
-      api.get('/teachers?limit=500', token),
-      api.get('/classes?limit=500', token),
-      api.get(`/subjects?school=${schoolFilter}`, token),
-    ]).then(([t, c, s]: any[]) => {
-      setTeachers(t.teachers || []);
-      setClasses(c.classes || []);
-      setSubjects(s.subjects || []);
-    }).catch(() => {
-      setMessage('فشل تحميل البيانات - تحقق من اتصالك');
-    }).finally(() => setLoading(false));
+    let cancelled = false;
+    api.get('/teachers?limit=500', token).then((t: any) => {
+      if (!cancelled) setTeachers(t.teachers || []);
+    }).catch(() => {});
+    api.get('/classes?limit=500', token).then((c: any) => {
+      if (!cancelled) setClasses(c.classes || []);
+    }).catch(() => {});
+    api.get(`/subjects?school=${schoolFilter}`, token).then((s: any) => {
+      if (!cancelled) setSubjects(s.subjects || []);
+    }).catch(() => setMessage('فشل تحميل البيانات'));
+    setLoading(false);
+    return () => { cancelled = true; };
   }, [schoolFilter]);
 
   const parseSpec = (spec: string): { ids: number[]; sessions: Record<number, number>; classes: Record<number, number[]> } => {

@@ -56,16 +56,18 @@ export default function SchedulePanel() {
   const loadData = () => {
     if (!token) return;
     setLoading(true);
-    Promise.all([
-      api.get('/classes?page=1&limit=100', token),
-      api.get('/teachers?page=1&limit=100', token),
-      api.get('/schedules?limit=500', token),
-    ]).then(([c, t, s]: any[]) => {
-      setClasses(c.classes || []);
-      setTeachers(t.teachers || []);
-      setSchedules(s.schedules || []);
+    let cancelled = false;
+    api.get('/classes?page=1&limit=100', token).then((c: any) => {
+      if (!cancelled) setClasses(c.classes || []);
+    }).catch(() => {});
+    api.get('/teachers?page=1&limit=100', token).then((t: any) => {
+      if (!cancelled) setTeachers(t.teachers || []);
+    }).catch(() => {});
+    api.get('/schedules?limit=500', token).then((s: any) => {
+      if (!cancelled) setSchedules(s.schedules || []);
     }).catch(() => setError('فشل تحميل البيانات'))
-    .finally(() => setLoading(false));
+    .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   };
   useEffect(() => { loadData() }, []);
 
