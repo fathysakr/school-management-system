@@ -684,6 +684,21 @@ function applyMigrations(bsql: any) {
         ? 'SELECT 1'
         : `ALTER TABLE students ADD COLUMN semester TEXT DEFAULT ''`
     },
+    {
+      name: '022_subject_classes',
+      sql: (() => {
+        try {
+          bsql.prepare("SELECT id FROM subject_classes LIMIT 1").get();
+          return 'SELECT 1';
+        } catch { return `CREATE TABLE IF NOT EXISTS subject_classes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          subject_id INTEGER NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+          class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+          sessions_per_week INTEGER NOT NULL DEFAULT 0,
+          UNIQUE(subject_id, class_id)
+        )`; }
+      })()
+    },
   ];
 
   for (const migration of migrations) {
