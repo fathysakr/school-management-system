@@ -869,6 +869,8 @@ async function _ensureTursoReady() {
       id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
       school TEXT NOT NULL CHECK (school IN ('middle', 'high')),
       sessions_per_week INTEGER NOT NULL DEFAULT 3,
+      grade TEXT,
+      teacher_id INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
     await db.exec(`CREATE TABLE IF NOT EXISTS management_positions (

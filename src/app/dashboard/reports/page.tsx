@@ -212,7 +212,7 @@ export default function ReportsPage() {
     } else {
       setEditing(null);
       setFormData({
-        teacher_id: selectedTeacher || '',
+        teacher_id: '',
         student_id: '', class_id: selectedClass || '',
         title: '', content: '',
         date: new Date().toISOString().split('T')[0],

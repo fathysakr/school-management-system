@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    const result = run(action as BulkAction);
+    const result = await run(action as BulkAction);
     return success(result);
   } catch (error) {
     console.error('Bulk delete error:', error);

@@ -164,7 +164,7 @@ export default function ClassesPage() {
   };
 
   const handleEnroll = async () => {
-    if (!token || !enrollData.student_id) return;
+    if (!token || !selectedClass || !enrollData.student_id) return;
     setError('');
     setSuccess('');
 

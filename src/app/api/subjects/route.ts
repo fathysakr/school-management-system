@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const params: string[] = [];
     const clauses: string[] = [];
     if (school) { clauses.push('s.school = ?'); params.push(school); }
-    if (grade) { clauses.push('s.grade = ?'); params.push(grade); }
+    if (grade) { clauses.push('s.grade LIKE ?'); params.push(`%${grade}%`); }
     if (clauses.length) sql += ' WHERE ' + clauses.join(' AND ');
     sql += ' ORDER BY s.name';
     const subjects = await db.prepare(sql).all(...params);

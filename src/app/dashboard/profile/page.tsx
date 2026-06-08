@@ -47,8 +47,8 @@ export default function ProfilePage() {
     const fetchProfile = async () => {
       try {
         const res = await api.get('/auth/profile', token);
-        setProfile(res.user);
-        setEditEmail(res.user.email);
+        setProfile(res.user || null);
+        setEditEmail(res.user?.email || '');
       } catch {
         setError('فشل في تحميل البيانات');
       } finally {
