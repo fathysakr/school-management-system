@@ -51,8 +51,8 @@ export async function GET(request: NextRequest) {
     if (isTeacher) {
       const teacherRec = await db.prepare('SELECT COALESCE(u.teacher_id, t.id) as id FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ?').get(user.id) as any;
       if (teacherRec?.id) {
-        whereClause += ' AND e.class_id IN (SELECT id FROM classes WHERE teacher_id = ? AND status = \'active\' UNION SELECT class_id FROM schedules WHERE teacher_id = ? AND status = \'active\')';
-        params.push(teacherRec.id, teacherRec.id);
+        whereClause += ' AND e.class_id IN (SELECT id FROM classes WHERE teacher_id = ? AND status = \'active\' UNION SELECT class_id FROM schedules WHERE teacher_id = ? AND status = \'active\' UNION SELECT sc.class_id FROM subject_classes sc JOIN subjects s ON sc.subject_id = s.id WHERE s.teacher_id = ?)';
+        params.push(teacherRec.id, teacherRec.id, teacherRec.id);
       }
     }
 
