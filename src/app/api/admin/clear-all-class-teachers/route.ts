@@ -9,10 +9,13 @@ export async function POST(request: NextRequest) {
     if (!user) return unauthorized();
     if (user.role !== 'admin') return forbidden('Admin only');
 
-    await db.prepare("UPDATE classes SET teacher_id = NULL").run();
-    return success({ message: 'تم مسح اسناد الفصول لكل المعلمين' });
+    const result = await db.prepare("UPDATE classes SET teacher_id = NULL").run();
+    return success({
+      message: 'تم مسح اسناد الفصول لكل المعلمين',
+      changes: result.changes,
+    });
   } catch (error) {
     console.error('Clear all class teachers error:', error);
-    return new Response(JSON.stringify({ error: 'فشل في مسح اسناد الفصول' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'فشل في مسح اسناد الفصول: ' + (error instanceof Error ? error.message : '') }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

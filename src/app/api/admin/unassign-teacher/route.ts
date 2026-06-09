@@ -15,11 +15,14 @@ export async function POST(request: NextRequest) {
       return badRequest('معرف المدرس مطلوب');
     }
 
-    await db.prepare('UPDATE subjects SET teacher_id = NULL WHERE teacher_id = ?').run(teacherId);
-    await db.prepare('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?').run(teacherId);
-    await db.prepare('UPDATE teachers SET specialization = ? WHERE id = ?').run('[]', teacherId);
+    const r1 = await db.prepare('UPDATE subjects SET teacher_id = NULL WHERE teacher_id = ?').run(teacherId);
+    const r2 = await db.prepare('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?').run(teacherId);
+    const r3 = await db.prepare('UPDATE teachers SET specialization = ? WHERE id = ?').run('[]', teacherId);
 
-    return success({ message: 'تم إلغاء التعيينات بنجاح' });
+    return success({
+      message: 'تم إلغاء التعيينات بنجاح',
+      changes: { subjects: r1.changes, classes: r2.changes, teachers: r3.changes },
+    });
   } catch (error) {
     console.error('Unassign teacher error:', error);
     return serverError('فشل في إلغاء التعيينات: ' + (error instanceof Error ? error.message : ''));

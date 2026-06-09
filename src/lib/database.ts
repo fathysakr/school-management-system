@@ -24,10 +24,13 @@ function findDbPath(): string {
     const fbDir = path.dirname(srcPath);
     if (!fs.existsSync(fbDir)) fs.mkdirSync(fbDir, { recursive: true });
   }
-  // Check if the source is writable (local dev) — if so use it directly
+  // Check if the source dir is writable (local dev) — if so use it directly
   if (fs.existsSync(srcPath)) {
     try {
-      fs.accessSync(srcPath, fs.constants.W_OK);
+      const dir = path.dirname(srcPath);
+      const probe = path.join(dir, '.wtest_' + Date.now());
+      fs.writeFileSync(probe, '');
+      fs.unlinkSync(probe);
       return srcPath;
     } catch {}
   }
@@ -37,6 +40,8 @@ function findDbPath(): string {
   const tmpPath = path.join(tmpDir, 'school.db');
   if (fs.existsSync(srcPath) && !fs.existsSync(tmpPath)) {
     fs.copyFileSync(srcPath, tmpPath);
+  } else if (!fs.existsSync(srcPath) && !fs.existsSync(tmpPath)) {
+    fs.writeFileSync(tmpPath, '');
   }
   return tmpPath;
 }
@@ -1004,18 +1009,18 @@ async function ensureTursoReady() {
 
 async function _ensureTursoReady() {
   try {
-    // Performance pragmas
-    await db.exec(`PRAGMA journal_mode=WAL`);
-    await db.exec(`PRAGMA cache_size=-20000`);
-    await db.exec(`PRAGMA synchronous=NORMAL`);
+    // Performance pragmas (wrap each in try-catch for read-only FS like Vercel)
+    try { await db.exec(`PRAGMA journal_mode=WAL`); } catch (e) { console.warn('[DB] Could not set WAL mode:', e); }
+    try { await db.exec(`PRAGMA cache_size=-20000`); } catch {}
+    try { await db.exec(`PRAGMA synchronous=NORMAL`); } catch {}
 
     // Fix corrupted teacher_id values from old '' -> 0 bug
-    await db.exec(`UPDATE classes SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''`);
-    await db.exec(`UPDATE subjects SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''`);
+    try { await db.exec(`UPDATE classes SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''`); } catch {}
+    try { await db.exec(`UPDATE subjects SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''`); } catch {}
 
     // Skip full initialization if already done
-    await db.exec(`CREATE TABLE IF NOT EXISTS _init_done (flag INTEGER PRIMARY KEY)`);
-    const done = await db.prepare("SELECT 1 FROM _init_done WHERE flag = 1").get() as any;
+    try { await db.exec(`CREATE TABLE IF NOT EXISTS _init_done (flag INTEGER PRIMARY KEY)`); } catch {}
+    const done = await db.prepare("SELECT 1 FROM _init_done WHERE flag = 1").get().catch(() => null) as any;
     if (done) { return; }
 
     await db.exec(`CREATE TABLE IF NOT EXISTS notifications (
