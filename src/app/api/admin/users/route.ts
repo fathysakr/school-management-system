@@ -54,8 +54,24 @@ export async function POST(request: NextRequest) {
     const result = await insert.run(sanitizeString(email), hashed, role);
     const userId = result.lastInsertRowid;
 
-    if (teacher_id) {
-      await db.prepare('UPDATE users SET teacher_id = ? WHERE id = ?').run(teacher_id, userId);
+    let finalTeacherId = teacher_id || null;
+    const isTeacherRole = role === 'middle_teacher' || role === 'high_teacher';
+
+    if (isTeacherRole && !finalTeacherId) {
+      const existingTeacher = await db.prepare('SELECT id FROM teachers WHERE email = ?').get(email) as any;
+      if (existingTeacher) {
+        finalTeacherId = existingTeacher.id;
+      } else {
+        const name = email.includes('@') ? email.split('@')[0] : email;
+        const school = role.startsWith('middle_') ? 'middle' : 'high';
+        const tid = `${school === 'middle' ? 'M' : 'H'}-${name.toUpperCase()}`;
+        const tResult = await db.prepare('INSERT INTO teachers (teacher_id, user_id, first_name, last_name, email, school, status) VALUES (?, ?, ?, ?, ?, ?, ?)').run(tid, userId, name, name, email, school, 'active');
+        finalTeacherId = Number(tResult.lastInsertRowid);
+      }
+    }
+
+    if (finalTeacherId) {
+      await db.prepare('UPDATE users SET teacher_id = ? WHERE id = ?').run(finalTeacherId, userId);
     }
 
     return success({ message: 'User created successfully', user_id: userId }, 201);
@@ -116,6 +132,27 @@ export async function PUT(request: NextRequest) {
     if (teacher_id !== undefined) {
       updates.push('teacher_id = ?');
       values.push(teacher_id || null);
+    }
+
+    const newRole = role !== undefined ? role : existing.role;
+    const isTeacherRole = newRole === 'middle_teacher' || newRole === 'high_teacher';
+    let finalTeacherId: number | null = teacher_id !== undefined ? (teacher_id || null) : (existing.teacher_id || null);
+
+    if (isTeacherRole && !finalTeacherId) {
+      const existingTeacher = await db.prepare('SELECT id FROM teachers WHERE email = ?').get(existing.email) as any;
+      if (existingTeacher) {
+        finalTeacherId = existingTeacher.id;
+        updates.push('teacher_id = ?');
+        values.push(finalTeacherId);
+      } else {
+        const name = existing.email.includes('@') ? existing.email.split('@')[0] : existing.email;
+        const school = newRole.startsWith('middle_') ? 'middle' : 'high';
+        const tid = `${school === 'middle' ? 'M' : 'H'}-${name.toUpperCase()}`;
+        const tResult = await db.prepare('INSERT INTO teachers (teacher_id, user_id, first_name, last_name, email, school, status) VALUES (?, ?, ?, ?, ?, ?, ?)').run(tid, uid, name, name, existing.email, school, 'active');
+        finalTeacherId = Number(tResult.lastInsertRowid);
+        updates.push('teacher_id = ?');
+        values.push(finalTeacherId);
+      }
     }
 
     if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');

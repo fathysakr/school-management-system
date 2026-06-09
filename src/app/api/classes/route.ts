@@ -44,11 +44,16 @@ export async function GET(request: NextRequest) {
     const isTeacher = user.role === 'middle_teacher' || user.role === 'high_teacher';
     let teacherFilterId: number | null = null;
     if (isTeacher) {
-      const teacher = await db.prepare('SELECT COALESCE(u.teacher_id, t.id) as id FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ?').get(user.id) as any;
+      let teacher = await db.prepare('SELECT COALESCE(u.teacher_id, t.id) as id FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ?').get(user.id) as any;
+      if (!teacher?.id) {
+        teacher = await db.prepare('SELECT id FROM teachers WHERE email = ?').get(user.email) as any;
+      }
       if (teacher?.id) {
         teacherFilterId = teacher.id;
         whereClause += ' AND (c.teacher_id = ? OR c.id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = \'active\') OR c.id IN (SELECT sc.class_id FROM subject_classes sc JOIN subjects s ON sc.subject_id = s.id WHERE s.teacher_id = ?))';
         params.push(teacher.id, teacher.id, teacher.id);
+      } else {
+        whereClause += ' AND 1=0';
       }
     } else if (teacherId) {
       const tid = parseInt(teacherId);
