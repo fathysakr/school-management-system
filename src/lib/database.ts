@@ -5,22 +5,40 @@ import fs from 'fs';
 
 function findDbPath(): string {
   if (process.env.DB_PATH) return process.env.DB_PATH;
+  // Find the source db in the repo
+  let srcPath = '';
   let dir = process.cwd();
   for (let i = 0; i < 15; i++) {
     if (fs.existsSync(path.join(dir, 'package.json'))) {
-      const candidate = path.join(dir, 'data', 'school.db');
+      srcPath = path.join(dir, 'data', 'school.db');
       const dataDir = path.join(dir, 'data');
       if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-      return candidate;
+      break;
     }
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;
   }
-  const fallback = path.join(process.cwd(), 'data', 'school.db');
-  const fbDir = path.dirname(fallback);
-  if (!fs.existsSync(fbDir)) fs.mkdirSync(fbDir, { recursive: true });
-  return fallback;
+  if (!srcPath) {
+    srcPath = path.join(process.cwd(), 'data', 'school.db');
+    const fbDir = path.dirname(srcPath);
+    if (!fs.existsSync(fbDir)) fs.mkdirSync(fbDir, { recursive: true });
+  }
+  // Check if the source is writable (local dev) — if so use it directly
+  if (fs.existsSync(srcPath)) {
+    try {
+      fs.accessSync(srcPath, fs.constants.W_OK);
+      return srcPath;
+    } catch {}
+  }
+  // On read-only filesystem (Vercel), copy to /tmp/ so writes persist
+  const tmpDir = path.join('/tmp', 'data');
+  if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+  const tmpPath = path.join(tmpDir, 'school.db');
+  if (fs.existsSync(srcPath) && !fs.existsSync(tmpPath)) {
+    fs.copyFileSync(srcPath, tmpPath);
+  }
+  return tmpPath;
 }
 
 export type DbResult = {
