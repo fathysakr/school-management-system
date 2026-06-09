@@ -29,6 +29,31 @@ export async function POST(request: NextRequest) {
       return badRequest('إجراء غير صالح. الإجراءات المتاحة: ' + ACTIONS.join(', '));
     }
 
+    if (action === 'factory_reset') {
+      await db.exec('PRAGMA foreign_keys=OFF');
+      await db.exec('DELETE FROM attendance');
+      await db.exec('DELETE FROM grades');
+      await db.exec('DELETE FROM teacher_reports');
+      await db.exec('DELETE FROM enrollments');
+      await db.exec('DELETE FROM subject_classes');
+      await db.exec('DELETE FROM substitutions');
+      await db.exec('DELETE FROM schedules');
+      await db.exec('DELETE FROM notifications');
+      await db.exec('DELETE FROM management_position_assignments');
+      await db.exec('DELETE FROM announcements');
+      await db.exec('DELETE FROM leave_requests');
+      await db.exec('DELETE FROM parents');
+      await db.exec('DELETE FROM students');
+      await db.exec('DELETE FROM classes');
+      await db.exec('DELETE FROM subjects');
+      await db.exec('DELETE FROM management_positions');
+      await db.exec('DELETE FROM teachers');
+      await db.exec('DELETE FROM users');
+      await db.exec('DELETE FROM _init_done WHERE flag = 1');
+      await db.exec('PRAGMA foreign_keys=ON');
+      return success({ message: 'تم إعادة تعيين النظام بالكامل. سيتم إعادة تهيئة البيانات الافتراضية في الزيارة التالية. يرجى تسجيل الدخول مرة أخرى.' });
+    }
+
     const run = db.transaction(async (act: BulkAction) => {
       switch (act) {
         case 'delete_all_grades':
@@ -77,30 +102,6 @@ export async function POST(request: NextRequest) {
           await db.prepare('DELETE FROM teacher_reports').run();
           await db.prepare('DELETE FROM enrollments').run();
           return { message: 'تم بدء فصل دراسي جديد - تم مسح الدرجات والحضور والجداول والتقارير والتسجيلات' };
-
-        case 'factory_reset':
-          await db.exec('PRAGMA foreign_keys=OFF');
-          await db.exec('DELETE FROM attendance');
-          await db.exec('DELETE FROM grades');
-          await db.exec('DELETE FROM teacher_reports');
-          await db.exec('DELETE FROM enrollments');
-          await db.exec('DELETE FROM subject_classes');
-          await db.exec('DELETE FROM substitutions');
-          await db.exec('DELETE FROM schedules');
-          await db.exec('DELETE FROM notifications');
-          await db.exec('DELETE FROM management_position_assignments');
-          await db.exec('DELETE FROM announcements');
-          await db.exec('DELETE FROM leave_requests');
-          await db.exec('DELETE FROM parents');
-          await db.exec('DELETE FROM students');
-          await db.exec('DELETE FROM classes');
-          await db.exec('DELETE FROM subjects');
-          await db.exec('DELETE FROM management_positions');
-          await db.exec('DELETE FROM teachers');
-          await db.exec('DELETE FROM users');
-          await db.exec('DELETE FROM _init_done WHERE flag = 1');
-          await db.exec('PRAGMA foreign_keys=ON');
-          return { message: 'تم إعادة تعيين النظام بالكامل. سيتم إعادة تهيئة البيانات الافتراضية في الزيارة التالية. يرجى تسجيل الدخول مرة أخرى.' };
 
         default:
           return { message: 'Unknown action' };
