@@ -140,16 +140,7 @@ export default function TeacherAssignments() {
     setMessage('');
     try {
       const token = localStorage.getItem('token');
-      const allSubjects = await api.get(`/subjects?school=${schoolFilter}`, token) as any;
-      const teacherSubjects = (allSubjects.subjects || []).filter((s: any) => s.teacher_id === teacher.id);
-      for (const sub of teacherSubjects) {
-        await api.put(`/subjects?id=${sub.id}`, { teacher_id: null }, token).catch(() => {});
-      }
-      const assignedClasses = classes.filter((c: any) => c.teacher_id === teacher.id);
-      for (const c of assignedClasses) {
-        await api.put(`/classes/${c.id}`, { teacher_id: null }, token).catch(() => {});
-      }
-      await api.put(`/teachers/${teacher.id}`, { specialization: '[]' }, token);
+      await api.post('/admin/unassign-teacher', { teacher_id: teacher.id }, token);
       const t = await api.get('/teachers?limit=500', token);
       const c = await api.get('/classes?limit=500', token);
       setTeachers(t.teachers || []);

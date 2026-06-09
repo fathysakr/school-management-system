@@ -733,6 +733,14 @@ function applyMigrations(bsql: any) {
         `;
       })()
     },
+    {
+      name: '024_fix_orphan_teacher_refs',
+      sql: (() => {
+        bsql.prepare("UPDATE classes SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''").run();
+        bsql.prepare("UPDATE subjects SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''").run();
+        return 'SELECT 1';
+      })()
+    },
   ];
 
   for (const migration of migrations) {
@@ -982,6 +990,10 @@ async function _ensureTursoReady() {
     await db.exec(`PRAGMA journal_mode=WAL`);
     await db.exec(`PRAGMA cache_size=-20000`);
     await db.exec(`PRAGMA synchronous=NORMAL`);
+
+    // Fix corrupted teacher_id values from old '' -> 0 bug
+    await db.exec(`UPDATE classes SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''`);
+    await db.exec(`UPDATE subjects SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''`);
 
     // Skip full initialization if already done
     await db.exec(`CREATE TABLE IF NOT EXISTS _init_done (flag INTEGER PRIMARY KEY)`);
