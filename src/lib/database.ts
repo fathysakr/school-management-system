@@ -1333,12 +1333,12 @@ async function _ensureTursoReady() {
     )`); } catch {}
 
     const seedAdminEmail = process.env.ADMIN_EMAIL || 'admin@school.com';
-    const seedAdminPass = process.env.ADMIN_PASSWORD ? await bcrypt.hash(process.env.ADMIN_PASSWORD, 10) : '$2a$10$Kc1v.vgFEho5SKGmtIMppOc6u9usmVQB5ITSrHzjm3VcduBo.s1..';
-    const h = { teacher:'$2a$04$M7Xfk/P1o.e6wOQYLZVrQ.DekRYrtV3JVOBZKxB6rVgJJ4J3nyK2u' };
+    const seedAdminPass = process.env.ADMIN_PASSWORD ? await bcrypt.hash(process.env.ADMIN_PASSWORD, 10) : await bcrypt.hash('admin123', 10);
+    const seedTeacherPass = process.env.TEACHER_PASSWORD ? await bcrypt.hash(process.env.TEACHER_PASSWORD, 10) : await bcrypt.hash('teacher123', 10);
     const users: [string, string, string][] = [
       [seedAdminEmail, seedAdminPass, 'admin'],
-      ['middle.teacher@school.com', h.teacher, 'middle_teacher'],
-      ['high.teacher@school.com', h.teacher, 'high_teacher'],
+      ['middle.teacher@school.com', seedTeacherPass, 'middle_teacher'],
+      ['high.teacher@school.com', seedTeacherPass, 'high_teacher'],
     ];
     try {
       await db.prepare("INSERT INTO users (email, password, role) VALUES ('__test_monitor__', '__test__', 'middle_monitor')").run();
