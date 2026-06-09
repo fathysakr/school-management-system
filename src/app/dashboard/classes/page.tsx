@@ -255,27 +255,43 @@ export default function ClassesPage() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
       const parsed: { student_id: string; first_name: string; last_name: string }[] = [];
+      let debugInfo = '';
       for (const sheetName of workbook.SheetNames) {
         const rows: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
         if (rows.length < 2) continue;
-        const headers = rows[0] as string[];
-        const hasHeaders = headers && headers.some(h => typeof h === 'string' && (h.includes('طالب') || h.includes('student') || h.includes('رقم')));
-        const startIdx = hasHeaders ? 1 : 0;
-        for (let i = startIdx; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row || !row[0]) continue;
-          const sid = String(row[0]).trim();
-          if (!sid || sid.length < 3) continue;
-          if (hasHeaders) {
-            const fullName = String(row[1] || '').trim();
-            const parts = fullName.split(' ');
-            parsed.push({ student_id: sid, first_name: parts[0] || fullName, last_name: parts.slice(1).join(' ') || parts[0] || fullName });
-          } else {
-            parsed.push({ student_id: sid, first_name: String(row[1] || '').trim(), last_name: String(row[2] || '').trim() });
+        const firstRows = rows.slice(0, Math.min(5, rows.length)).map((r: any) => JSON.stringify(r)).join(' | ');
+        debugInfo += `ورقة "${sheetName}": ${rows.length} صف، أولها: ${firstRows}. `;
+        const couldBeId = (v: any) => /\d/.test(String(v));
+        const couldBeName = (v: any) => typeof v === 'string' && /[a-zA-Z\u0600-\u06FF\s]/.test(v) && !/^\d+$/.test(v.trim());
+        for (const row of rows) {
+          if (!row) continue;
+          const vals = (Array.isArray(row) ? row : Object.values(row)).filter((v: any) => v !== undefined && v !== null && v !== '');
+          if (vals.length < 2) continue;
+          let sid = '', fn = '', ln = '';
+          if (vals.length >= 3 && couldBeId(vals[0]) && couldBeName(vals[1]) && couldBeName(vals[2])) {
+            sid = String(vals[0]).trim(); fn = String(vals[1]).trim(); ln = String(vals[2]).trim();
+          } else if (vals.length >= 2 && couldBeId(vals[0]) && couldBeName(vals[1])) {
+            sid = String(vals[0]).trim();
+            const name = String(vals[1]).trim();
+            const parts = name.split(' ');
+            fn = parts[0] || name;
+            ln = parts.slice(1).join(' ') || parts[0] || name;
+          } else if (vals.length >= 2 && couldBeName(vals[0]) && couldBeId(vals[1])) {
+            sid = String(vals[1]).trim();
+            const name = String(vals[0]).trim();
+            const parts = name.split(' ');
+            fn = parts[0] || name;
+            ln = parts.slice(1).join(' ') || parts[0] || name;
+          }
+          if (sid && sid.length >= 2 && fn && ln) {
+            parsed.push({ student_id: sid, first_name: fn, last_name: ln });
           }
         }
       }
-      if (parsed.length === 0) { setError('لم يتم العثور على طلاب في الملف'); return; }
+      if (parsed.length === 0) {
+        setError(`لم يتم العثور على طلاب في الملف. تفاصيل: ${debugInfo}`);
+        return;
+      }
       setUploadPreview(parsed);
       setUploadPreviewOpen(true);
     } catch (err: unknown) {
