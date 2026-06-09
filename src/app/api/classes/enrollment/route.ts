@@ -18,21 +18,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify student and class exist
-    const student = await db.prepare('SELECT id FROM students WHERE id = ? AND status = "active"').get(student_id);
+    const student = await db.prepare("SELECT id FROM students WHERE id = ? AND status = 'active'").get(student_id);
     if (!student) return badRequest('الطالب غير موجود أو غير نشط');
 
-    const classData = await db.prepare('SELECT id, capacity FROM classes WHERE id = ? AND status = "active"').get(class_id) as any;
+    const classData = await db.prepare("SELECT id, capacity FROM classes WHERE id = ? AND status = 'active'").get(class_id) as any;
     if (!classData) return badRequest('الفصل غير موجود أو غير نشط');
 
     // Check capacity
-    const enrolled = await db.prepare('SELECT COUNT(*) as count FROM enrollments WHERE class_id = ? AND status = "active"').get(class_id) as any;
+    const enrolled = await db.prepare("SELECT COUNT(*) as count FROM enrollments WHERE class_id = ? AND status = 'active'").get(class_id) as any;
     if (enrolled.count >= classData.capacity) {
       return badRequest('الفصل ممتلئ');
     }
 
     // Check if already enrolled
     const existing = await db.prepare(
-      'SELECT id FROM enrollments WHERE student_id = ? AND class_id = ? AND status = "active"'
+      "SELECT id FROM enrollments WHERE student_id = ? AND class_id = ? AND status = 'active'"
     ).get(student_id, class_id);
     if (existing) {
       return badRequest('الطالب مسجل بالفعل في هذا الفصل');
@@ -74,7 +74,7 @@ export async function DELETE(request: NextRequest) {
     const cid = parseInt(class_id);
     if (isNaN(sid) || isNaN(cid)) return badRequest('معرف الطالب أو الفصل غير صالح');
     const enrollment = await db.prepare(
-      'SELECT id FROM enrollments WHERE student_id = ? AND class_id = ? AND status = "active"'
+      "SELECT id FROM enrollments WHERE student_id = ? AND class_id = ? AND status = 'active'"
     ).get(sid, cid);
 
     if (!enrollment) return notFound('التسجيل غير موجود');
