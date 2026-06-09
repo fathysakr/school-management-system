@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
     return success({ users });
   } catch (error) {
     console.error('Get users error:', error);
-    return serverError('فشل في جلب المستخدمين');
+    const message = error instanceof Error ? error.message : 'فشل في جلب المستخدمين';
+    return serverError(message);
   }
 }
 

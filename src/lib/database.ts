@@ -69,6 +69,10 @@ function createTursoAdapter() {
     url: process.env.TURSO_DB_URL!,
     authToken: process.env.TURSO_DB_TOKEN,
   });
+  return createLibsqlAdapter(client);
+}
+
+function createLibsqlAdapter(client: any): DbAdapter {
   return {
     prepare(sql: string) {
       return {
@@ -769,17 +773,13 @@ function applyMigrations(bsql: any) {
   const classCnt = (bsql.prepare("SELECT COUNT(*) as cnt FROM classes WHERE status = 'active'").get() as any)?.cnt;
   bsql.pragma('foreign_keys = OFF');
   if (!classCnt) {
-    const hsTeacher = bsql.prepare("SELECT id FROM teachers WHERE school = 'high' AND status = 'active' LIMIT 1").get() as any;
-    const msTeacher = bsql.prepare("SELECT id FROM teachers WHERE school = 'middle' AND status = 'active' LIMIT 1").get() as any;
-    const hsTid = hsTeacher?.id || (bsql.prepare("SELECT id FROM teachers LIMIT 1").get() as any)?.id || 1;
-    const msTid = msTeacher?.id || hsTid;
-    bsql.prepare(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ` +
-      `('1/أ','الصف الأول الثانوي','أ',${hsTid},'101',30,'active'),('1/ب','الصف الأول الثانوي','ب',${hsTid},'102',30,'active'),('1/ت','الصف الأول الثانوي','ت',${hsTid},'103',30,'active'),('1/ث','الصف الأول الثانوي','ث',${hsTid},'104',30,'active'),('1/ج','الصف الأول الثانوي','ج',${hsTid},'105',30,'active'),('1/ح','الصف الأول الثانوي','ح',${hsTid},'106',30,'active'),('1/خ','الصف الأول الثانوي','خ',${hsTid},'107',30,'active'),` +
-      `('2/أ','الصف الثاني الثانوي','أ',${hsTid},'201',30,'active'),('2/ب','الصف الثاني الثانوي','ب',${hsTid},'202',30,'active'),('2/ت','الصف الثاني الثانوي','ت',${hsTid},'203',30,'active'),('2/ث','الصف الثاني الثانوي','ث',${hsTid},'204',30,'active'),('2/ج','الصف الثاني الثانوي','ج',${hsTid},'205',30,'active'),('2/ح','الصف الثاني الثانوي','ح',${hsTid},'206',30,'active'),('2/خ','الصف الثاني الثانوي','خ',${hsTid},'207',30,'active'),` +
-      `('3/أ','الصف الثالث الثانوي','أ',${hsTid},'301',30,'active'),('3/ب','الصف الثالث الثانوي','ب',${hsTid},'302',30,'active'),('3/ت','الصف الثالث الثانوي','ت',${hsTid},'303',30,'active'),('3/ث','الصف الثالث الثانوي','ث',${hsTid},'304',30,'active'),('3/ج','الصف الثالث الثانوي','ج',${hsTid},'305',30,'active'),('3/ح','الصف الثالث الثانوي','ح',${hsTid},'306',30,'active'),` +
-      `('1/أ','الصف الأول المتوسط','أ',${msTid},'401',30,'active'),('1/ب','الصف الأول المتوسط','ب',${msTid},'402',30,'active'),('1/ت','الصف الأول المتوسط','ت',${msTid},'403',30,'active'),('1/ث','الصف الأول المتوسط','ث',${msTid},'404',30,'active'),('1/ج','الصف الأول المتوسط','ج',${msTid},'405',30,'active'),('1/ح','الصف الأول المتوسط','ح',${msTid},'406',30,'active'),('1/خ','الصف الأول المتوسط','خ',${msTid},'407',30,'active'),` +
-      `('2/أ','الصف الثاني المتوسط','أ',${msTid},'501',30,'active'),('2/ب','الصف الثاني المتوسط','ب',${msTid},'502',30,'active'),('2/ت','الصف الثاني المتوسط','ت',${msTid},'503',30,'active'),('2/ث','الصف الثاني المتوسط','ث',${msTid},'504',30,'active'),('2/ج','الصف الثاني المتوسط','ج',${msTid},'505',30,'active'),('2/ح','الصف الثاني المتوسط','ح',${msTid},'506',30,'active'),('2/خ','الصف الثاني المتوسط','خ',${msTid},'507',30,'active'),` +
-      `('3/أ','الصف الثالث المتوسط','أ',${msTid},'601',30,'active'),('3/ب','الصف الثالث المتوسط','ب',${msTid},'602',30,'active'),('3/ت','الصف الثالث المتوسط','ت',${msTid},'603',30,'active'),('3/ث','الصف الثالث المتوسط','ث',${msTid},'604',30,'active'),('3/ج','الصف الثالث المتوسط','ج',${msTid},'605',30,'active'),('3/ح','الصف الثالث المتوسط','ح',${msTid},'606',30,'active')`).run();
+    bsql.prepare(`INSERT OR IGNORE INTO classes (class_name, grade, section, room_number, capacity, status) VALUES ` +
+      `('1/أ','الصف الأول الثانوي','أ','101',30,'active'),('1/ب','الصف الأول الثانوي','ب','102',30,'active'),('1/ت','الصف الأول الثانوي','ت','103',30,'active'),('1/ث','الصف الأول الثانوي','ث','104',30,'active'),('1/ج','الصف الأول الثانوي','ج','105',30,'active'),('1/ح','الصف الأول الثانوي','ح','106',30,'active'),('1/خ','الصف الأول الثانوي','خ','107',30,'active'),` +
+      `('2/أ','الصف الثاني الثانوي','أ','201',30,'active'),('2/ب','الصف الثاني الثانوي','ب','202',30,'active'),('2/ت','الصف الثاني الثانوي','ت','203',30,'active'),('2/ث','الصف الثاني الثانوي','ث','204',30,'active'),('2/ج','الصف الثاني الثانوي','ج','205',30,'active'),('2/ح','الصف الثاني الثانوي','ح','206',30,'active'),('2/خ','الصف الثاني الثانوي','خ','207',30,'active'),` +
+      `('3/أ','الصف الثالث الثانوي','أ','301',30,'active'),('3/ب','الصف الثالث الثانوي','ب','302',30,'active'),('3/ت','الصف الثالث الثانوي','ت','303',30,'active'),('3/ث','الصف الثالث الثانوي','ث','304',30,'active'),('3/ج','الصف الثالث الثانوي','ج','305',30,'active'),('3/ح','الصف الثالث الثانوي','ح','306',30,'active'),` +
+      `('1/أ','الصف الأول المتوسط','أ','401',30,'active'),('1/ب','الصف الأول المتوسط','ب','402',30,'active'),('1/ت','الصف الأول المتوسط','ت','403',30,'active'),('1/ث','الصف الأول المتوسط','ث','404',30,'active'),('1/ج','الصف الأول المتوسط','ج','405',30,'active'),('1/ح','الصف الأول المتوسط','ح','406',30,'active'),('1/خ','الصف الأول المتوسط','خ','407',30,'active'),` +
+      `('2/أ','الصف الثاني المتوسط','أ','501',30,'active'),('2/ب','الصف الثاني المتوسط','ب','502',30,'active'),('2/ت','الصف الثاني المتوسط','ت','503',30,'active'),('2/ث','الصف الثاني المتوسط','ث','504',30,'active'),('2/ج','الصف الثاني المتوسط','ج','505',30,'active'),('2/ح','الصف الثاني المتوسط','ح','506',30,'active'),('2/خ','الصف الثاني المتوسط','خ','507',30,'active'),` +
+      `('3/أ','الصف الثالث المتوسط','أ','601',30,'active'),('3/ب','الصف الثالث المتوسط','ب','602',30,'active'),('3/ت','الصف الثالث المتوسط','ت','603',30,'active'),('3/ث','الصف الثالث المتوسط','ث','604',30,'active'),('3/ج','الصف الثالث المتوسط','ج','605',30,'active'),('3/ح','الصف الثالث المتوسط','ح','606',30,'active')`).run();
     bsql.pragma('foreign_keys = ON');
   }
 
@@ -806,11 +806,14 @@ function applyMigrations(bsql: any) {
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)',
     'CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)',
+    'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
     'CREATE INDEX IF NOT EXISTS idx_teachers_school ON teachers(school)',
     'CREATE INDEX IF NOT EXISTS idx_teachers_status ON teachers(status)',
     'CREATE INDEX IF NOT EXISTS idx_teachers_user_id ON teachers(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_teachers_teacher_id ON teachers(teacher_id)',
     'CREATE INDEX IF NOT EXISTS idx_students_status ON students(status)',
     'CREATE INDEX IF NOT EXISTS idx_students_school ON students(school)',
+    'CREATE INDEX IF NOT EXISTS idx_students_student_id ON students(student_id)',
     'CREATE INDEX IF NOT EXISTS idx_classes_grade ON classes(grade)',
     'CREATE INDEX IF NOT EXISTS idx_classes_status ON classes(status)',
     'CREATE INDEX IF NOT EXISTS idx_classes_teacher_id ON classes(teacher_id)',
@@ -859,44 +862,132 @@ function createMockAdapter(): DbAdapter {
   };
 }
 
+function createLocalLibsqlAdapter(): DbAdapter {
+  let realClient: any = null;
+  let realAdapter: DbAdapter | null = null;
+  let initPromise: Promise<void> | null = null;
+
+  async function ensureInit() {
+    if (realAdapter) return;
+    if (initPromise) return initPromise;
+    initPromise = (async () => {
+      const dbPath = findDbPath();
+      console.log('[DB] Initializing local libsql adapter, path:', dbPath);
+      realClient = createClient({ url: `file:${dbPath}` });
+      // Verify connection
+      const testResult = await realClient.execute('SELECT 1 as ok');
+      console.log('[DB] Local libsql connection OK:', JSON.stringify(testResult.rows[0]));
+      realAdapter = createLibsqlAdapter(realClient);
+    })();
+    return initPromise;
+  }
+
+  return {
+    prepare(sql: string) {
+      return {
+        get: async (...args: any[]) => {
+          await ensureInit();
+          return realAdapter!.prepare(sql).get(...args);
+        },
+        all: async (...args: any[]) => {
+          await ensureInit();
+          return realAdapter!.prepare(sql).all(...args);
+        },
+        run: async (...args: any[]) => {
+          await ensureInit();
+          return realAdapter!.prepare(sql).run(...args);
+        },
+      };
+    },
+    exec: async (sql: string) => {
+      await ensureInit();
+      return realAdapter!.exec(sql);
+    },
+    transaction(fn: (...args: any[]) => any) {
+      return async (...args: any[]) => {
+        await ensureInit();
+        return realAdapter!.transaction(fn)(...args);
+      };
+    },
+    close: () => { if (realClient) realClient.close(); },
+  };
+}
+
 function initDb(): DbAdapter {
   if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
+    console.log('[DB] Using Turso remote adapter');
     return createTursoAdapter();
   }
+  // Try better-sqlite3 first (fast and synchronous)
   try {
-    // Lazy-load better-sqlite3 to avoid Windows security blocks at module parse time
     const Database = require('better-sqlite3');
     const dbPath = findDbPath();
     const bsql = new Database(dbPath);
     bsql.pragma('foreign_keys = ON');
     const adapter = createBetterSqlite3Adapter(bsql);
     applyMigrations(bsql);
+    console.log('[DB] Using better-sqlite3 adapter');
     return adapter;
   } catch (e: any) {
-    console.warn('[DB] better-sqlite3 unavailable, using mock adapter:', e?.message || e);
-    return createMockAdapter();
+    console.warn('[DB] better-sqlite3 unavailable:', e?.message || e);
   }
+  // Use @libsql/client local adapter lazily (WASM-based, no native modules)
+  try {
+    const adapter = createLocalLibsqlAdapter();
+    usingLocalLibsql = true;
+    console.log('[DB] Using @libsql/client local adapter (lazy)');
+    return adapter;
+  } catch (e: any) {
+    console.warn('[DB] @libsql/client local unavailable:', e?.message || e);
+  }
+  // Last resort: mock adapter (build-only, no actual DB)
+  console.warn('[DB] All database backends failed, using mock adapter');
+  return createMockAdapter();
 }
 
-let db: DbAdapter = initDb();
 let tursoReady = false;
 let tursoReadyPromise: Promise<void> | null = null;
+let usingLocalLibsql = false;
+let localLibsqlReady = false;
+let localLibsqlReadyPromise: Promise<void> | null = null;
+
+let db: DbAdapter = initDb();
 
 async function ensureTursoReady() {
   if (tursoReady) return;
-  if (!process.env.TURSO_DB_URL || !process.env.TURSO_DB_TOKEN) return;
-  if (tursoReadyPromise) return tursoReadyPromise;
-  const p = _ensureTursoReady().then(() => {
-    tursoReady = true;
-  }).catch((e) => {
-    console.error('Turso initialization error:', e);
-  });
-  tursoReadyPromise = p;
-  return p;
+  if (process.env.TURSO_DB_URL && process.env.TURSO_DB_TOKEN) {
+    if (tursoReadyPromise) return tursoReadyPromise;
+    const p = _ensureTursoReady().then(() => {
+      tursoReady = true;
+    }).catch((e) => {
+      console.error('Turso initialization error:', e);
+    });
+    tursoReadyPromise = p;
+    return p;
+  }
+  if (usingLocalLibsql && !localLibsqlReady) {
+    if (localLibsqlReadyPromise) return localLibsqlReadyPromise;
+    localLibsqlReadyPromise = _ensureTursoReady().then(() => {
+      localLibsqlReady = true;
+    }).catch((e) => {
+      console.error('Local libsql initialization error:', e);
+    });
+    return localLibsqlReadyPromise;
+  }
 }
 
 async function _ensureTursoReady() {
   try {
+    // Performance pragmas
+    await db.exec(`PRAGMA journal_mode=WAL`);
+    await db.exec(`PRAGMA cache_size=-20000`);
+    await db.exec(`PRAGMA synchronous=NORMAL`);
+
+    // Skip full initialization if already done
+    await db.exec(`CREATE TABLE IF NOT EXISTS _init_done (flag INTEGER PRIMARY KEY)`);
+    const done = await db.prepare("SELECT 1 FROM _init_done WHERE flag = 1").get() as any;
+    if (done) { return; }
+
     await db.exec(`CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
       title TEXT NOT NULL, message TEXT NOT NULL,
@@ -1195,18 +1286,13 @@ async function _ensureTursoReady() {
       await db.prepare("INSERT INTO teachers (teacher_id, first_name, last_name, email, school, status) VALUES (?,?,?,?,?,?)").run('T-HIGH-SEED', 'محمد', 'المعلم', 'high.teacher@school.com', 'high', 'active');
     }
 
-    let hsTid = 1, msTid = 1;
-    const hsTeacher = await db.prepare("SELECT id FROM teachers WHERE school = 'high' AND status = 'active' LIMIT 1").get() as any;
-    if (hsTeacher) { hsTid = hsTeacher.id; } else { const t = await db.prepare("SELECT id FROM teachers LIMIT 1").get() as any; if (t) hsTid = t.id; }
-    const msTeacher = await db.prepare("SELECT id FROM teachers WHERE school = 'middle' AND status = 'active' LIMIT 1").get() as any;
-    if (msTeacher) { msTid = msTeacher.id; } else { msTid = hsTid; }
     await db.exec(`PRAGMA foreign_keys=OFF`);
-    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('1/أ','الصف الأول الثانوي','أ',${hsTid},'101',30,'active'),('1/ب','الصف الأول الثانوي','ب',${hsTid},'102',30,'active'),('1/ت','الصف الأول الثانوي','ت',${hsTid},'103',30,'active'),('1/ث','الصف الأول الثانوي','ث',${hsTid},'104',30,'active'),('1/ج','الصف الأول الثانوي','ج',${hsTid},'105',30,'active'),('1/ح','الصف الأول الثانوي','ح',${hsTid},'106',30,'active'),('1/خ','الصف الأول الثانوي','خ',${hsTid},'107',30,'active')`);
-    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('2/أ','الصف الثاني الثانوي','أ',${hsTid},'201',30,'active'),('2/ب','الصف الثاني الثانوي','ب',${hsTid},'202',30,'active'),('2/ت','الصف الثاني الثانوي','ت',${hsTid},'203',30,'active'),('2/ث','الصف الثاني الثانوي','ث',${hsTid},'204',30,'active'),('2/ج','الصف الثاني الثانوي','ج',${hsTid},'205',30,'active'),('2/ح','الصف الثاني الثانوي','ح',${hsTid},'206',30,'active'),('2/خ','الصف الثاني الثانوي','خ',${hsTid},'207',30,'active')`);
-    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('3/أ','الصف الثالث الثانوي','أ',${hsTid},'301',30,'active'),('3/ب','الصف الثالث الثانوي','ب',${hsTid},'302',30,'active'),('3/ت','الصف الثالث الثانوي','ت',${hsTid},'303',30,'active'),('3/ث','الصف الثالث الثانوي','ث',${hsTid},'304',30,'active'),('3/ج','الصف الثالث الثانوي','ج',${hsTid},'305',30,'active'),('3/ح','الصف الثالث الثانوي','ح',${hsTid},'306',30,'active')`);
-    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('1/أ','الصف الأول المتوسط','أ',${msTid},'401',30,'active'),('1/ب','الصف الأول المتوسط','ب',${msTid},'402',30,'active'),('1/ت','الصف الأول المتوسط','ت',${msTid},'403',30,'active'),('1/ث','الصف الأول المتوسط','ث',${msTid},'404',30,'active'),('1/ج','الصف الأول المتوسط','ج',${msTid},'405',30,'active'),('1/ح','الصف الأول المتوسط','ح',${msTid},'406',30,'active'),('1/خ','الصف الأول المتوسط','خ',${msTid},'407',30,'active')`);
-    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('2/أ','الصف الثاني المتوسط','أ',${msTid},'501',30,'active'),('2/ب','الصف الثاني المتوسط','ب',${msTid},'502',30,'active'),('2/ت','الصف الثاني المتوسط','ت',${msTid},'503',30,'active'),('2/ث','الصف الثاني المتوسط','ث',${msTid},'504',30,'active'),('2/ج','الصف الثاني المتوسط','ج',${msTid},'505',30,'active'),('2/ح','الصف الثاني المتوسط','ح',${msTid},'506',30,'active'),('2/خ','الصف الثاني المتوسط','خ',${msTid},'507',30,'active')`);
-    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, teacher_id, room_number, capacity, status) VALUES ('3/أ','الصف الثالث المتوسط','أ',${msTid},'601',30,'active'),('3/ب','الصف الثالث المتوسط','ب',${msTid},'602',30,'active'),('3/ت','الصف الثالث المتوسط','ت',${msTid},'603',30,'active'),('3/ث','الصف الثالث المتوسط','ث',${msTid},'604',30,'active'),('3/ج','الصف الثالث المتوسط','ج',${msTid},'605',30,'active'),('3/ح','الصف الثالث المتوسط','ح',${msTid},'606',30,'active')`);
+    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, room_number, capacity, status) VALUES ('1/أ','الصف الأول الثانوي','أ','101',30,'active'),('1/ب','الصف الأول الثانوي','ب','102',30,'active'),('1/ت','الصف الأول الثانوي','ت','103',30,'active'),('1/ث','الصف الأول الثانوي','ث','104',30,'active'),('1/ج','الصف الأول الثانوي','ج','105',30,'active'),('1/ح','الصف الأول الثانوي','ح','106',30,'active'),('1/خ','الصف الأول الثانوي','خ','107',30,'active')`);
+    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, room_number, capacity, status) VALUES ('2/أ','الصف الثاني الثانوي','أ','201',30,'active'),('2/ب','الصف الثاني الثانوي','ب','202',30,'active'),('2/ت','الصف الثاني الثانوي','ت','203',30,'active'),('2/ث','الصف الثاني الثانوي','ث','204',30,'active'),('2/ج','الصف الثاني الثانوي','ج','205',30,'active'),('2/ح','الصف الثاني الثانوي','ح','206',30,'active'),('2/خ','الصف الثاني الثانوي','خ','207',30,'active')`);
+    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, room_number, capacity, status) VALUES ('3/أ','الصف الثالث الثانوي','أ','301',30,'active'),('3/ب','الصف الثالث الثانوي','ب','302',30,'active'),('3/ت','الصف الثالث الثانوي','ت','303',30,'active'),('3/ث','الصف الثالث الثانوي','ث','304',30,'active'),('3/ج','الصف الثالث الثانوي','ج','305',30,'active'),('3/ح','الصف الثالث الثانوي','ح','306',30,'active')`);
+    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, room_number, capacity, status) VALUES ('1/أ','الصف الأول المتوسط','أ','401',30,'active'),('1/ب','الصف الأول المتوسط','ب','402',30,'active'),('1/ت','الصف الأول المتوسط','ت','403',30,'active'),('1/ث','الصف الأول المتوسط','ث','404',30,'active'),('1/ج','الصف الأول المتوسط','ج','405',30,'active'),('1/ح','الصف الأول المتوسط','ح','406',30,'active'),('1/خ','الصف الأول المتوسط','خ','407',30,'active')`);
+    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, room_number, capacity, status) VALUES ('2/أ','الصف الثاني المتوسط','أ','501',30,'active'),('2/ب','الصف الثاني المتوسط','ب','502',30,'active'),('2/ت','الصف الثاني المتوسط','ت','503',30,'active'),('2/ث','الصف الثاني المتوسط','ث','504',30,'active'),('2/ج','الصف الثاني المتوسط','ج','505',30,'active'),('2/ح','الصف الثاني المتوسط','ح','506',30,'active'),('2/خ','الصف الثاني المتوسط','خ','507',30,'active')`);
+    await db.exec(`INSERT OR IGNORE INTO classes (class_name, grade, section, room_number, capacity, status) VALUES ('3/أ','الصف الثالث المتوسط','أ','601',30,'active'),('3/ب','الصف الثالث المتوسط','ب','602',30,'active'),('3/ت','الصف الثالث المتوسط','ت','603',30,'active'),('3/ث','الصف الثالث المتوسط','ث','604',30,'active'),('3/ج','الصف الثالث المتوسط','ج','605',30,'active'),('3/ح','الصف الثالث المتوسط','ح','606',30,'active')`);
     await db.exec(`PRAGMA foreign_keys=ON`);
 
     try { await db.exec(`CREATE TABLE IF NOT EXISTS subject_classes (
@@ -1242,7 +1328,7 @@ async function _ensureTursoReady() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
-      await db.exec(`INSERT OR IGNORE INTO users_new SELECT * FROM users`);
+      await db.exec(`INSERT OR IGNORE INTO users_new (id, email, password, role, status, custom_permissions, teacher_id, created_at, updated_at) SELECT id, email, password, role, status, custom_permissions, teacher_id, created_at, updated_at FROM users`);
       await db.exec(`DROP TABLE IF EXISTS users`);
       await db.exec(`ALTER TABLE users_new RENAME TO users`);
       await db.exec(`PRAGMA foreign_keys=ON`);
@@ -1286,25 +1372,45 @@ async function _ensureTursoReady() {
       }
     }
 
-    // Performance indexes for Turso
+    // Performance indexes
     const idxCmds = [
-      'CREATE INDEX IF NOT EXISTS idx_t_users_role ON users(role)',
-      'CREATE INDEX IF NOT EXISTS idx_t_teachers_school ON teachers(school)',
-      'CREATE INDEX IF NOT EXISTS idx_t_classes_grade ON classes(grade)',
-      'CREATE INDEX IF NOT EXISTS idx_t_classes_status ON classes(status)',
-      'CREATE INDEX IF NOT EXISTS idx_t_enrollments_class_id ON enrollments(class_id)',
-      'CREATE INDEX IF NOT EXISTS idx_t_enrollments_student_id ON enrollments(student_id)',
-      'CREATE INDEX IF NOT EXISTS idx_t_enrollments_status ON enrollments(status)',
-      'CREATE INDEX IF NOT EXISTS idx_t_attendance_class_id ON attendance(class_id)',
-      'CREATE INDEX IF NOT EXISTS idx_t_attendance_date ON attendance(attendance_date)',
-      'CREATE INDEX IF NOT EXISTS idx_t_grades_student_id ON grades(student_id)',
-      'CREATE INDEX IF NOT EXISTS idx_t_teacher_reports_teacher_id ON teacher_reports(teacher_id)',
-      'CREATE INDEX IF NOT EXISTS idx_t_schedules_class_id ON schedules(class_id)',
-      'CREATE INDEX IF NOT EXISTS idx_t_schedules_teacher_id ON schedules(teacher_id)',
+      'CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)',
+      'CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)',
+      'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
+      'CREATE INDEX IF NOT EXISTS idx_teachers_school ON teachers(school)',
+      'CREATE INDEX IF NOT EXISTS idx_teachers_status ON teachers(status)',
+      'CREATE INDEX IF NOT EXISTS idx_teachers_user_id ON teachers(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_teachers_teacher_id ON teachers(teacher_id)',
+      'CREATE INDEX IF NOT EXISTS idx_students_status ON students(status)',
+      'CREATE INDEX IF NOT EXISTS idx_students_school ON students(school)',
+      'CREATE INDEX IF NOT EXISTS idx_students_student_id ON students(student_id)',
+      'CREATE INDEX IF NOT EXISTS idx_classes_grade ON classes(grade)',
+      'CREATE INDEX IF NOT EXISTS idx_classes_status ON classes(status)',
+      'CREATE INDEX IF NOT EXISTS idx_classes_teacher_id ON classes(teacher_id)',
+      'CREATE INDEX IF NOT EXISTS idx_enrollments_class_id ON enrollments(class_id)',
+      'CREATE INDEX IF NOT EXISTS idx_enrollments_student_id ON enrollments(student_id)',
+      'CREATE INDEX IF NOT EXISTS idx_enrollments_status ON enrollments(status)',
+      'CREATE INDEX IF NOT EXISTS idx_attendance_class_id ON attendance(class_id)',
+      'CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(attendance_date)',
+      'CREATE INDEX IF NOT EXISTS idx_grades_student_id ON grades(student_id)',
+      'CREATE INDEX IF NOT EXISTS idx_grades_class_id ON grades(class_id)',
+      'CREATE INDEX IF NOT EXISTS idx_teacher_reports_teacher_id ON teacher_reports(teacher_id)',
+      'CREATE INDEX IF NOT EXISTS idx_teacher_reports_student_id ON teacher_reports(student_id)',
+      'CREATE INDEX IF NOT EXISTS idx_teacher_reports_class_id ON teacher_reports(class_id)',
+      'CREATE INDEX IF NOT EXISTS idx_schedules_class_id ON schedules(class_id)',
+      'CREATE INDEX IF NOT EXISTS idx_schedules_teacher_id ON schedules(teacher_id)',
+      'CREATE INDEX IF NOT EXISTS idx_schedules_day ON schedules(day_of_week)',
+      'CREATE INDEX IF NOT EXISTS idx_leave_requests_user_id ON leave_requests(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_leave_requests_status ON leave_requests(status)',
+      'CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)',
+      'CREATE INDEX IF NOT EXISTS idx_substitutions_date ON substitutions(date)',
+      'CREATE INDEX IF NOT EXISTS idx_substitutions_absent ON substitutions(absent_teacher_id)',
     ];
     for (const cmd of idxCmds) {
       try { await db.exec(cmd); } catch (e) { console.error('Index creation error:', e); }
     }
+    await db.prepare("INSERT OR IGNORE INTO _init_done (flag) VALUES (1)").run();
     tursoReady = true;
   } catch (e) { console.error('Turso initialization error:', e); }
 }

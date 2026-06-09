@@ -135,6 +135,31 @@ export default function TeacherAssignments() {
     setSaving(false);
   };
 
+  const unassignTeacher = async (teacher: any) => {
+    if (!window.confirm(`إلغاء تعيين ${teacher.first_name} ${teacher.last_name} من جميع المواد والفصول؟`)) return;
+    setMessage('');
+    try {
+      const token = localStorage.getItem('token');
+      const allSubjects = await api.get(`/subjects?school=${schoolFilter}`, token) as any;
+      const teacherSubjects = (allSubjects.subjects || []).filter((s: any) => s.teacher_id === teacher.id);
+      for (const sub of teacherSubjects) {
+        await api.put(`/subjects?id=${sub.id}`, { teacher_id: '' }, token).catch(() => {});
+      }
+      const assignedClasses = classes.filter((c: any) => c.teacher_id === teacher.id);
+      for (const c of assignedClasses) {
+        await api.put(`/classes/${c.id}`, { teacher_id: '' }, token).catch(() => {});
+      }
+      await api.put(`/teachers/${teacher.id}`, { specialization: '[]' }, token);
+      const t = await api.get('/teachers?limit=500', token);
+      const c = await api.get('/classes?limit=500', token);
+      setTeachers(t.teachers || []);
+      setClasses(c.classes || []);
+      setMessage('تم إلغاء التعيينات بنجاح');
+    } catch (e: any) {
+      setMessage('فشل إلغاء التعيين: ' + (e?.message || ''));
+    }
+  };
+
   const formatSpec = (spec: string): { name: string; sessions: number; classes: number[] }[] => {
     if (!spec) return [];
     if (spec.startsWith('[')) {
@@ -210,9 +235,14 @@ export default function TeacherAssignments() {
                     ))}
                   </TableCell>
                   <TableCell>
-                    <Button size="small" variant="outlined" startIcon={<Assignment />} onClick={() => openAssignment(t)}>
-                      تعيين
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Button size="small" variant="outlined" startIcon={<Assignment />} onClick={() => openAssignment(t)}>
+                        تعيين
+                      </Button>
+                      <Button size="small" variant="outlined" color="error" onClick={() => unassignTeacher(t)}>
+                        إلغاء التعيين
+                      </Button>
+                    </Box>
                   </TableCell>
                 </TableRow>
               );

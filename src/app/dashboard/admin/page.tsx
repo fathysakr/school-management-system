@@ -111,8 +111,8 @@ export default function AdminPage() {
     try {
       const res = await api.get('/admin/users', token);
       setUsers(res.users || []);
-    } catch {
-      setUserError('فشل في جلب الحسابات');
+    } catch (err) {
+      setUserError(err instanceof Error ? err.message : 'فشل في جلب الحسابات');
     } finally {
       setUserLoading(false);
     }
@@ -123,7 +123,7 @@ export default function AdminPage() {
     try {
       const res = await api.get('/teachers?limit=500', token);
       setTeachers(res.teachers || []);
-    } catch { /* */ }
+    } catch { /* ignore teacher fetch errors */ }
   };
 
   useEffect(() => {

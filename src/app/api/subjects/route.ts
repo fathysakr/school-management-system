@@ -22,10 +22,17 @@ export async function GET(request: NextRequest) {
     finalSql += ' ORDER BY s.name';
     const subjects = await db.prepare(finalSql).all(...params) as any[];
 
-    const subjectsWithClasses = await Promise.all(subjects.map(async (s) => {
-      const rows = await db.prepare('SELECT class_id FROM subject_classes WHERE subject_id = ?').all(s.id) as any[];
-      return { ...s, class_ids: rows.map((r: any) => r.class_id) };
-    }));
+    let classIdsMap: Record<number, number[]> = {};
+    if (subjects.length > 0) {
+      const subjectIds = subjects.map((s: any) => s.id);
+      const placeholders = subjectIds.map(() => '?').join(',');
+      const relations = await db.prepare(`SELECT subject_id, class_id FROM subject_classes WHERE subject_id IN (${placeholders})`).all(...subjectIds) as any[];
+      for (const r of relations) {
+        if (!classIdsMap[r.subject_id]) classIdsMap[r.subject_id] = [];
+        classIdsMap[r.subject_id].push(r.class_id);
+      }
+    }
+    const subjectsWithClasses = subjects.map((s: any) => ({ ...s, class_ids: classIdsMap[s.id] || [] }));
     return success({ subjects: subjectsWithClasses });
   } catch (error: any) {
     console.error('Get subjects error:', error);
