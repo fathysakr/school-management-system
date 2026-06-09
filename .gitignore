@@ -3,11 +3,15 @@ node_modules/
 .env.local
 .env
 *.db
-/data/
-
+!/data/school.db
+/data/*.db
+!/data/school.db
+*.xlsx
 .vercel
 
 # TypeScript incremental build cache
 tsconfig.tsbuildinfo
 
 build.log
+dev-error.log
+dev-output.log

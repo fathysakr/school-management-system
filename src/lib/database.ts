@@ -756,14 +756,6 @@ function applyMigrations(bsql: any) {
         `;
       })()
     },
-    {
-      name: '024_fix_orphan_teacher_refs',
-      sql: (() => {
-        bsql.prepare("UPDATE classes SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''").run();
-        bsql.prepare("UPDATE subjects SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''").run();
-        return 'SELECT 1';
-      })()
-    },
   ];
 
   for (const migration of migrations) {
@@ -1014,12 +1006,11 @@ async function _ensureTursoReady() {
     try { await db.exec(`PRAGMA cache_size=-20000`); } catch {}
     try { await db.exec(`PRAGMA synchronous=NORMAL`); } catch {}
 
-    // Fix corrupted teacher_id values from old '' -> 0 bug
-    try { await db.exec(`UPDATE classes SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''`); } catch {}
-    try { await db.exec(`UPDATE subjects SET teacher_id = NULL WHERE teacher_id = 0 OR teacher_id = ''`); } catch {}
-
-    // Skip full initialization if already done
-    try { await db.exec(`CREATE TABLE IF NOT EXISTS _init_done (flag INTEGER PRIMARY KEY)`); } catch {}
+    // Detect read-only FS: if _init_done can't be created, skip all heavy init
+    try { await db.exec(`CREATE TABLE IF NOT EXISTS _init_done (flag INTEGER PRIMARY KEY)`); } catch {
+      // _init_done table can't be created (read-only FS) — skip table creation & seed
+      return;
+    }
     const done = await db.prepare("SELECT 1 FROM _init_done WHERE flag = 1").get().catch(() => null) as any;
     if (done) { return; }
 
@@ -1443,7 +1434,7 @@ async function _ensureTursoReady() {
       'CREATE INDEX IF NOT EXISTS idx_substitutions_absent ON substitutions(absent_teacher_id)',
     ];
     for (const cmd of idxCmds) {
-      try { await db.exec(cmd); } catch (e) { console.error('Index creation error:', e); }
+      try { await db.exec(cmd); } catch {}
     }
     await db.prepare("INSERT OR IGNORE INTO _init_done (flag) VALUES (1)").run();
     tursoReady = true;
@@ -1451,11 +1442,24 @@ async function _ensureTursoReady() {
 }
 
 export function getDbStatus() {
-  const dbPath = findDbPath();
+  let dbPath = '';
+  try { dbPath = findDbPath(); } catch {}
   let writable = false;
   try { fs.accessSync(dbPath, fs.constants.W_OK); writable = true; } catch {}
+  let adapterName = 'unknown';
+  try {
+    require.resolve('better-sqlite3');
+    adapterName = 'better-sqlite3';
+  } catch {
+    try {
+      require.resolve('@libsql/client');
+      adapterName = '@libsql/client';
+    } catch {
+      adapterName = 'mock';
+    }
+  }
   return {
-    adapter: db.constructor?.name || typeof db.prepare,
+    adapter: adapterName,
     usingLocalLibsql,
     localLibsqlReady,
     tursoReady,

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
-import { authenticate, forbidden, unauthorized, success } from '@/lib/auth';
+import { authenticate, forbidden, unauthorized, serverError, success } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
       changes: result.changes,
     });
   } catch (error) {
-    console.error('Clear all class teachers error:', error);
-    return new Response(JSON.stringify({ error: 'فشل في مسح اسناد الفصول: ' + (error instanceof Error ? error.message : '') }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return serverError('فشل في مسح اسناد الفصول: ' + (error instanceof Error ? error.message : ''));
   }
 }

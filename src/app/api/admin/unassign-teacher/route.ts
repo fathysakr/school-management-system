@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
       changes: { subjects: r1.changes, classes: r2.changes, teachers: r3.changes },
     });
   } catch (error) {
-    console.error('Unassign teacher error:', error);
     return serverError('فشل في إلغاء التعيينات: ' + (error instanceof Error ? error.message : ''));
   }
 }
