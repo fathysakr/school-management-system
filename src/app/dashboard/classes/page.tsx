@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
@@ -10,7 +10,8 @@ import {
   TablePagination, Select, MenuItem, InputLabel, FormControl, Grid,
   Tabs, Tab
 } from '@mui/material';
-import { Add, Edit, Delete, People, Close, FileDownload, FileUpload, Download } from '@mui/icons-material';
+import { Add, Edit, Delete, People, Close, FileDownload, FileUpload, Download, CloudUpload } from '@mui/icons-material';
+import * as XLSX from 'xlsx';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
 import EmptyState from '@/components/empty-state';
@@ -39,6 +40,8 @@ export default function ClassesPage() {
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [selectedImportIds, setSelectedImportIds] = useState<number[]>([]);
   const [importing, setImporting] = useState(false);
+  const [uploadingClass, setUploadingClass] = useState<number | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   const fetchClasses = async () => {
     if (!token) return;
@@ -237,6 +240,47 @@ export default function ClassesPage() {
     }
   };
 
+  const handleClassUploadClick = (classId: number) => {
+    setUploadingClass(classId);
+    setTimeout(() => uploadInputRef.current?.click(), 0);
+  };
+
+  const handleClassUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || uploadingClass === null) return;
+    setError(''); setSuccess('');
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const rows: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+      const parsed: { student_id: string; first_name: string; last_name: string }[] = [];
+      const headers = rows[0] as string[];
+      const hasHeaders = headers && headers.some(h => typeof h === 'string' && (h.includes('طالب') || h.includes('student') || h.includes('رقم')));
+      const startIdx = hasHeaders ? 1 : 0;
+      for (let i = startIdx; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !row[0]) continue;
+        const sid = String(row[0]).trim();
+        if (!sid) continue;
+        if (hasHeaders) {
+          const fullName = String(row[1] || '').trim();
+          const parts = fullName.split(' ');
+          parsed.push({ student_id: sid, first_name: parts[0] || fullName, last_name: parts.slice(1).join(' ') || parts[0] || fullName });
+        } else {
+          parsed.push({ student_id: sid, first_name: String(row[1] || '').trim(), last_name: String(row[2] || '').trim() });
+        }
+      }
+      if (parsed.length === 0) { setError('لم يتم العثور على طلاب في الملف'); return; }
+      const res = await api.post(`/classes/${uploadingClass}/upload`, { students: parsed }, token);
+      setSuccess(`تم رفع ${res.created || 0} طالب جديد، تسجيل ${res.enrolled || 0} في الفصل، ${res.errors || 0} خطأ`);
+      fetchClasses();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'فشل رفع الملف');
+    }
+    setUploadingClass(null);
+    if (e.target) e.target.value = '';
+  };
+
   const handleExportClassStudents = () => {
     if (!selectedClass || classStudents.length === 0) return;
     const rows = classStudents.map((s: any) => [
@@ -313,6 +357,9 @@ export default function ClassesPage() {
                           <Box sx={{ display: 'flex', gap: 0.5 }}>
                             {hasPermission(user?.role, 'classes:edit') && (
                               <IconButton size="small" color="info" onClick={() => handleOpenEnroll(c)} title="إدارة الطلاب"><People /></IconButton>
+                            )}
+                            {hasPermission(user?.role, 'classes:edit') && (
+                              <IconButton size="small" color="success" onClick={() => handleClassUploadClick(c.id)} title="رفع ملف طلاب"><CloudUpload /></IconButton>
                             )}
                             {hasPermission(user?.role, 'classes:edit') && (
                               <IconButton size="small" onClick={() => handleOpenDialog(c)} title="تعديل"><Edit /></IconButton>
@@ -484,6 +531,7 @@ export default function ClassesPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      <input ref={uploadInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleClassUploadFile} style={{ display: 'none' }} />
     </Box>
   );
 }
