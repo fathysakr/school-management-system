@@ -85,6 +85,7 @@ export async function PUT(
           if (!emailRegex.test(body[field])) return badRequest('صيغة البريد الإلكتروني غير صالحة');
           values.push(body[field]);
         } else if (field === 'phone') {
+          if (!body[field]) continue;
           const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
           if (!phoneRegex.test(body[field])) return badRequest('صيغة رقم الجوال غير صالحة');
           values.push(body[field]);
