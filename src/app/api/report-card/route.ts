@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
-import { authenticate, unauthorized, serverError, success } from '@/lib/auth';
+import { authenticate, unauthorized, badRequest, notFound, serverError, success } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,13 +10,13 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const studentIdStr = searchParams.get('student_id');
-    if (!studentIdStr) return serverError('معرف الطالب مطلوب');
+    if (!studentIdStr) return badRequest('معرف الطالب مطلوب');
 
     const studentId = parseInt(studentIdStr);
-    if (isNaN(studentId)) return serverError('معرف الطالب غير صالح');
+    if (isNaN(studentId)) return badRequest('معرف الطالب غير صالح');
 
     const student = await db.prepare('SELECT id, first_name, last_name, student_id FROM students WHERE id = ?').get(studentId) as any;
-    if (!student) return serverError('الطالب غير موجود');
+    if (!student) return notFound('الطالب غير موجود');
 
     const classInfo = await db.prepare(`
       SELECT c.class_name, c.grade FROM enrollments e JOIN classes c ON e.class_id = c.id

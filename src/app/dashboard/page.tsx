@@ -227,10 +227,10 @@ export default function DashboardPage() {
               <StatCard title="الطلاب" value={teacherStats.students} icon={<School sx={{ color: '#2e7d32' }} />} color="#2e7d32" subtitle="في فصولي" />
             </Grid>
             <Grid item xs={6} sm={3} md={2}>
-              <StatCard title="معدل الحضور" value={`${teacherStats.attendanceRate}%`} icon={<Percent sx={{ color: teacherStats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02' }} />} color={teacherStats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02'} subtitle={`${teacherStats.totalAttendance} سجل`} />
+              <StatCard title="معدل الحضور" value={teacherStats.attendanceRate != null ? `${teacherStats.attendanceRate}%` : '0%'} icon={<Percent sx={{ color: (teacherStats.attendanceRate ?? 0) >= 80 ? '#2e7d32' : '#ed6c02' }} />} color={(teacherStats.attendanceRate ?? 0) >= 80 ? '#2e7d32' : '#ed6c02'} subtitle={teacherStats.totalAttendance != null ? `${teacherStats.totalAttendance} سجل` : '0 سجل'} />
             </Grid>
             <Grid item xs={6} sm={3} md={2}>
-              <StatCard title="المتوسط العام" value={`${teacherStats.avgScore}%`} icon={<Speed sx={{ color: teacherStats.avgScore >= 75 ? '#2e7d32' : '#ed6c02' }} />} color={teacherStats.avgScore >= 75 ? '#2e7d32' : '#ed6c02'} subtitle={`${teacherStats.totalGrades} درجة`} />
+              <StatCard title="المتوسط العام" value={teacherStats.avgScore != null ? `${teacherStats.avgScore}%` : '0%'} icon={<Speed sx={{ color: (teacherStats.avgScore ?? 0) >= 75 ? '#2e7d32' : '#ed6c02' }} />} color={(teacherStats.avgScore ?? 0) >= 75 ? '#2e7d32' : '#ed6c02'} subtitle={teacherStats.totalGrades != null ? `${teacherStats.totalGrades} درجة` : '0 درجة'} />
             </Grid>
             <Grid item xs={6} sm={3} md={2}>
               <StatCard title="حصص الانتظار" value={teacherStats.pendingSubstitutions} icon={<SwapHoriz sx={{ color: '#e65100' }} />} color="#e65100" subtitle="قيد الانتظار" />
@@ -308,10 +308,10 @@ export default function DashboardPage() {
               <StatCard title="الفصول" value={stats.classes} icon={<ClassIcon sx={{ color: '#0288d1' }} />} color="#0288d1" subtitle="نشطة" />
             </Grid>
             <Grid item xs={12} sm={6} md={2}>
-              <StatCard title="معدل الحضور" value={`${stats.attendanceRate}%`} icon={<Percent sx={{ color: stats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02' }} />} color={stats.attendanceRate >= 80 ? '#2e7d32' : '#ed6c02'} subtitle={`${stats.totalAttendance} سجل`} />
+              <StatCard title="معدل الحضور" value={stats.attendanceRate != null ? `${stats.attendanceRate}%` : '0%'} icon={<Percent sx={{ color: (stats.attendanceRate ?? 0) >= 80 ? '#2e7d32' : '#ed6c02' }} />} color={(stats.attendanceRate ?? 0) >= 80 ? '#2e7d32' : '#ed6c02'} subtitle={stats.totalAttendance != null ? `${stats.totalAttendance} سجل` : '0 سجل'} />
             </Grid>
             <Grid item xs={12} sm={6} md={2}>
-              <StatCard title="المتوسط العام" value={`${stats.avgScore}%`} icon={<Speed sx={{ color: stats.avgScore >= 75 ? '#2e7d32' : '#ed6c02' }} />} color={stats.avgScore >= 75 ? '#2e7d32' : '#ed6c02'} subtitle={`${stats.totalGrades} درجة`} />
+              <StatCard title="المتوسط العام" value={stats.avgScore != null ? `${stats.avgScore}%` : '0%'} icon={<Speed sx={{ color: (stats.avgScore ?? 0) >= 75 ? '#2e7d32' : '#ed6c02' }} />} color={(stats.avgScore ?? 0) >= 75 ? '#2e7d32' : '#ed6c02'} subtitle={stats.totalGrades != null ? `${stats.totalGrades} درجة` : '0 درجة'} />
             </Grid>
             <Grid item xs={12} sm={6} md={2}>
               <StatCard title="استبدالات معلقة" value={pendingSubstitutions} icon={<Schedule sx={{ color: '#e65100' }} />} color="#e65100" subtitle="قيد الانتظار" />

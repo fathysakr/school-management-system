@@ -42,8 +42,10 @@ export async function GET(request: NextRequest) {
     const joinClause = 'LEFT JOIN enrollments e ON s.id = e.student_id AND e.status = \'active\' LEFT JOIN classes c ON c.id = e.class_id';
 
     if (classId) {
+      const cid = parseInt(classId);
+      if (isNaN(cid)) return badRequest('معرف الفصل غير صالح');
       whereClause += ' AND e.class_id = ?';
-      params.push(parseInt(classId));
+      params.push(cid);
     }
 
     // Auto-filter by teacher's classes for teacher roles
@@ -158,6 +160,7 @@ export async function POST(request: NextRequest) {
     let targetClassId: number | null = null;
     if (body.class_id) {
       targetClassId = parseInt(body.class_id);
+      if (isNaN(targetClassId)) return badRequest('معرف الفصل غير صالح');
     } else if (body.class_name && body.grade) {
       const cn = body.class_name || '';
       const gr = body.grade || '';

@@ -8,8 +8,10 @@ import {
 } from '@mui/material';
 import { Assignment, Save, Home } from '@mui/icons-material';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 
 export default function TeacherAssignments() {
+  const { token } = useAuth();
   const [teachers, setTeachers] = useState<any[]>([]);
   const teachingTeachers = teachers.filter((t: any) => !t.user_role || t.user_role.includes('teacher'));
   const [classes, setClasses] = useState<any[]>([]);
@@ -26,20 +28,20 @@ export default function TeacherAssignments() {
   const [schoolFilter, setSchoolFilter] = useState('high');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    if (!token) return;
     let cancelled = false;
     api.get('/teachers?limit=500', token).then((t: any) => {
       if (!cancelled) setTeachers(t.teachers || []);
-    }).catch(() => {});
+    }).catch(() => setMessage('فشل تحميل المعلمين'));
     api.get('/classes?limit=500', token).then((c: any) => {
       if (!cancelled) setClasses(c.classes || []);
-    }).catch(() => {});
+    }).catch(() => setMessage('فشل تحميل الفصول'));
     api.get(`/subjects?school=${schoolFilter}`, token).then((s: any) => {
       if (!cancelled) setSubjects(s.subjects || []);
-    }).catch(() => setMessage('فشل تحميل البيانات'));
+    }).catch(() => setMessage('فشل تحميل المواد'));
     setLoading(false);
     return () => { cancelled = true; };
-  }, [schoolFilter]);
+  }, [token, schoolFilter]);
 
   const parseSpec = (spec: string): { ids: number[]; sessions: Record<number, number>; classes: Record<number, number[]> } => {
     if (!spec) return { ids: [], sessions: {}, classes: {} };
@@ -58,7 +60,7 @@ export default function TeacherAssignments() {
           }
         }
         return { ids, sessions, classes };
-      } catch { return { ids: [], sessions: {}, classes: {} }; }
+      } catch { setMessage('فشل تحليل التخصص'); return { ids: [], sessions: {}, classes: {} }; }
     }
     const names = spec.split(',').map((s: string) => s.trim());
     const ids = subjects.filter((s: any) => names.includes(s.name)).map((s: any) => s.id);
@@ -96,7 +98,6 @@ export default function TeacherAssignments() {
     setSaving(true);
     setMessage('');
     try {
-      const token = localStorage.getItem('token');
       await api.put(`/teachers/${selectedTeacher.id}`, { specialization: buildSpec() }, token);
 
       // Sync: for each selected subject, update subjects.teacher_id and subject_classes
@@ -108,7 +109,7 @@ export default function TeacherAssignments() {
           teacher_id: String(selectedTeacher.id),
           class_ids: classIds,
           sessions_per_week: subjectSessions[subId] ?? sub.sessions_per_week,
-        }, token).catch(() => {});
+        }, token).catch(() => setMessage('فشل تحديث بعض المواد'));
       }
 
       const prevHomeRoom = classes.find((c: any) => c.teacher_id === selectedTeacher.id);
@@ -139,7 +140,6 @@ export default function TeacherAssignments() {
     if (!window.confirm(`إلغاء تعيين ${teacher.first_name} ${teacher.last_name} من جميع المواد والفصول؟`)) return;
     setMessage('');
     try {
-      const token = localStorage.getItem('token');
       await api.post('/admin/unassign-teacher', { teacher_id: teacher.id }, token);
       const t = await api.get('/teachers?limit=500', token);
       const c = await api.get('/classes?limit=500', token);
@@ -156,7 +156,7 @@ export default function TeacherAssignments() {
     if (spec.startsWith('[')) {
       try {
         return JSON.parse(spec).map((item: any) => ({ name: item.n, sessions: item.s || 0, classes: item.classes || [] }));
-      } catch { return []; }
+      } catch { setMessage('فشل تحليل التخصص'); return []; }
     }
     return spec.split(',').map((s: string) => ({ name: s.trim(), sessions: 0, classes: [] }));
   };

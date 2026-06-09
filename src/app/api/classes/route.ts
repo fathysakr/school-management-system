@@ -51,8 +51,10 @@ export async function GET(request: NextRequest) {
         params.push(teacher.id, teacher.id, teacher.id);
       }
     } else if (teacherId) {
+      const tid = parseInt(teacherId);
+      if (isNaN(tid)) return badRequest('معرف المعلم غير صالح');
       whereClause += ' AND c.teacher_id = ?';
-      params.push(parseInt(teacherId));
+      params.push(tid);
     }
 
     // Count

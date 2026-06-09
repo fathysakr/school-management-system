@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
 
     return success({ ...status, counts: { classes: classCount?.cnt || 0, teachers: teacherCount?.cnt || 0, subjects: subjectCount?.cnt || 0 } });
   } catch (error) {
-    return new Response(JSON.stringify({ error: String(error) }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    console.error('DB status error:', error);
+    return new Response(JSON.stringify({ error: 'فشل في جلب حالة قاعدة البيانات' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

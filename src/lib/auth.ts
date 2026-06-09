@@ -79,9 +79,9 @@ export async function authenticate(request: NextRequest) {
 }
 
 // Response helpers
-export function unauthorized() {
+export function unauthorized(message: string = 'Unauthorized') {
   return NextResponse.json(
-    { error: 'Unauthorized' },
+    { error: message },
     { status: 401 }
   );
 }

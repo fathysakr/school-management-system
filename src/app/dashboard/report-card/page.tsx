@@ -138,10 +138,10 @@ export default function ReportCardPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.subjects.map((s: any, i: number) => {
+                {data.subjects.map((s: any) => {
                   const level = getGradeLevel(s.avg_pct);
                   return (
-                    <TableRow key={i}>
+                    <TableRow key={s.subject}>
                       <TableCell sx={{ fontWeight: 600 }}>{s.subject}</TableCell>
                       <TableCell>{s.total_tests}</TableCell>
                       <TableCell>{isNaN(s.avg_pct) ? '-' : `${s.avg_pct.toFixed(1)}%`}</TableCell>

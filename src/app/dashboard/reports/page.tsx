@@ -169,7 +169,7 @@ export default function ReportsPage() {
     if (!token || !selectedClass) { setStudents([]); return; }
     api.get(`/students?page=1&limit=200&class_id=${selectedClass}${schoolParam}`, token)
       .then(res => setStudents(res.students || []))
-      .catch(() => {});
+      .catch(() => setError('فشل تحميل الطلاب'));
   }, [token, selectedClass]);
 
   const fetchReports = async () => {

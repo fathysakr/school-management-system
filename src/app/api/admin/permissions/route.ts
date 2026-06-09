@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('user_id');
     if (!userId) return badRequest('معرف المستخدم مطلوب');
 
-    const targetUser = await db.prepare('SELECT id, role, custom_permissions FROM users WHERE id = ?').get(parseInt(userId)) as any;
+    const uid = parseInt(userId);
+    if (isNaN(uid)) return badRequest('معرف المستخدم غير صالح');
+    const targetUser = await db.prepare('SELECT id, role, custom_permissions FROM users WHERE id = ?').get(uid) as any;
     if (!targetUser) return notFound('المستخدم غير موجود');
 
     const roleDefault = rolePermissions[targetUser.role as keyof typeof rolePermissions] || [];

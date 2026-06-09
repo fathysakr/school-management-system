@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     const verify = await db.prepare("SELECT COUNT(*) as cnt, school FROM subjects GROUP BY school").all();
     return NextResponse.json({ success: true, subjects: verify });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'خطأ في الترحيل';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Migrate error:', err);
+    return NextResponse.json({ error: 'فشلت عملية الترحيل' }, { status: 500 });
   }
 }

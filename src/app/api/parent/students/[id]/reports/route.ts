@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
-import { verifyToken, unauthorized, serverError, success } from '@/lib/auth';
+import { verifyToken, unauthorized, badRequest, notFound, serverError, success } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -18,10 +18,10 @@ export async function GET(
     if (!parent) return unauthorized();
 
     const studentId = parseInt(params.id);
-    if (isNaN(studentId)) return serverError('معرف الطالب غير صالح');
+    if (isNaN(studentId)) return badRequest('معرف الطالب غير صالح');
 
     const student = await db.prepare('SELECT * FROM students WHERE id = ?').get(studentId) as any;
-    if (!student) return serverError('الطالب غير موجود');
+    if (!student) return notFound('الطالب غير موجود');
     if (student.parent_email !== parent.email && student.parent_phone !== parent.phone) return unauthorized();
 
     const reports = await db.prepare(`

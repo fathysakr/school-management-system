@@ -41,7 +41,7 @@ export default function SubstitutionsPage() {
     if (!token || !canView) return;
     api.get(`/teachers?page=1&limit=200${schoolParam}`, token)
       .then(res => setTeachers(res.teachers || []))
-      .catch(() => {});
+      .catch(() => setError('فشل تحميل المعلمين'));
   }, [token, canView]);
 
   const fetchHistory = useCallback(async () => {
@@ -216,7 +216,7 @@ export default function SubstitutionsPage() {
                   </TableHead>
                   <TableBody>
                     {suggestions.map((s, i) => (
-                      <TableRow key={i}>
+                      <TableRow key={s.subject + s.class_name + s.start_time || i}>
                         <TableCell>{s.class_name}</TableCell>
                         <TableCell>{s.subject}</TableCell>
                         <TableCell>{s.start_time} - {s.end_time}</TableCell>
@@ -237,7 +237,7 @@ export default function SubstitutionsPage() {
                           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                             {s.alternatives?.filter((alt: any) => alt.id !== s.suggested_teacher?.id).map((alt: any, j: number) => (
                               <Chip
-                                key={j} size="small" variant="outlined"
+                                key={alt.id || j} size="small" variant="outlined"
                                 label={`${alt.name} (${alt.score})`}
                                 onClick={() => setConfirmDialog({ suggestion: s, teacherId: alt.id })}
                                 sx={{ cursor: 'pointer' }}

@@ -8,8 +8,10 @@ import {
 } from '@mui/material';
 import { Add, Delete, Edit, Book } from '@mui/icons-material';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 
 export default function SubjectsManagement() {
+  const { token } = useAuth();
   const [subjects, setSubjects] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -23,23 +25,27 @@ export default function SubjectsManagement() {
   const [schoolFilter, setSchoolFilter] = useState('high');
 
   const loadData = () => {
-    const token = localStorage.getItem('token');
+    if (!token) return;
     let cancelled = false;
     api.get(`/subjects?school=${schoolFilter}`, token).then((s: any) => {
       if (!cancelled) setSubjects(s.subjects || []);
     }).catch(() => {
-      if (!cancelled) setMessage('فشل تحميل البيانات');
+      if (!cancelled) setMessage('فشل تحميل المواد');
     });
     api.get('/teachers?limit=500', token).then((t: any) => {
       if (!cancelled) setTeachers(t.teachers || []);
-    }).catch(() => {});
+    }).catch(() => {
+      if (!cancelled) setMessage('فشل تحميل المعلمين');
+    });
     api.get(`/classes?limit=500`, token).then((c: any) => {
       if (!cancelled) setClasses(c.classes || []);
-    }).catch(() => {});
+    }).catch(() => {
+      if (!cancelled) setMessage('فشل تحميل الفصول');
+    });
     setLoading(false);
   };
 
-  useEffect(() => { loadData() }, [schoolFilter]);
+  useEffect(() => { loadData() }, [token, schoolFilter]);
 
   const openAdd = () => {
     setEditing(null);
@@ -57,7 +63,6 @@ export default function SubjectsManagement() {
     if (!form.name) { setMessage('اسم المادة مطلوب'); return; }
     setSaving(true);
     setMessage('');
-    const token = localStorage.getItem('token');
     try {
       if (editing) {
         await api.put(`/subjects?id=${editing.id}`, { ...form }, token);
@@ -69,7 +74,7 @@ export default function SubjectsManagement() {
             if (teacher) {
               const spec = teacher.specialization || '[]';
               let specArr = [];
-              try { specArr = JSON.parse(spec); } catch { specArr = []; }
+              try { specArr = JSON.parse(spec); } catch { setMessage('تخصص المعلم غير صالح'); specArr = []; }
               const existingIdx = specArr.findIndex((item: any) => item.n === form.name);
               const entry: any = { n: form.name };
               if (form.sessions_per_week) entry.s = form.sessions_per_week;
@@ -97,7 +102,7 @@ export default function SubjectsManagement() {
 
   const del = async (id: number) => {
     if (!confirm('تأكيد حذف المادة؟')) return;
-    const token = localStorage.getItem('token');
+    if (!token) return;
     try {
       await api.delete(`/subjects?id=${id}`, token);
       loadData();

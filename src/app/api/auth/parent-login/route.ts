@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
-import { comparePassword, generateToken, badRequest, serverError, success } from '@/lib/auth';
+import { comparePassword, generateToken, badRequest, serverError, success, unauthorized } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,12 +18,12 @@ export async function POST(request: NextRequest) {
     `).get(email, email) as any;
 
     if (!parent) {
-      return badRequest('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+      return unauthorized('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
 
     const passwordValid = await comparePassword(password, parent.password);
     if (!passwordValid) {
-      return badRequest('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+      return unauthorized('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
 
     const token = generateToken({

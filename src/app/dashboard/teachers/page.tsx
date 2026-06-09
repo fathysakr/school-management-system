@@ -247,6 +247,7 @@ export default function TeachersPage() {
       setImportTab(1);
 
       let successCount = 0;
+      let skipCount = 0;
       let failCount = 0;
       const errors = new Set<string>();
       for (const teacher of mapped) {
@@ -254,13 +255,20 @@ export default function TeachersPage() {
           await api.post('/teachers', teacher, token);
           successCount++;
         } catch (err: any) {
-          if (err?.message) errors.add(err.message);
-          failCount++;
+          if (err?.message?.includes('موجود مسبقاً')) {
+            skipCount++;
+          } else {
+            if (err?.message) errors.add(err.message);
+            failCount++;
+          }
         }
       }
 
-      const errorSummary = errors.size > 0 ? 'الأخطاء: ' + [...errors].join(' | ') : '';
-      setSuccess(`تم استيراد ${successCount} معلم بنجاح${failCount > 0 ? `، فشل ${failCount}. ${errorSummary}` : ''}`);
+      let msg = `تم استيراد ${successCount} معلم بنجاح`;
+      if (skipCount > 0) msg += `، ${skipCount} موجود مسبقاً (تم التخطي)`;
+      if (failCount > 0) msg += `، فشل ${failCount}`;
+      if (errors.size > 0) msg += `. ${[...errors].join(' | ')}`;
+      setSuccess(msg);
       fetchTeachers();
     } catch {
       setError('فشل في قراءة الملف');

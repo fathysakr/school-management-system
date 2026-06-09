@@ -23,19 +23,21 @@ export async function GET(request: NextRequest) {
     const schoolParams: any[] = schoolFilter.grade ? [`%${schoolFilter.grade}%`] : [];
 
     if (transcript === 'true' && student_id) {
-      const student = await db.prepare('SELECT * FROM students WHERE id = ?').get(parseInt(student_id));
+      const sid = parseInt(student_id);
+      if (isNaN(sid)) return badRequest('معرف الطالب غير صالح');
+      const student = await db.prepare('SELECT * FROM students WHERE id = ?').get(sid);
       if (!student) return notFound('الطالب غير موجود');
 
       const grades = await db.prepare(`
         SELECT subject, COUNT(*) as assessment_count, AVG(score) as average,
           MAX(score) as highest, MIN(score) as lowest
         FROM grades WHERE student_id = ? GROUP BY subject ORDER BY subject
-      `).all(parseInt(student_id));
+      `).all(sid);
 
       const overall = await db.prepare(`
         SELECT COUNT(*) as total_assessments, AVG(score) as overall_average
         FROM grades WHERE student_id = ?
-      `).get(parseInt(student_id)) as any;
+      `).get(sid) as any;
 
       return success({ student, grades, overall });
     }
@@ -43,8 +45,8 @@ export async function GET(request: NextRequest) {
     let query = `SELECT g.* FROM grades g${schoolJoin} WHERE 1=1${schoolWhere}`;
     const params: any[] = [...schoolParams];
 
-    if (student_id) { query += ' AND g.student_id = ?'; params.push(parseInt(student_id)); }
-    if (class_id) { query += ' AND g.class_id = ?'; params.push(parseInt(class_id)); }
+    if (student_id) { const sid = parseInt(student_id); if (!isNaN(sid)) { query += ' AND g.student_id = ?'; params.push(sid); } }
+    if (class_id) { const cid = parseInt(class_id); if (!isNaN(cid)) { query += ' AND g.class_id = ?'; params.push(cid); } }
     if (subject) { query += ' AND g.subject LIKE ?'; params.push(`%${subject}%`); }
 
     query += ' ORDER BY g.assessment_date DESC, g.student_id';
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
       return badRequest('نوع التقييم غير صالح');
     }
 
-    const totalScore = total_score || 100;
+    const totalScore = total_score ?? 100;
     if (!isValidScore(score, totalScore)) {
       return badRequest(`الدرجة يجب أن تكون بين 0 و ${totalScore}`);
     }
@@ -126,11 +128,13 @@ export async function PUT(request: NextRequest) {
     const grade_id = searchParams.get('id');
 
     if (!grade_id) return badRequest('معرف الدرجة مطلوب');
+    const gid = parseInt(grade_id);
+    if (isNaN(gid)) return badRequest('معرف الدرجة غير صالح');
 
     const body = await request.json();
     const { score, remarks } = body;
 
-    const grade = await db.prepare('SELECT * FROM grades WHERE id = ?').get(parseInt(grade_id)) as any;
+    const grade = await db.prepare('SELECT * FROM grades WHERE id = ?').get(gid) as any;
     if (!grade) return notFound('الدرجة غير موجودة');
 
     const updates: string[] = [];
@@ -153,7 +157,7 @@ export async function PUT(request: NextRequest) {
       return badRequest('لا توجد بيانات للتحديث');
     }
 
-    values.push(parseInt(grade_id));
+    values.push(gid);
     const query = `UPDATE grades SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
     await db.prepare(query).run(...values);
 

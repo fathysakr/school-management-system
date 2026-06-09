@@ -40,9 +40,9 @@ export async function GET(request: NextRequest) {
     const schoolFilter = getSchoolFilter(user.role, searchParams.get('school') || undefined);
     if (schoolFilter.grade) { query += ' AND INSTR(c.grade, ?) > 0'; params.push(schoolFilter.grade); }
 
-    if (teacher_id) { query += ' AND r.teacher_id = ?'; params.push(parseInt(teacher_id)); }
-    if (student_id) { query += ' AND r.student_id = ?'; params.push(parseInt(student_id)); }
-    if (class_id) { query += ' AND r.class_id = ?'; params.push(parseInt(class_id)); }
+    if (teacher_id) { const tid = parseInt(teacher_id); if (!isNaN(tid)) { query += ' AND r.teacher_id = ?'; params.push(tid); } }
+    if (student_id) { const sid = parseInt(student_id); if (!isNaN(sid)) { query += ' AND r.student_id = ?'; params.push(sid); } }
+    if (class_id) { const cid = parseInt(class_id); if (!isNaN(cid)) { query += ' AND r.class_id = ?'; params.push(cid); } }
     if (report_type) { query += ' AND r.report_type = ?'; params.push(report_type); }
 
     query += ' ORDER BY r.created_at DESC LIMIT ? OFFSET ?';
@@ -57,9 +57,9 @@ export async function GET(request: NextRequest) {
     `;
     const countParams: any[] = [status];
     if (schoolFilter.grade) { countQuery += ' AND INSTR(c.grade, ?) > 0'; countParams.push(schoolFilter.grade); }
-    if (teacher_id) { countQuery += ' AND r.teacher_id = ?'; countParams.push(parseInt(teacher_id)); }
-    if (student_id) { countQuery += ' AND r.student_id = ?'; countParams.push(parseInt(student_id)); }
-    if (class_id) { countQuery += ' AND r.class_id = ?'; countParams.push(parseInt(class_id)); }
+    if (teacher_id) { const tid = parseInt(teacher_id); if (!isNaN(tid)) { countQuery += ' AND r.teacher_id = ?'; countParams.push(tid); } }
+    if (student_id) { const sid = parseInt(student_id); if (!isNaN(sid)) { countQuery += ' AND r.student_id = ?'; countParams.push(sid); } }
+    if (class_id) { const cid = parseInt(class_id); if (!isNaN(cid)) { countQuery += ' AND r.class_id = ?'; countParams.push(cid); } }
     if (report_type) { countQuery += ' AND r.report_type = ?'; countParams.push(report_type); }
     const count = await db.prepare(countQuery).get(...countParams) as any;
 
@@ -116,10 +116,14 @@ export async function POST(request: NextRequest) {
       VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
     `);
 
+    const sid = parseInt(student_id);
+    if (isNaN(sid)) return badRequest('معرف الطالب غير صالح');
+    const cid = parseInt(class_id);
+    if (isNaN(cid)) return badRequest('معرف الفصل غير صالح');
     const result = await stmt.run(
       teacher_id,
-      parseInt(student_id),
-      parseInt(class_id),
+      sid,
+      cid,
       report_type,
       title ? sanitizeString(title) : null,
       sanitizeString(content),
@@ -127,7 +131,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (report_type === 'behavioral') {
-      const cls = await db.prepare('SELECT class_name, grade FROM classes WHERE id = ?').get(parseInt(class_id)) as any;
+      const cls = await db.prepare('SELECT class_name, grade FROM classes WHERE id = ?').get(cid) as any;
       const schoolStage = cls?.grade?.includes('متوسط') ? 'middle' : 'high';
       const targetRoles = [`${schoolStage}_supervisor`, `${schoolStage}_counselor`];
       const targetUsers = await db.prepare(
@@ -136,7 +140,7 @@ export async function POST(request: NextRequest) {
       WHERE u.role IN (?, ?)`
       ).all(...targetRoles) as any[];
 
-      const student = await db.prepare('SELECT first_name, last_name FROM students WHERE id = ?').get(parseInt(student_id)) as any;
+      const student = await db.prepare('SELECT first_name, last_name FROM students WHERE id = ?').get(sid) as any;
       const teacher = await db.prepare('SELECT first_name, last_name FROM teachers WHERE id = ?').get(teacher_id) as any;
       const studentName = student ? `${student.first_name} ${student.last_name}` : '';
       const teacherName = teacher ? `${teacher.first_name} ${teacher.last_name}` : '';
@@ -169,6 +173,8 @@ export async function PUT(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return badRequest('معرف التقرير مطلوب');
+    const rid = parseInt(id);
+    if (isNaN(rid)) return badRequest('معرف التقرير غير صالح');
 
     const body = await request.json();
     const updates: string[] = [];
@@ -179,7 +185,7 @@ export async function PUT(request: NextRequest) {
     if (body.status !== undefined) { updates.push('status = ?'); values.push(body.status); }
     if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
-    values.push(parseInt(id));
+    values.push(rid);
     await db.prepare(`UPDATE teacher_reports SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
 
     return success({ message: 'Report updated' });
@@ -199,8 +205,10 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return badRequest('معرف التقرير مطلوب');
+    const did = parseInt(id);
+    if (isNaN(did)) return badRequest('معرف التقرير غير صالح');
 
-    await db.prepare('DELETE FROM teacher_reports WHERE id = ?').run(parseInt(id));
+    await db.prepare('DELETE FROM teacher_reports WHERE id = ?').run(did);
     return success({ message: 'Report deleted' });
   } catch (error) {
     console.error('Delete report error:', error);

@@ -68,7 +68,7 @@ export default function StudentsPage() {
       try {
         const parsed = JSON.parse(student.parent_phones);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed.filter(Boolean);
-      } catch { /* ignore */ }
+      } catch { console.error('Invalid parent_phones JSON'); }
     }
     return student.parent_phone ? [student.parent_phone] : [''];
   };
@@ -268,7 +268,7 @@ export default function StudentsPage() {
       const rows = (res.students || []).map((s: any) => {
         const phones: string[] = (() => {
           if (s.parent_phones) {
-            try { const p = JSON.parse(s.parent_phones); if (Array.isArray(p)) return p; } catch { /* */ }
+            try { const p = JSON.parse(s.parent_phones); if (Array.isArray(p)) return p; } catch { console.error('Invalid parent_phones JSON in export'); }
           }
           return s.parent_phone ? [s.parent_phone] : [];
         })();
@@ -299,8 +299,7 @@ export default function StudentsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const effectiveToken = token || localStorage.getItem('token');
-    if (!effectiveToken) {
+    if (!token) {
       setError('الرجاء تسجيل الدخول أولاً');
       return;
     }
@@ -514,10 +513,10 @@ export default function StudentsPage() {
             if (!payload.grade) delete payload.grade;
             if (!payload.class_name) delete payload.class_name;
             if (Object.keys(payload).length > 0) {
-              await api.put(`/students/${existing.id}`, payload, effectiveToken);
+              await api.put(`/students/${existing.id}`, payload, token);
             }
           } else {
-            await api.post('/students', student, effectiveToken);
+            await api.post('/students', student, token);
           }
           successCount++;
         } catch (err: any) {
@@ -741,7 +740,7 @@ export default function StudentsPage() {
                   {(() => {
                     const phones: string[] = (() => {
                       if (selectedStudent.parent_phones) {
-                        try { const p = JSON.parse(selectedStudent.parent_phones); if (Array.isArray(p)) return p; } catch { /* */ }
+                        try { const p = JSON.parse(selectedStudent.parent_phones); if (Array.isArray(p)) return p; } catch { console.error('Invalid parent_phones JSON in view'); }
                       }
                       return selectedStudent.parent_phone ? [selectedStudent.parent_phone] : [];
                     })();

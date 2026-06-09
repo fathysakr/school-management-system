@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
       status,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: String(error), status: getDbStatus() }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    console.error('Test write error:', error);
+    return new Response(JSON.stringify({ error: 'فشل اختبار الكتابة', status: getDbStatus() }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

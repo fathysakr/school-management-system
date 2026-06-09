@@ -21,8 +21,7 @@ export async function GET(request: NextRequest) {
     return success({ users });
   } catch (error) {
     console.error('Get users error:', error);
-    const message = error instanceof Error ? error.message : 'فشل في جلب المستخدمين';
-    return serverError(message);
+    return serverError('فشل في جلب المستخدمين');
   }
 }
 
@@ -76,8 +75,10 @@ export async function PUT(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return badRequest('معرف المستخدم مطلوب');
+    const uid = parseInt(id);
+    if (isNaN(uid)) return badRequest('معرف المستخدم غير صالح');
 
-    const existing = await db.prepare('SELECT * FROM users WHERE id = ?').get(parseInt(id)) as any;
+    const existing = await db.prepare('SELECT * FROM users WHERE id = ?').get(uid) as any;
     if (!existing) return notFound('المستخدم غير موجود');
 
     const body = await request.json();
@@ -87,7 +88,7 @@ export async function PUT(request: NextRequest) {
     const values: any[] = [];
 
     if (email !== undefined) {
-      const dup = await db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, id);
+      const dup = await db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, uid);
       if (dup) return badRequest('اسم المستخدم موجود مسبقًا');
       updates.push('email = ?');
       values.push(sanitizeString(email));
@@ -120,7 +121,7 @@ export async function PUT(request: NextRequest) {
     if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
     updates.push('updated_at = CURRENT_TIMESTAMP');
-    values.push(parseInt(id));
+    values.push(uid);
     await db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...values);
 
     return success({ message: 'User updated successfully' });
@@ -132,6 +133,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    await ensureTursoReady();
     const user = await authenticate(request);
     if (!user) return unauthorized();
     if (user.role !== 'admin') return forbidden();
@@ -139,12 +141,14 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return badRequest('معرف المستخدم مطلوب');
+    const did = parseInt(id);
+    if (isNaN(did)) return badRequest('معرف المستخدم غير صالح');
 
-    const target = await db.prepare('SELECT * FROM users WHERE id = ?').get(parseInt(id)) as any;
+    const target = await db.prepare('SELECT * FROM users WHERE id = ?').get(did) as any;
     if (!target) return notFound('المستخدم غير موجود');
     if (target.role === 'admin') return forbidden('لا يمكن حذف حساب المدير');
 
-    await db.prepare('DELETE FROM users WHERE id = ?').run(parseInt(id));
+    await db.prepare('DELETE FROM users WHERE id = ?').run(did);
     return success({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Delete user error:', error);

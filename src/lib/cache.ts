@@ -12,7 +12,7 @@ export function cached<T>(key: string, fn: () => Promise<T>, ttl = DEFAULT_TTL):
       const oldest = cache.entries().next().value;
       if (oldest) cache.delete(oldest[0]);
     }
-  }).catch(() => {});
+  }).catch(() => { /* cache miss is ok */ });
   return p;
 }
 

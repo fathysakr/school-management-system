@@ -16,27 +16,32 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<any>({});
   const [atRisk, setAtRisk] = useState<any[]>([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!token) {
       router.push('/login');
       return;
     }
+    let cancelled = false;
     const fetchData = async () => {
       try {
         const [analyticsRes, atRiskRes] = await Promise.all([
-          api.get('/api/analytics', token),
-          api.get('/api/analytics/at-risk', token),
+          api.get('/analytics', token),
+          api.get('/analytics/at-risk', token),
         ]);
-        setAnalytics(analyticsRes);
-        setAtRisk(atRiskRes?.students || atRiskRes || []);
-      } catch (err) {
-        console.error('Analytics fetch error:', err);
+        if (!cancelled) {
+          setAnalytics(analyticsRes);
+          setAtRisk(atRiskRes?.students || atRiskRes || []);
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err?.message || 'فشل تحميل التحليلات');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchData();
+    return () => { cancelled = true; };
   }, [token, router]);
 
   const riskBgColor = (score: number) => {
@@ -67,6 +72,8 @@ export default function AnalyticsPage() {
   return (
     <Box>
       <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>التحليلات الذكية</Typography>
+
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
         {summaryCards.map((card) => (

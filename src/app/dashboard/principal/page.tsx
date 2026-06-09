@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Grid, Card, CardContent, Avatar, Chip, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress,
-  Button, IconButton
+  Button, IconButton, Alert
 } from '@mui/material';
 import {
   People, School, Class as ClassIcon, Assessment, TrendingUp,
@@ -24,6 +24,7 @@ export default function PrincipalPage() {
   const [stats, setStats] = useState<any>(null);
   const [pendingLeaves, setPendingLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [leaveError, setLeaveError] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -39,15 +40,15 @@ export default function PrincipalPage() {
       setStats(s.stats || s);
       setPendingLeaves(l.leaves || []);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => { setLeaveError('فشل تحميل البيانات'); setLoading(false); });
   }, [token]);
 
   const approveLeave = async (id: number) => {
-    try { await api.put(`/leaves/${id}`, { status: 'approved' }, token); setPendingLeaves(prev => prev.filter((l: any) => l.id !== id)); } catch {}
+    try { await api.put(`/leaves/${id}`, { status: 'approved' }, token); setPendingLeaves(prev => prev.filter((l: any) => l.id !== id)); } catch { setLeaveError('فشل الموافقة على الإجازة'); }
   };
 
   const rejectLeave = async (id: number) => {
-    try { await api.put(`/leaves/${id}`, { status: 'rejected' }, token); setPendingLeaves(prev => prev.filter((l: any) => l.id !== id)); } catch {}
+    try { await api.put(`/leaves/${id}`, { status: 'rejected' }, token); setPendingLeaves(prev => prev.filter((l: any) => l.id !== id)); } catch { setLeaveError('فشل رفض الإجازة'); }
   };
 
   if (!user || loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}><CircularProgress size={60} /></Box>;
@@ -64,6 +65,7 @@ export default function PrincipalPage() {
 
   return (
     <Box>
+      {leaveError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setLeaveError('')}>{leaveError}</Alert>}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
         <Avatar sx={{ bgcolor: primaryColor, width: 48, height: 48 }}><AdminPanelSettings /></Avatar>
         <Box>

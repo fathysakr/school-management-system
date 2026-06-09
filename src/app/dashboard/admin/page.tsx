@@ -30,6 +30,7 @@ const actions = [
   { key: 'delete_all_schedules', label: 'حذف الجداول', icon: <Schedule />, color: '#6a1b9a', desc: 'مسح جميع جداول الحصص' },
   { key: 'delete_all_announcements', label: 'حذف جميع الإعلانات', icon: <Campaign />, color: '#283593', desc: 'مسح جميع الإعلانات' },
   { key: 'new_semester', label: 'بداية فصل دراسي جديد', icon: <RestartAlt />, color: '#00897b', desc: 'مسح الدرجات والحضور والجداول والتقارير والتسجيلات' },
+  { key: 'factory_reset', label: '🔄 إعادة تعيين النظام بالكامل', icon: <RestartAlt />, color: '#b71c1c', desc: '⚠️ حذف جميع البيانات وإعادة تهيئة النظام من الصفر (يجب إعادة تسجيل الدخول)' },
 ];
 
 const roleLabels: Record<string, string> = {

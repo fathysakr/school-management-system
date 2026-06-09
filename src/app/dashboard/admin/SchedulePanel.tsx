@@ -8,6 +8,7 @@ import {
 import { Add, CalendarToday, FileDownload, AutoAwesome, Person, School, MeetingRoom } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 
 const dayLabels: Record<string, string> = { sunday: 'الأحد', monday: 'الاثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس' };
 const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
@@ -30,7 +31,7 @@ function getSubjColor(subject: string): string {
 }
 
 export default function SchedulePanel() {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const { token } = useAuth();
   const [schedules, setSchedules] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
@@ -59,13 +60,13 @@ export default function SchedulePanel() {
     let cancelled = false;
     api.get('/classes?page=1&limit=100', token).then((c: any) => {
       if (!cancelled) setClasses(c.classes || []);
-    }).catch(() => {});
+    }).catch(() => { if (!cancelled) setError('فشل تحميل الفصول'); });
     api.get('/teachers?page=1&limit=100', token).then((t: any) => {
       if (!cancelled) setTeachers(t.teachers || []);
-    }).catch(() => {});
+    }).catch(() => { if (!cancelled) setError('فشل تحميل المعلمين'); });
     api.get('/schedules?limit=500', token).then((s: any) => {
       if (!cancelled) setSchedules(s.schedules || []);
-    }).catch(() => setError('فشل تحميل البيانات'))
+    }).catch(() => { if (!cancelled) setError('فشل تحميل الجداول'); })
     .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   };
@@ -132,7 +133,9 @@ export default function SchedulePanel() {
       setOpenDialog(false);
       const res = await api.get('/schedules?limit=500', token);
       setSchedules(res.schedules || []);
-    } catch { setError('فشل الحفظ') }
+    } catch (e: any) {
+      setError(e?.message || 'فشل الحفظ');
+    }
   };
 
   const handleGenerate = async () => {
@@ -145,7 +148,9 @@ export default function SchedulePanel() {
       setGenDialogOpen(false);
       const reload = await api.get('/schedules?limit=500', token);
       setSchedules(reload.schedules || []);
-    } catch { setError('فشل التوليد') }
+    } catch (e: any) {
+      setError(e?.message || 'فشل التوليد');
+    }
     finally { setGenLoading(false) }
   };
 

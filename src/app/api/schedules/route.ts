@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
     const schoolFilter = getSchoolFilter(user.role, searchParams.get('school') || undefined);
     if (schoolFilter.grade) { query += ' AND c.grade LIKE ?'; params.push(`%${schoolFilter.grade}%`); }
 
-    if (class_id) { query += ' AND s.class_id = ?'; params.push(parseInt(class_id)); }
-    if (teacher_id) { query += ' AND s.teacher_id = ?'; params.push(parseInt(teacher_id)); }
+    if (class_id) { const cid = parseInt(class_id); if (!isNaN(cid)) { query += ' AND s.class_id = ?'; params.push(cid); } }
+    if (teacher_id) { const tid = parseInt(teacher_id); if (!isNaN(tid)) { query += ' AND s.teacher_id = ?'; params.push(tid); } }
     if (day) { query += ' AND s.day_of_week = ?'; params.push(day); }
 
     query += " ORDER BY CASE s.day_of_week WHEN 'sunday' THEN 1 WHEN 'monday' THEN 2 WHEN 'tuesday' THEN 3 WHEN 'wednesday' THEN 4 WHEN 'thursday' THEN 5 END, s.start_time";
@@ -60,17 +60,22 @@ export async function POST(request: NextRequest) {
       return badRequest('اليوم غير صالح. يجب أن يكون: الأحد، الإثنين، الثلاثاء، الأربعاء، الخميس');
     }
 
-    const cls = await db.prepare('SELECT id FROM classes WHERE id = ?').get(parseInt(class_id));
+    const cid = parseInt(class_id);
+    if (isNaN(cid)) return badRequest('معرف الفصل غير صالح');
+    const tid = parseInt(teacher_id);
+    if (isNaN(tid)) return badRequest('معرف المعلم غير صالح');
+
+    const cls = await db.prepare('SELECT id FROM classes WHERE id = ?').get(cid);
     if (!cls) return badRequest('الفصل غير موجود');
 
-    const teacher = await db.prepare('SELECT id FROM teachers WHERE id = ?').get(parseInt(teacher_id));
+    const teacher = await db.prepare('SELECT id FROM teachers WHERE id = ?').get(tid);
     if (!teacher) return badRequest('المعلم غير موجود');
 
     // Check for time conflicts
     const conflict = await db.prepare(`
       SELECT id FROM schedules WHERE class_id = ? AND day_of_week = ? AND status = 'active'
       AND start_time < ? AND end_time > ?
-    `).get(parseInt(class_id), day_of_week, end_time, start_time);
+    `).get(cid, day_of_week, end_time, start_time);
 
     if (conflict) return badRequest('يوجد تعارض في الجدول في هذا الوقت');
 
@@ -80,8 +85,8 @@ export async function POST(request: NextRequest) {
     `);
 
     const result = await stmt.run(
-      parseInt(class_id),
-      parseInt(teacher_id),
+      cid,
+      tid,
       sanitizeString(subject),
       day_of_week,
       start_time,
@@ -106,9 +111,11 @@ export async function PUT(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return badRequest('معرف الجدول مطلوب');
+    const sid = parseInt(id);
+    if (isNaN(sid)) return badRequest('معرف الجدول غير صالح');
 
     const body = await request.json();
-    const schedule = await db.prepare('SELECT * FROM schedules WHERE id = ?').get(parseInt(id));
+    const schedule = await db.prepare('SELECT * FROM schedules WHERE id = ?').get(sid);
     if (!schedule) return notFound('الجدول غير موجود');
 
     const updates: string[] = [];
@@ -123,7 +130,7 @@ export async function PUT(request: NextRequest) {
 
     if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
-    values.push(parseInt(id));
+    values.push(sid);
     await db.prepare(`UPDATE schedules SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
 
     return success({ message: 'Schedule updated successfully' });
@@ -143,11 +150,13 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return badRequest('معرف الجدول مطلوب');
+    const did = parseInt(id);
+    if (isNaN(did)) return badRequest('معرف الجدول غير صالح');
 
-    const schedule = await db.prepare('SELECT * FROM schedules WHERE id = ?').get(parseInt(id));
+    const schedule = await db.prepare('SELECT * FROM schedules WHERE id = ?').get(did);
     if (!schedule) return notFound('الجدول غير موجود');
 
-    await db.prepare('DELETE FROM schedules WHERE id = ?').run(parseInt(id));
+    await db.prepare('DELETE FROM schedules WHERE id = ?').run(did);
 
     return success({ message: 'Schedule deleted successfully' });
   } catch (error) {

@@ -10,9 +10,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'substitutions:edit')) return forbidden();
 
-    const { id } = params;
     const body = await request.json();
     const { substitute_teacher_id, status } = body;
+
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('معرف غير صالح');
 
     const existing = await db.prepare('SELECT id FROM substitutions WHERE id = ?').get(id);
     if (!existing) return badRequest('البديل غير موجود');
@@ -51,7 +53,9 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'substitutions:delete')) return forbidden();
 
-    const { id } = params;
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('معرف غير صالح');
+
     const existing = await db.prepare('SELECT id FROM substitutions WHERE id = ?').get(id);
     if (!existing) return badRequest('البديل غير موجود');
 

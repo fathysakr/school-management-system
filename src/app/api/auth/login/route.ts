@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
-import { comparePassword, generateToken, badRequest, serverError, success, notFound, forbidden } from '@/lib/auth';
+import { comparePassword, generateToken, badRequest, serverError, success, unauthorized, forbidden } from '@/lib/auth';
 import { getSchoolStage } from '@/lib/permissions';
 
 export async function POST(request: NextRequest) {
@@ -21,13 +21,12 @@ export async function POST(request: NextRequest) {
       WHERE u.email = ?
     `).get(email) as any;
     if (!user) {
-      return notFound('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+      return unauthorized('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
 
-    // Check password
     const passwordValid = await comparePassword(password, user.password);
     if (!passwordValid) {
-      return notFound('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+      return unauthorized('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
 
     // Check status
@@ -62,6 +61,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error('Login error:', errMsg, error instanceof Error ? error.stack : '');
-    return serverError('فشل تسجيل الدخول: ' + errMsg);
+    return serverError('فشل تسجيل الدخول');
   }
 }

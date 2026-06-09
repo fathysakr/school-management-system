@@ -93,7 +93,7 @@ export default function ManagementPage() {
     try {
       const res = await api.get('/teachers?limit=500', token);
       setTeachers(res.teachers || []);
-    } catch { /* ignore */ }
+    } catch { setError('فشل تحميل المعلمين'); }
   };
 
   useEffect(() => { fetchStaff(); fetchTeachers(); }, [token, selectedSchool, schoolFilter]);
@@ -192,7 +192,7 @@ export default function ManagementPage() {
     try {
       const res = await api.get('/management-positions', token);
       setPositions(res.positions || []);
-    } catch { /* ignore */ }
+    } catch { setError('فشل تحميل المسميات'); }
   };
 
   const fetchAllUsers = async () => {
@@ -218,7 +218,7 @@ export default function ManagementPage() {
       const combined = [...mgmtUsers, ...teacherUsers];
       const seen = new Set<number>();
       setAllUsers(combined.filter((u: any) => { const dup = seen.has(u.user_id); seen.add(u.user_id); return !dup; }));
-    } catch { /* ignore */ }
+    } catch { setError('فشل تحميل المستخدمين'); }
   };
 
   const openPositionsDialog = () => {
@@ -271,7 +271,7 @@ export default function ManagementPage() {
   };
 
   const filteredStaff = staff.filter(s => {
-    if (roleFilter !== 'all' && !s.user_role.includes(roleFilter)) return false;
+    if (roleFilter !== 'all' && !s.user_role?.includes(roleFilter)) return false;
     return true;
   });
 

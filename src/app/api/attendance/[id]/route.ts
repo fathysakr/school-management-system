@@ -11,6 +11,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'attendance:view')) return forbidden();
 
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('معرف سجل الحضور غير صالح');
+
     const record = await db.prepare(`
       SELECT a.*, s.first_name as student_first, s.last_name as student_last,
              c.class_name
@@ -18,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       JOIN students s ON a.student_id = s.id
       JOIN classes c ON a.class_id = c.id
       WHERE a.id = ?
-    `).get(parseInt(params.id)) as any;
+    `).get(id) as any;
 
     if (!record) return notFound('سجل الحضور غير موجود');
 
@@ -43,7 +46,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return badRequest('حالة الحضور غير صالحة');
     }
 
-    const record = await db.prepare('SELECT * FROM attendance WHERE id = ?').get(parseInt(params.id));
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('معرف سجل الحضور غير صالح');
+
+    const record = await db.prepare('SELECT * FROM attendance WHERE id = ?').get(id);
     if (!record) return notFound('سجل الحضور غير موجود');
 
     const updates: string[] = [];
@@ -60,7 +66,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
-    values.push(parseInt(params.id));
+    values.push(id);
     await db.prepare(`UPDATE attendance SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
 
     if (status === 'escape') {
@@ -95,10 +101,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'attendance:delete')) return forbidden();
 
-    const record = await db.prepare('SELECT * FROM attendance WHERE id = ?').get(parseInt(params.id));
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('معرف سجل الحضور غير صالح');
+
+    const record = await db.prepare('SELECT * FROM attendance WHERE id = ?').get(id);
     if (!record) return notFound('سجل الحضور غير موجود');
 
-    await db.prepare('DELETE FROM attendance WHERE id = ?').run(parseInt(params.id));
+    await db.prepare('DELETE FROM attendance WHERE id = ?').run(id);
 
     return success({ message: 'Attendance record deleted successfully' });
   } catch (error) {

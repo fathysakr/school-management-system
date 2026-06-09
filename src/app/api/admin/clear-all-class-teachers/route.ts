@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
       changes: result.changes,
     });
   } catch (error) {
-    return serverError('فشل في مسح اسناد الفصول: ' + (error instanceof Error ? error.message : ''));
+    console.error('Clear all class teachers error:', error);
+    return serverError('فشل في مسح اسناد الفصول');
   }
 }

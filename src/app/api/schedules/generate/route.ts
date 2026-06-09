@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
       warnings: [...new Set(warnings)],
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'خطأ في توليد الجدول';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Generate schedules error:', err);
+    return NextResponse.json({ error: 'خطأ في توليد الجدول' }, { status: 500 });
   }
 }

@@ -10,6 +10,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (user.role !== 'admin') return forbidden();
 
     const parentId = parseInt(params.id);
+    if (isNaN(parentId)) return badRequest('معرف ولي الأمر غير صالح');
     const existing = await db.prepare('SELECT * FROM parents WHERE id = ?').get(parentId) as any;
     if (!existing) return notFound('ولي الأمر غير موجود');
 
@@ -65,6 +66,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (user.role !== 'admin') return forbidden();
 
     const parentId = parseInt(params.id);
+    if (isNaN(parentId)) return badRequest('معرف ولي الأمر غير صالح');
     const existing = await db.prepare('SELECT * FROM parents WHERE id = ?').get(parentId) as any;
     if (!existing) return notFound('ولي الأمر غير موجود');
 

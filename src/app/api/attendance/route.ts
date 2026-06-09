@@ -28,13 +28,17 @@ export async function GET(request: NextRequest) {
     }
 
     if (student_id) {
+      const sid = parseInt(student_id);
+      if (isNaN(sid)) return badRequest('معرف الطالب غير صالح');
       query += ' AND a.student_id = ?';
-      params.push(parseInt(student_id));
+      params.push(sid);
     }
 
     if (class_id) {
+      const cid = parseInt(class_id);
+      if (isNaN(cid)) return badRequest('معرف الفصل غير صالح');
       query += ' AND a.class_id = ?';
-      params.push(parseInt(class_id));
+      params.push(cid);
     }
 
     if (date) {
@@ -43,8 +47,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (period) {
+      const p = parseInt(period);
+      if (isNaN(p)) return badRequest('رقم الحصة غير صالح');
       query += ' AND a.period = ?';
-      params.push(parseInt(period));
+      params.push(p);
     }
 
     query += ' ORDER BY a.attendance_date DESC, a.period, a.student_id';
@@ -68,6 +74,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { student_id, class_id, attendance_date, period, status, remarks } = body;
     const periodVal = period ? parseInt(period) : 1;
+    if (period && isNaN(periodVal)) return badRequest('رقم الحصة غير صالح');
 
     if (!student_id || !class_id || !attendance_date || !status) {
       return badRequest('معرف الطالب والفصل والتاريخ والحالة مطلوبة');
@@ -144,6 +151,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { class_id, attendance_date, period, records } = body;
     const periodVal = period ? parseInt(period) : 1;
+    if (period && isNaN(periodVal)) return badRequest('رقم الحصة غير صالح');
 
     if (!class_id || !attendance_date || !Array.isArray(records)) {
       return badRequest('معرف الفصل والتاريخ وسجل الحضور مطلوبة');

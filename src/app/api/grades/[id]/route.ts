@@ -11,6 +11,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'grades:view')) return forbidden();
 
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('معرف الدرجة غير صالح');
+
     const grade = await db.prepare(`
       SELECT g.*, s.first_name as student_first, s.last_name as student_last,
              c.class_name
@@ -18,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       JOIN students s ON g.student_id = s.id
       JOIN classes c ON g.class_id = c.id
       WHERE g.id = ?
-    `).get(parseInt(params.id)) as any;
+    `).get(id) as any;
 
     if (!grade) return notFound('سجل الدرجة غير موجود');
 
@@ -39,7 +42,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json();
     const { score, total_score, assessment_type, remarks, assessment_date } = body;
 
-    const grade = await db.prepare('SELECT * FROM grades WHERE id = ?').get(parseInt(params.id)) as any;
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('معرف الدرجة غير صالح');
+
+    const grade = await db.prepare('SELECT * FROM grades WHERE id = ?').get(id) as any;
     if (!grade) return notFound('سجل الدرجة غير موجود');
 
     const newTotal = total_score ?? grade.total_score;
@@ -64,7 +70,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
-    values.push(parseInt(params.id));
+    values.push(id);
     await db.prepare(`UPDATE grades SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
 
     return success({ message: 'Grade record updated successfully' });
@@ -81,10 +87,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!user) return unauthorized();
     if (!hasPermission(user.role, 'grades:delete')) return forbidden();
 
-    const grade = await db.prepare('SELECT * FROM grades WHERE id = ?').get(parseInt(params.id));
+    const id = parseInt(params.id);
+    if (isNaN(id)) return badRequest('معرف الدرجة غير صالح');
+
+    const grade = await db.prepare('SELECT * FROM grades WHERE id = ?').get(id);
     if (!grade) return notFound('سجل الدرجة غير موجود');
 
-    await db.prepare('DELETE FROM grades WHERE id = ?').run(parseInt(params.id));
+    await db.prepare('DELETE FROM grades WHERE id = ?').run(id);
 
     return success({ message: 'Grade record deleted successfully' });
   } catch (error) {

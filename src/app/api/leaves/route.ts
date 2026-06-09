@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const params: any[] = [];
     const clauses: string[] = [];
     if (status) { clauses.push('lr.status = ?'); params.push(status); }
-    if (userId) { clauses.push('lr.user_id = ?'); params.push(parseInt(userId)); }
+    if (userId) { const uid = parseInt(userId); if (!isNaN(uid)) { clauses.push('lr.user_id = ?'); params.push(uid); } }
     if (!hasPermission(user.role, 'settings:edit')) {
       clauses.push('lr.user_id = ?'); params.push(user.id);
     }

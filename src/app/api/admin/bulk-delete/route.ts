@@ -11,6 +11,7 @@ const ACTIONS = [
   'delete_all_schedules',
   'delete_all_announcements',
   'new_semester',
+  'factory_reset',
 ] as const;
 
 type BulkAction = typeof ACTIONS[number];
@@ -77,6 +78,28 @@ export async function POST(request: NextRequest) {
           await db.prepare('DELETE FROM enrollments').run();
           return { message: 'تم بدء فصل دراسي جديد - تم مسح الدرجات والحضور والجداول والتقارير والتسجيلات' };
 
+        case 'factory_reset':
+          await db.prepare('DELETE FROM attendance').run();
+          await db.prepare('DELETE FROM grades').run();
+          await db.prepare('DELETE FROM teacher_reports').run();
+          await db.prepare('DELETE FROM enrollments').run();
+          await db.prepare('DELETE FROM subject_classes').run();
+          await db.prepare('DELETE FROM substitutions').run();
+          await db.prepare('DELETE FROM schedules').run();
+          await db.prepare('DELETE FROM notifications').run();
+          await db.prepare('DELETE FROM management_position_assignments').run();
+          await db.prepare('DELETE FROM announcements').run();
+          await db.prepare('DELETE FROM leave_requests').run();
+          await db.prepare('DELETE FROM parents').run();
+          await db.prepare('DELETE FROM students').run();
+          await db.prepare('DELETE FROM classes').run();
+          await db.prepare('DELETE FROM subjects').run();
+          await db.prepare('DELETE FROM management_positions').run();
+          await db.prepare('DELETE FROM teachers').run();
+          await db.prepare('DELETE FROM users').run();
+          await db.prepare('DELETE FROM _init_done WHERE flag = 1').run();
+          return { message: 'تم إعادة تعيين النظام بالكامل. سيتم إعادة تهيئة البيانات الافتراضية في الزيارة التالية. يرجى تسجيل الدخول مرة أخرى.' };
+
         default:
           return { message: 'Unknown action' };
       }
@@ -86,7 +109,6 @@ export async function POST(request: NextRequest) {
     return success(result);
   } catch (error) {
     console.error('Bulk delete error:', error);
-    const message = error instanceof Error ? error.message : 'فشلت العملية';
-    return serverError(message);
+    return serverError('فشلت العملية');
   }
 }

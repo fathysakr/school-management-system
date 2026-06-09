@@ -15,6 +15,8 @@ export async function PUT(
     const id = parseInt(params.id);
     if (isNaN(id)) return badRequest('معرف غير صحيح');
     const body = await request.json();
+    const existing = await db.prepare('SELECT id FROM leave_requests WHERE id = ?').get(id) as any;
+    if (!existing) return notFound('طلب الإجازة غير موجود');
     const { status, approved_by } = body;
     if (!['pending', 'approved', 'rejected'].includes(status)) return badRequest('حالة غير صحيحة');
     await db.prepare(

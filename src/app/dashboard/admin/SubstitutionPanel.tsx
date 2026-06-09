@@ -7,11 +7,12 @@ import {
 } from '@mui/material';
 import { SwapHoriz, Search, Cancel, CheckCircle, WarningAmber } from '@mui/icons-material';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 
 const dayOfWeekFromDate = (dateStr: string) => ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date(dateStr).getDay()];
 
 export default function SubstitutionPanel() {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const { token } = useAuth();
   const [tab, setTab] = useState(0);
   const [allSubs, setAllSubs] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
@@ -31,10 +32,10 @@ export default function SubstitutionPanel() {
     let cancelled = false;
     api.get('/teachers?page=1&limit=100', token).then((t: any) => {
       if (!cancelled) setTeachers(t.teachers || []);
-    }).catch(() => {});
+    }).catch(() => { if (!cancelled) setError('فشل تحميل المعلمين'); });
     api.get('/substitutions?limit=500', token).then((s: any) => {
       if (!cancelled) setAllSubs(s.substitutions || []);
-    }).catch(() => setError('فشل تحميل البيانات'))
+    }).catch(() => { if (!cancelled) setError('فشل تحميل البدائل'); })
     .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   };
@@ -57,7 +58,9 @@ export default function SubstitutionPanel() {
       const res = await api.post('/substitutions/suggest', { date, absent_teacher_ids: absentIds }, token);
       setSuggestions(res.suggestions || []);
       if (!res.suggestions?.length) setError('لا توجد بدائل متاحة');
-    } catch { setError('فشل جلب البدائل') }
+    } catch (e: any) {
+      setError(e?.message || 'فشل جلب البدائل');
+    }
     finally { setSuggestLoading(false) }
   };
 
@@ -73,7 +76,9 @@ export default function SubstitutionPanel() {
       setSuccess('تم تأكيد البديل');
       setConfirmOpen(null);
       loadData();
-    } catch { setError('فشل تأكيد البديل') }
+    } catch (e: any) {
+      setError(e?.message || 'فشل تأكيد البديل');
+    }
   };
 
   const handleCancel = async (id: number) => {
@@ -82,7 +87,9 @@ export default function SubstitutionPanel() {
       await api.put(`/substitutions?id=${id}`, { status: 'cancelled' }, token);
       setSuccess('تم إلغاء البديل');
       loadData();
-    } catch { setError('فشل الإلغاء') }
+    } catch (e: any) {
+      setError(e?.message || 'فشل الإلغاء');
+    }
   };
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 6 }}><CircularProgress /></Box>;
@@ -137,7 +144,7 @@ export default function SubstitutionPanel() {
             <Box sx={{ mt: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>البدائل المقترحة ({suggestions.length}):</Typography>
               {suggestions.map((item, i) => (
-                <Paper key={i} variant="outlined" sx={{ p: 1.5, mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1, borderRight: '4px solid #2e7d32' }}>
+                <Paper key={item.subject + item.class_name + item.start_time || i} variant="outlined" sx={{ p: 1.5, mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1, borderRight: '4px solid #2e7d32' }}>
                   <Box>
                     <Typography variant="body2"><strong>{item.subject}</strong> — {item.class_name}</Typography>
                     <Typography variant="caption" color="text.secondary" display="block">{item.start_time} - {item.end_time}</Typography>

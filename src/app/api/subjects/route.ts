@@ -55,11 +55,15 @@ export async function POST(request: NextRequest) {
     const stmt = await db.prepare(
       'INSERT INTO subjects (name, school, sessions_per_week, grade, teacher_id) VALUES (?, ?, ?, ?, ?)'
     );
+    const spw = sessions_per_week !== undefined ? parseInt(sessions_per_week) : 3;
+    if (isNaN(spw)) return badRequest('عدد الحصص الأسبوعية غير صالح');
+    const tid = teacher_id ? parseInt(teacher_id) : null;
+    if (teacher_id && isNaN(tid!)) return badRequest('معرف المعلم غير صالح');
     const result = await stmt.run(
       sanitizeString(name), school,
-      sessions_per_week !== undefined ? parseInt(sessions_per_week) : 3,
+      spw,
       body.grade || null,
-      teacher_id ? parseInt(teacher_id) : null
+      tid
     );
     const subjectId = result.lastInsertRowid;
 
@@ -93,19 +97,23 @@ export async function PUT(request: NextRequest) {
       if (!['middle', 'high'].includes(body.school)) return badRequest('المرحلة غير صحيحة');
       updates.push('school = ?'); values.push(body.school);
     }
-    if (body.sessions_per_week !== undefined) { updates.push('sessions_per_week = ?'); values.push(parseInt(body.sessions_per_week)); }
-    if ('grade' in body) { updates.push('grade = ?'); values.push(body.grade || null); }
-    if ('teacher_id' in body) { updates.push('teacher_id = ?'); values.push(body.teacher_id ? parseInt(body.teacher_id) : null); }
+    if (body.sessions_per_week !== undefined) { const spw = parseInt(body.sessions_per_week); if (isNaN(spw)) return badRequest('عدد الحصص الأسبوعية غير صالح'); updates.push('sessions_per_week = ?'); values.push(spw); }
+    if (body.grade !== undefined) { updates.push('grade = ?'); values.push(body.grade || null); }
+    if (body.teacher_id !== undefined) { const tid = body.teacher_id ? parseInt(body.teacher_id) : null; if (body.teacher_id && isNaN(tid!)) return badRequest('معرف المعلم غير صالح'); updates.push('teacher_id = ?'); values.push(tid); }
     if (updates.length === 0) return badRequest('لا توجد حقول للتحديث');
-    values.push(parseInt(id));
+    const nid = parseInt(id);
+    if (isNaN(nid)) return badRequest('معرف المادة غير صالح');
+    values.push(nid);
     await db.prepare(`UPDATE subjects SET ${updates.join(', ')} WHERE id = ?`).run(...values);
 
     if ('class_ids' in body) {
-      await db.prepare('DELETE FROM subject_classes WHERE subject_id = ?').run(parseInt(id));
+      const nid = parseInt(id);
+      if (isNaN(nid)) return badRequest('معرف المادة غير صالح');
+      await db.prepare('DELETE FROM subject_classes WHERE subject_id = ?').run(nid);
       if (Array.isArray(body.class_ids) && body.class_ids.length) {
         const insert = await db.prepare('INSERT OR IGNORE INTO subject_classes (subject_id, class_id, sessions_per_week) VALUES (?, ?, ?)');
         for (const classId of body.class_ids) {
-          await insert.run(parseInt(id), classId, body.sessions_per_week || 0);
+          await insert.run(nid, classId, body.sessions_per_week || 0);
         }
       }
     }
@@ -125,8 +133,10 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return badRequest('معرف المادة مطلوب');
-    await db.prepare('DELETE FROM subject_classes WHERE subject_id = ?').run(parseInt(id));
-    await db.prepare('DELETE FROM subjects WHERE id = ?').run(parseInt(id));
+    const did = parseInt(id);
+    if (isNaN(did)) return badRequest('معرف المادة غير صالح');
+    await db.prepare('DELETE FROM subject_classes WHERE subject_id = ?').run(did);
+    await db.prepare('DELETE FROM subjects WHERE id = ?').run(did);
     return success({ message: 'تم حذف المادة' });
   } catch (error: any) {
     console.error('Delete subject error:', error);

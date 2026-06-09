@@ -112,6 +112,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifError, setNotifError] = useState('');
 
   const isHovered = open || hovering;
 
@@ -121,7 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const res = await api.get('/notifications?unread=true&limit=50', token);
       setNotifications(res.notifications || []);
       setUnreadCount(res.unread_count || 0);
-    } catch { /* ignore */ }
+    } catch { setNotifError('فشل تحميل الإشعارات'); }
   }, [token]);
 
   useEffect(() => {
@@ -132,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const markAllRead = async () => {
     if (!token) return;
-    try { await api.put('/notifications', { mark_all: true }, token); setUnreadCount(0); setNotifications(prev => prev.map((n: any) => ({ ...n, is_read: 1 }))); } catch { /* ignore */ }
+    try { await api.put('/notifications', { mark_all: true }, token); setUnreadCount(0); setNotifications(prev => prev.map((n: any) => ({ ...n, is_read: 1 }))); } catch { setNotifError('فشل تحديث الإشعارات'); }
   };
 
   useEffect(() => {
@@ -216,7 +217,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Paper sx={{ position: 'absolute', left: 0, top: '100%', mt: 1, width: 360, maxHeight: 480, overflow: 'auto', zIndex: 9999, borderRadius: 2, boxShadow: 8 }}>
                     <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="subtitle2" fontWeight={700}>الإشعارات</Typography>
-                      {unreadCount > 0 && <Chip label={`${unreadCount} جديد`} size="small" color="error" onClick={markAllRead} sx={{ cursor: 'pointer', fontSize: 11 }} />}
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        {notifError && <Typography variant="caption" color="error">{notifError}</Typography>}
+                        {unreadCount > 0 && <Chip label={`${unreadCount} جديد`} size="small" color="error" onClick={markAllRead} sx={{ cursor: 'pointer', fontSize: 11 }} />}
+                      </Box>
                     </Box>
                     {notifications.length === 0 ? (
                       <Typography color="text.secondary" textAlign="center" py={4} variant="body2">لا توجد إشعارات</Typography>

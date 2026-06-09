@@ -10,8 +10,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const unreadOnly = searchParams.get('unread') === 'true';
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = Math.max(1, parseInt(searchParams.get('limit') || '20') || 20);
+    const offset = Math.max(0, parseInt(searchParams.get('offset') || '0') || 0);
 
     let where = 'WHERE n.user_id = ?';
     const params: any[] = [user.id];
@@ -41,7 +41,10 @@ export async function PUT(request: NextRequest) {
     if (mark_all) {
       await db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?').run(user.id);
     } else if (id) {
-      await db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?').run(parseInt(id), user.id);
+      const nid = parseInt(id);
+      if (!isNaN(nid)) {
+        await db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?').run(nid, user.id);
+      }
     }
 
     return success({ message: 'تم التحديث' });

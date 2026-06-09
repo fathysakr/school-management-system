@@ -70,14 +70,17 @@ export async function DELETE(request: NextRequest) {
       return badRequest('معرف الطالب والفصل مطلوبان');
     }
 
+    const sid = parseInt(student_id);
+    const cid = parseInt(class_id);
+    if (isNaN(sid) || isNaN(cid)) return badRequest('معرف الطالب أو الفصل غير صالح');
     const enrollment = await db.prepare(
       'SELECT id FROM enrollments WHERE student_id = ? AND class_id = ? AND status = "active"'
-    ).get(parseInt(student_id), parseInt(class_id));
+    ).get(sid, cid);
 
     if (!enrollment) return notFound('التسجيل غير موجود');
 
     await db.prepare('UPDATE enrollments SET status = ? WHERE student_id = ? AND class_id = ?')
-      .run('dropped', parseInt(student_id), parseInt(class_id));
+      .run('dropped', sid, cid);
 
     return success({ message: 'Student unenrolled successfully' });
   } catch (error) {

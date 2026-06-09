@@ -39,8 +39,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (class_id) {
+      const cid = parseInt(class_id);
+      if (isNaN(cid)) return badRequest('معرف الفصل غير صالح');
       query += ' AND (a.class_id = ? OR a.class_id IS NULL)';
-      params.push(parseInt(class_id));
+      params.push(cid);
     }
 
     query += ' ORDER BY a.published_date DESC';
@@ -75,8 +77,11 @@ export async function POST(request: NextRequest) {
       return badRequest('معرف الفصل مطلوب للإعلانات الموجهة للفصل');
     }
 
+    let parsedClassId: number | null = null;
     if (class_id) {
-      const cls = await db.prepare('SELECT id FROM classes WHERE id = ?').get(parseInt(class_id));
+      parsedClassId = parseInt(class_id);
+      if (isNaN(parsedClassId)) return badRequest('معرف الفصل غير صالح');
+      const cls = await db.prepare('SELECT id FROM classes WHERE id = ?').get(parsedClassId);
       if (!cls) return badRequest('الفصل غير موجود');
     }
 
@@ -89,7 +94,7 @@ export async function POST(request: NextRequest) {
       sanitizeString(title),
       sanitizeString(content),
       target_audience,
-      class_id ? parseInt(class_id) : null,
+      parsedClassId,
       user.id
     );
 
@@ -114,7 +119,10 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { title, content, target_audience, class_id, status } = body;
 
-    const announcement = await db.prepare('SELECT * FROM announcements WHERE id = ?').get(parseInt(id));
+    const aid = parseInt(id);
+    if (isNaN(aid)) return badRequest('معرف الإعلان غير صالح');
+
+    const announcement = await db.prepare('SELECT * FROM announcements WHERE id = ?').get(aid);
     if (!announcement) return notFound('الإعلان غير موجود');
 
     const updates: string[] = [];
@@ -136,8 +144,10 @@ export async function PUT(request: NextRequest) {
       values.push(target_audience);
     }
     if (class_id !== undefined) {
+      const cid = class_id ? parseInt(class_id) : null;
+      if (class_id && isNaN(cid!)) return badRequest('معرف الفصل غير صالح');
       updates.push('class_id = ?');
-      values.push(class_id ? parseInt(class_id) : null);
+      values.push(cid);
     }
     if (status !== undefined) {
       if (!['active', 'archived'].includes(status)) return badRequest('حالة غير صالحة');
@@ -147,7 +157,7 @@ export async function PUT(request: NextRequest) {
 
     if (updates.length === 0) return badRequest('لا توجد بيانات للتحديث');
 
-    values.push(parseInt(id));
+    values.push(aid);
     await db.prepare(`UPDATE announcements SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
 
     return success({ message: 'Announcement updated successfully' });
@@ -168,10 +178,13 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
     if (!id) return badRequest('معرف الإعلان مطلوب');
 
-    const announcement = await db.prepare('SELECT * FROM announcements WHERE id = ?').get(parseInt(id));
+    const did = parseInt(id);
+    if (isNaN(did)) return badRequest('معرف الإعلان غير صالح');
+
+    const announcement = await db.prepare('SELECT * FROM announcements WHERE id = ?').get(did);
     if (!announcement) return notFound('الإعلان غير موجود');
 
-    await db.prepare('DELETE FROM announcements WHERE id = ?').run(parseInt(id));
+    await db.prepare('DELETE FROM announcements WHERE id = ?').run(did);
 
     return success({ message: 'Announcement deleted successfully' });
   } catch (error) {
