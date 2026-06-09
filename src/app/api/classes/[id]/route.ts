@@ -84,6 +84,8 @@ export async function PUT(
           const cap = parseInt(body[field]);
           if (isNaN(cap) || cap < 1) return badRequest('السعة غير صالحة');
           values.push(cap);
+        } else if (field === 'teacher_id') {
+          values.push(body[field] !== null && body[field] !== '' ? body[field] : null);
         } else {
           values.push(body[field]);
         }
