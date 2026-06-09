@@ -252,27 +252,30 @@ export default function ClassesPage() {
     try {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
-      const rows: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
       const parsed: { student_id: string; first_name: string; last_name: string }[] = [];
-      const headers = rows[0] as string[];
-      const hasHeaders = headers && headers.some(h => typeof h === 'string' && (h.includes('طالب') || h.includes('student') || h.includes('رقم')));
-      const startIdx = hasHeaders ? 1 : 0;
-      for (let i = startIdx; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || !row[0]) continue;
-        const sid = String(row[0]).trim();
-        if (!sid) continue;
-        if (hasHeaders) {
-          const fullName = String(row[1] || '').trim();
-          const parts = fullName.split(' ');
-          parsed.push({ student_id: sid, first_name: parts[0] || fullName, last_name: parts.slice(1).join(' ') || parts[0] || fullName });
-        } else {
-          parsed.push({ student_id: sid, first_name: String(row[1] || '').trim(), last_name: String(row[2] || '').trim() });
+      for (const sheetName of workbook.SheetNames) {
+        const rows: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+        if (rows.length < 2) continue;
+        const headers = rows[0] as string[];
+        const hasHeaders = headers && headers.some(h => typeof h === 'string' && (h.includes('طالب') || h.includes('student') || h.includes('رقم')));
+        const startIdx = hasHeaders ? 1 : 0;
+        for (let i = startIdx; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || !row[0]) continue;
+          const sid = String(row[0]).trim();
+          if (!sid || sid.length < 3) continue;
+          if (hasHeaders) {
+            const fullName = String(row[1] || '').trim();
+            const parts = fullName.split(' ');
+            parsed.push({ student_id: sid, first_name: parts[0] || fullName, last_name: parts.slice(1).join(' ') || parts[0] || fullName });
+          } else {
+            parsed.push({ student_id: sid, first_name: String(row[1] || '').trim(), last_name: String(row[2] || '').trim() });
+          }
         }
       }
       if (parsed.length === 0) { setError('لم يتم العثور على طلاب في الملف'); return; }
       const res = await api.post(`/classes/${uploadingClass}/upload`, { students: parsed }, token);
-      setSuccess(`تم رفع ${res.created || 0} طالب جديد، تسجيل ${res.enrolled || 0} في الفصل، ${res.errors || 0} خطأ`);
+      setSuccess(`تم استخراج ${parsed.length} طالب من الملف، إنشاء ${res.created||0} جديد، تسجيل ${res.enrolled||0} في الفصل، ${res.skipped||0} موجود مسبقاً، ${res.errors||0} خطأ`);
       fetchClasses();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'فشل رفع الملف');

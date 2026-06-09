@@ -23,7 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const currentCount = (await db.prepare('SELECT COUNT(*) as count FROM enrollments WHERE class_id = ? AND status = ?').get(classId, 'active') as any)?.count || 0;
     const available = classRow.capacity - currentCount;
 
-    let created = 0, enrolled = 0, errors = 0;
+    let created = 0, enrolled = 0, errors = 0, skipped = 0;
 
     for (const s of students) {
       try {
@@ -57,6 +57,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         if (!already) {
           await db.prepare("INSERT INTO enrollments (student_id, class_id, enrollment_date, status) VALUES (?,?,date('now'),'active')").run(studentDbId, classId);
           enrolled++;
+        } else {
+          skipped++;
         }
       } catch (e) {
         console.error('Upload student error:', e);
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       }
     }
 
-    return success({ created, enrolled, errors, total: students.length });
+    return success({ created, enrolled, errors, skipped, total: students.length });
   } catch (error) {
     console.error('Upload students error:', error);
     return serverError('فشل رفع الطلاب');
