@@ -1445,5 +1445,19 @@ async function _ensureTursoReady() {
   } catch (e) { console.error('Turso initialization error:', e); }
 }
 
+export function getDbStatus() {
+  const dbPath = findDbPath();
+  let writable = false;
+  try { fs.accessSync(dbPath, fs.constants.W_OK); writable = true; } catch {}
+  return {
+    adapter: db.constructor?.name || typeof db.prepare,
+    usingLocalLibsql,
+    localLibsqlReady,
+    tursoReady,
+    dbPath,
+    writable,
+  };
+}
+
 export default db;
 export { ensureTursoReady };
