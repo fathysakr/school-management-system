@@ -381,7 +381,7 @@ export default function TeachersPage() {
                 </FormControl>
               </Grid>
             )}
-            <Grid item xs={12}><TextField fullWidth label="تاريخ الميلاد" type="date" value={formData.date_of_birth} onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} InputLabelProps={{ shrink: true }} /></Grid>
+
             <Grid item xs={12}><TextField fullWidth label="العنوان" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} /></Grid>
           </Grid>
         </DialogContent>

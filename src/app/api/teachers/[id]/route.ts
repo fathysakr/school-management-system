@@ -76,11 +76,11 @@ export async function PUT(
 
     for (const field of allowedFields) {
       if (field in body && body[field] !== undefined && body[field] !== null) {
-        // Validate field
         if (field.includes('name')) {
           if (!body[field].trim()) continue;
           values.push(sanitizeString(body[field]));
         } else if (field === 'email') {
+          if (!body[field]) continue;
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(body[field])) return badRequest('صيغة البريد الإلكتروني غير صالحة');
           values.push(body[field]);
@@ -108,7 +108,7 @@ export async function PUT(
     values.push(id);
 
     // Prevent duplicate email
-    if ('email' in body) {
+    if (body.email) {
       const existingEmail = await db.prepare(
         'SELECT id FROM teachers WHERE email = ? AND id != ?'
       ).get(body.email, id);
