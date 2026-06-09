@@ -101,7 +101,7 @@ export default function ClassesPage() {
     if (cls) {
       setIsEdit(true);
       setSelectedClass(cls);
-      setFormData({ class_name: cls.class_name, grade: cls.grade, section: cls.section || '', teacher_id: cls.teacher_id.toString(), room_number: cls.room_number || '', capacity: cls.capacity?.toString() || '30' });
+      setFormData({ class_name: cls.class_name, grade: cls.grade, section: cls.section || '', teacher_id: cls.teacher_id?.toString() || '', room_number: cls.room_number || '', capacity: cls.capacity?.toString() || '30' });
     } else {
       setIsEdit(false);
       setFormData({ class_name: '', grade: '', section: '', teacher_id: '', room_number: '', capacity: '30' });
@@ -117,10 +117,10 @@ export default function ClassesPage() {
 
     try {
       if (isEdit && selectedClass) {
-        await api.put(`/classes/${selectedClass.id}`, formData, token);
+        await api.put(`/classes/${selectedClass.id}`, { ...formData, teacher_id: formData.teacher_id ? parseInt(formData.teacher_id) : null, capacity: parseInt(formData.capacity) }, token);
         setSuccess('تم تحديث الفصل بنجاح');
       } else {
-        await api.post('/classes', { ...formData, teacher_id: parseInt(formData.teacher_id), capacity: parseInt(formData.capacity) }, token);
+        await api.post('/classes', { ...formData, teacher_id: formData.teacher_id ? parseInt(formData.teacher_id) : null, capacity: parseInt(formData.capacity) }, token);
         setSuccess('تم إنشاء الفصل بنجاح');
       }
       setOpenDialog(false);
@@ -350,7 +350,7 @@ export default function ClassesPage() {
             <Grid item xs={12} sm={6}><FormControl fullWidth><InputLabel>المرحلة</InputLabel><Select value={formData.grade} label="المرحلة" onChange={(e) => setFormData({ ...formData, grade: e.target.value })}><MenuItem value="المتوسطة">المدرسة المتوسطة</MenuItem><MenuItem value="الثانوية">المدرسة الثانوية</MenuItem></Select></FormControl></Grid>
             <Grid item xs={12} sm={6}><TextField fullWidth label="القسم" value={formData.section} onChange={(e) => setFormData({ ...formData, section: e.target.value })} /></Grid>
             <Grid item xs={12} sm={6}><TextField fullWidth label="رقم القاعة" value={formData.room_number} onChange={(e) => setFormData({ ...formData, room_number: e.target.value })} /></Grid>
-            <Grid item xs={12}><FormControl fullWidth><InputLabel>المعلم</InputLabel><Select value={formData.teacher_id} label="المعلم" onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}>{teachingTeachers.length === 0 ? <MenuItem disabled>لا يوجد معلمون غير إداريين</MenuItem> : teachingTeachers.map((t) => (<MenuItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</MenuItem>))}</Select></FormControl></Grid>
+            <Grid item xs={12}><FormControl fullWidth><InputLabel>المعلم (اختياري)</InputLabel><Select value={formData.teacher_id} label="المعلم (اختياري)" onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}><MenuItem value="">بدون معلم</MenuItem>{teachingTeachers.length === 0 ? <MenuItem disabled>لا يوجد معلمون غير إداريين</MenuItem> : teachingTeachers.map((t) => (<MenuItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</MenuItem>))}</Select></FormControl></Grid>
             <Grid item xs={12}><TextField fullWidth label="السعة" type="number" value={formData.capacity} onChange={(e) => setFormData({ ...formData, capacity: e.target.value })} /></Grid>
           </Grid>
         </DialogContent>

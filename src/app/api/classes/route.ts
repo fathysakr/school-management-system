@@ -114,14 +114,17 @@ export async function POST(request: NextRequest) {
       return badRequest(`فشل التحقق من صحة البيانات: ${validation.errors[0].message}`);
     }
 
-    // Check teacher exists
-    const teacher = await db.prepare("SELECT id FROM teachers WHERE id = ? AND status = 'active'")
-      .get(body.teacher_id);
-    if (!teacher) {
-      return badRequest('المعلم غير موجود أو غير نشط');
-    }
-
     const { class_name, grade, section, teacher_id, room_number, capacity } = body;
+
+    // Check teacher exists if provided
+    const finalTeacherId = teacher_id ? parseInt(teacher_id) : null;
+    if (finalTeacherId) {
+      const teacher = await db.prepare("SELECT id FROM teachers WHERE id = ? AND status = 'active'")
+        .get(finalTeacherId);
+      if (!teacher) {
+        return badRequest('المعلم غير موجود أو غير نشط');
+      }
+    }
 
     // Check unique constraint
     const existing = await db.prepare(
@@ -140,7 +143,7 @@ export async function POST(request: NextRequest) {
       sanitizeString(class_name),
       sanitizeString(grade),
       section ? sanitizeString(section) : null,
-      teacher_id,
+      finalTeacherId,
       room_number ? sanitizeString(room_number) : null,
       capacity || 30
     );
