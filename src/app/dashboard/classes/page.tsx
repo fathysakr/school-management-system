@@ -41,6 +41,8 @@ export default function ClassesPage() {
   const [selectedImportIds, setSelectedImportIds] = useState<number[]>([]);
   const [importing, setImporting] = useState(false);
   const [uploadingClass, setUploadingClass] = useState<number | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<{ student_id: string; first_name: string; last_name: string }[]>([]);
+  const [uploadPreviewOpen, setUploadPreviewOpen] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
   const fetchClasses = async () => {
@@ -274,14 +276,27 @@ export default function ClassesPage() {
         }
       }
       if (parsed.length === 0) { setError('لم يتم العثور على طلاب في الملف'); return; }
-      const res = await api.post(`/classes/${uploadingClass}/upload`, { students: parsed }, token);
-      setSuccess(`تم استخراج ${parsed.length} طالب من الملف، إنشاء ${res.created||0} جديد، تسجيل ${res.enrolled||0} في الفصل، ${res.skipped||0} موجود مسبقاً، ${res.errors||0} خطأ`);
+      setUploadPreview(parsed);
+      setUploadPreviewOpen(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'فشل قراءة الملف');
+    }
+    if (e.target) e.target.value = '';
+  };
+
+  const handleUploadConfirm = async () => {
+    if (!token || uploadingClass === null) return;
+    setUploadPreviewOpen(false);
+    setError('');
+    try {
+      const res = await api.post(`/classes/${uploadingClass}/upload`, { students: uploadPreview }, token);
+      setSuccess(`تم استخراج ${uploadPreview.length} طالب من الملف، إنشاء ${res.created||0} جديد، تسجيل ${res.enrolled||0} في الفصل، ${res.skipped||0} موجود مسبقاً، ${res.errors||0} خطأ`);
       fetchClasses();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'فشل رفع الملف');
     }
     setUploadingClass(null);
-    if (e.target) e.target.value = '';
+    setUploadPreview([]);
   };
 
   const handleExportClassStudents = () => {
@@ -532,6 +547,44 @@ export default function ClassesPage() {
             disabled={selectedImportIds.length === 0 || importing} startIcon={<FileUpload />}>
             {importing ? 'جاري الاستيراد...' : 'استيراد'}
           </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={uploadPreviewOpen} onClose={() => { setUploadPreviewOpen(false); setUploadingClass(null); }} maxWidth="md" fullWidth>
+        <DialogTitle>معاينة الطلاب قبل الرفع</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            تم استخراج {uploadPreview.length} طالب من الملف. تأكد من البيانات قبل الرفع:
+          </Typography>
+          <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd' }}>رقم الطالب</th>
+                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd' }}>الاسم الأول</th>
+                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd' }}>اسم العائلة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {uploadPreview.slice(0, 200).map((s, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '6px 8px', borderBottom: '1px solid #eee' }}>{s.student_id}</td>
+                    <td style={{ padding: '6px 8px', borderBottom: '1px solid #eee' }}>{s.first_name}</td>
+                    <td style={{ padding: '6px 8px', borderBottom: '1px solid #eee' }}>{s.last_name}</td>
+                  </tr>
+                ))}
+                {uploadPreview.length > 200 && (
+                  <tr><td colSpan={3} style={{ padding: '8px', textAlign: 'center' }}>...و {uploadPreview.length - 200} طالب آخر</td></tr>
+                )}
+              </tbody>
+            </table>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+            إجمالي: {uploadPreview.length} طالب
+          </Typography>
+          <Button onClick={() => { setUploadPreviewOpen(false); setUploadingClass(null); setUploadPreview([]); }}>إلغاء</Button>
+          <Button variant="contained" onClick={handleUploadConfirm} startIcon={<CloudUpload />}>تأكيد الرفع</Button>
         </DialogActions>
       </Dialog>
       <input ref={uploadInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleClassUploadFile} style={{ display: 'none' }} />
