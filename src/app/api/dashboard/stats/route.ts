@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import db, { ensureTursoReady } from '@/lib/database';
+import db, { ensureTursoReady, getOrCreateTeacher } from '@/lib/database';
 import { authenticate, unauthorized, serverError, success } from '@/lib/auth';
 import { getSchoolStage, hasPermission } from '@/lib/permissions';
 import { cached } from '@/lib/cache';
@@ -82,9 +82,8 @@ export async function GET(request: NextRequest) {
     // Teacher-specific stats
     let teacherStats = null;
     if (isTeacher) {
-      const teacherRec = await db.prepare('SELECT COALESCE(u.teacher_id, t.id) as id FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ?').get(user.id) as any;
-      if (teacherRec?.id) {
-        const tid = teacherRec.id;
+      const tid = await getOrCreateTeacher(user);
+      if (tid) {
         const classFilter = "(c.teacher_id = ? OR c.id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = 'active') OR c.id IN (SELECT sc.class_id FROM subject_classes sc JOIN subjects s ON sc.subject_id = s.id WHERE s.teacher_id = ?))";
         const [myClasses, myStudents, myAttendance, myGradeStats, myPendingSubs, mySubjects] = await Promise.all([
           db.prepare(`SELECT COUNT(*) as c FROM classes WHERE status = 'active' AND (teacher_id = ? OR id IN (SELECT class_id FROM schedules WHERE teacher_id = ? AND status = 'active') OR id IN (SELECT sc.class_id FROM subject_classes sc JOIN subjects s ON sc.subject_id = s.id WHERE s.teacher_id = ?))`).get(tid, tid, tid),

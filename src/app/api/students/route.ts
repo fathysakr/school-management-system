@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import db, { ensureTursoReady } from '@/lib/database';
+import db, { ensureTursoReady, getOrCreateTeacher } from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, serverError, success } from '@/lib/auth';
 import { validateStudent, sanitizeString } from '@/lib/validation';
 import { hasPermission, getSchoolFilter, getSchoolStage } from '@/lib/permissions';
@@ -51,10 +51,10 @@ export async function GET(request: NextRequest) {
     // Auto-filter by teacher's classes for teacher roles
     const isTeacher = user.role === 'middle_teacher' || user.role === 'high_teacher';
     if (isTeacher) {
-      const teacherRec = await db.prepare('SELECT COALESCE(u.teacher_id, t.id) as id FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ?').get(user.id) as any;
-      if (teacherRec?.id) {
+      const tid = await getOrCreateTeacher(user);
+      if (tid) {
         whereClause += ' AND e.class_id IN (SELECT id FROM classes WHERE teacher_id = ? AND status = \'active\' UNION SELECT class_id FROM schedules WHERE teacher_id = ? AND status = \'active\' UNION SELECT sc.class_id FROM subject_classes sc JOIN subjects s ON sc.subject_id = s.id WHERE s.teacher_id = ?)';
-        params.push(teacherRec.id, teacherRec.id, teacherRec.id);
+        params.push(tid, tid, tid);
       }
     }
 

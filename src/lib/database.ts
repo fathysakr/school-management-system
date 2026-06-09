@@ -1444,6 +1444,27 @@ async function _ensureTursoReady() {
   } catch {}
 }
 
+export async function getOrCreateTeacher(user: { id: number; email: string; role: string }): Promise<number | null> {
+  let teacher = await db.prepare('SELECT COALESCE(u.teacher_id, t.id) as id FROM users u LEFT JOIN teachers t ON t.user_id = u.id WHERE u.id = ?').get(user.id) as any;
+  if (!teacher?.id) {
+    teacher = await db.prepare('SELECT id FROM teachers WHERE email = ?').get(user.email) as any;
+  }
+  if (!teacher?.id) {
+    try {
+      const name = user.email.includes('@') ? user.email.split('@')[0] : user.email;
+      const school = user.role.startsWith('middle_') ? 'middle' : 'high';
+      const tid = `${school === 'middle' ? 'M' : 'H'}-${name.toUpperCase()}`;
+      const r = await db.prepare('INSERT INTO teachers (teacher_id, user_id, first_name, last_name, email, school, status) VALUES (?,?,?,?,?,?,?)').run(tid, user.id, name, name, user.email, school, 'active');
+      await db.prepare('UPDATE users SET teacher_id = ? WHERE id = ?').run(Number(r.lastInsertRowid), user.id);
+      teacher = { id: Number(r.lastInsertRowid) };
+    } catch (e) {
+      console.error('Failed to auto-create teacher record:', e);
+      return null;
+    }
+  }
+  return teacher.id;
+}
+
 export function getDbStatus() {
   let dbPath = '';
   try { dbPath = findDbPath(); } catch {}
@@ -1472,4 +1493,4 @@ export function getDbStatus() {
 }
 
 export default db;
-export { ensureTursoReady };
+export { ensureTursoReady, getOrCreateTeacher };

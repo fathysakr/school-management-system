@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import db, { ensureTursoReady } from '@/lib/database';
+import db, { ensureTursoReady, getOrCreateTeacher } from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
 import { hasPermission, getSchoolFilter } from '@/lib/permissions';
@@ -99,13 +99,7 @@ export async function POST(request: NextRequest) {
     // Resolve teacher_id: use provided value or look up from authenticated user
     let teacher_id = bodyTeacherId ? parseInt(bodyTeacherId) : NaN;
     if (isNaN(teacher_id) || !teacher_id) {
-      const userRecord = await db.prepare(`
-        SELECT COALESCE(u.teacher_id, t.id) as tid
-        FROM users u
-        LEFT JOIN teachers t ON t.user_id = u.id
-        WHERE u.id = ?
-      `).get(user.id) as any;
-      teacher_id = userRecord?.tid || 0;
+      teacher_id = await getOrCreateTeacher(user) || 0;
       if (!teacher_id) {
         return badRequest('لم يتم ربط حسابك بسجل معلم في النظام');
       }
