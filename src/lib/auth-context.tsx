@@ -70,9 +70,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback((newToken: string, newUser: User) => {
     setToken(newToken);
     setUser(newUser);
+    setSelectedSchool('all');
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));
     localStorage.setItem('lastLogin', new Date().toISOString());
+    localStorage.removeItem('selectedSchool');
   }, []);
 
   const logout = useCallback(() => {
