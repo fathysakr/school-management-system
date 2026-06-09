@@ -255,43 +255,65 @@ export default function ClassesPage() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
       const parsed: { student_id: string; first_name: string; last_name: string }[] = [];
-      let debugInfo = '';
+      const isIdStr = (v: any) => typeof v === 'string' && /[a-zA-Z\u0600-\u06FF]/.test(v);
+      const hasDigit = (v: any) => /\d/.test(String(v));
       for (const sheetName of workbook.SheetNames) {
         const rows: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
         if (rows.length < 2) continue;
-        const firstRows = rows.slice(0, Math.min(5, rows.length)).map((r: any) => JSON.stringify(r)).join(' | ');
-        debugInfo += `ورقة "${sheetName}": ${rows.length} صف، أولها: ${firstRows}. `;
-        const couldBeId = (v: any) => /\d/.test(String(v));
-        const couldBeName = (v: any) => typeof v === 'string' && /[a-zA-Z\u0600-\u06FF\s]/.test(v) && !/^\d+$/.test(v.trim());
-        for (const row of rows) {
-          if (!row) continue;
-          const vals = (Array.isArray(row) ? row : Object.values(row)).filter((v: any) => v !== undefined && v !== null && v !== '');
-          if (vals.length < 2) continue;
-          let sid = '', fn = '', ln = '';
-          if (vals.length >= 3 && couldBeId(vals[0]) && couldBeName(vals[1]) && couldBeName(vals[2])) {
-            sid = String(vals[0]).trim(); fn = String(vals[1]).trim(); ln = String(vals[2]).trim();
-          } else if (vals.length >= 2 && couldBeId(vals[0]) && couldBeName(vals[1])) {
-            sid = String(vals[0]).trim();
-            const name = String(vals[1]).trim();
-            const parts = name.split(' ');
-            fn = parts[0] || name;
-            ln = parts.slice(1).join(' ') || parts[0] || name;
-          } else if (vals.length >= 2 && couldBeName(vals[0]) && couldBeId(vals[1])) {
-            sid = String(vals[1]).trim();
-            const name = String(vals[0]).trim();
-            const parts = name.split(' ');
-            fn = parts[0] || name;
-            ln = parts.slice(1).join(' ') || parts[0] || name;
+        const allRows = rows as any[][];
+        const headerRow = allRows[0];
+        const isHeader = Array.isArray(headerRow) && headerRow.some(h => typeof h === 'string' && (h.includes('رقم') || h.includes('اسم') || h.includes('طالب') || h.includes('student')));
+        let idCol = -1, nameCol = -1;
+        if (isHeader) {
+          for (let c = 0; c < headerRow.length; c++) {
+            const h = String(headerRow[c] || '');
+            if (h.includes('رقم')) idCol = c;
+            else if (h.includes('اسم')) nameCol = c;
           }
-          if (sid && sid.length >= 2 && fn && ln) {
-            parsed.push({ student_id: sid, first_name: fn, last_name: ln });
+          if (idCol === -1 && nameCol === -1) {
+            for (let c = 0; c < headerRow.length; c++) {
+              const h = String(headerRow[c] || '');
+              if (h.includes('طالب')) nameCol = c;
+            }
           }
         }
+        for (let i = isHeader ? 1 : 0; i < allRows.length; i++) {
+          const row = allRows[i];
+          if (!row) continue;
+          let sid = '', name = '';
+          if (idCol >= 0 && nameCol >= 0) {
+            sid = String(row[idCol] || '').trim();
+            name = String(row[nameCol] || '').trim();
+          } else {
+            const vals = Array.isArray(row) ? row.filter((v: any) => v !== undefined && v !== null && v !== '') : [];
+            if (vals.length < 2) continue;
+            if (vals.length === 2) {
+              if (hasDigit(vals[0]) && !hasDigit(vals[1])) { sid = String(vals[0]).trim(); name = String(vals[1]).trim(); }
+              else if (hasDigit(vals[1]) && !hasDigit(vals[0])) { sid = String(vals[1]).trim(); name = String(vals[0]).trim(); }
+              else { sid = String(vals[0]).trim(); name = String(vals[1]).trim(); }
+            } else {
+              const digitIdx = vals.findIndex((v: any) => hasDigit(v) && !isIdStr(v));
+              const textIdx = vals.findIndex((v: any) => isIdStr(v));
+              if (digitIdx >= 0 && textIdx >= 0) {
+                if (digitIdx < textIdx) { sid = String(vals[digitIdx]).trim(); name = String(vals[textIdx]).trim(); }
+                else { name = String(vals[textIdx]).trim(); sid = String(vals[digitIdx]).trim(); }
+              } else if (digitIdx >= 0) {
+                sid = String(vals[digitIdx]).trim();
+                name = vals.find((v: any, j: number) => j !== digitIdx && isIdStr(v));
+                name = String(name || '').trim();
+              } else {
+                sid = String(vals[0]).trim(); name = String(vals[1]).trim();
+              }
+            }
+          }
+          if (!sid || sid.length < 2 || !name) continue;
+          const parts = name.split(' ');
+          const fn = parts[0] || name;
+          const ln = parts.slice(1).join(' ') || fn;
+          parsed.push({ student_id: sid, first_name: fn, last_name: ln });
+        }
       }
-      if (parsed.length === 0) {
-        setError(`لم يتم العثور على طلاب في الملف. تفاصيل: ${debugInfo}`);
-        return;
-      }
+      if (parsed.length === 0) { setError('لم يتم العثور على طلاب في الملف'); return; }
       setUploadPreview(parsed);
       setUploadPreviewOpen(true);
     } catch (err: unknown) {
