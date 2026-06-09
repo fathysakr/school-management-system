@@ -9,20 +9,19 @@ export async function POST(request: NextRequest) {
     if (!user) return unauthorized();
     if (user.role !== 'admin') return forbidden('Admin only');
 
-    const { teacher_id } = await request.json() as { teacher_id?: number };
-    if (!teacher_id || typeof teacher_id !== 'number') {
+    const body = await request.json();
+    const teacherId = Number(body.teacher_id);
+    if (!teacherId) {
       return badRequest('معرف المدرس مطلوب');
     }
 
-    await db.transaction(async () => {
-      await db.prepare('UPDATE subjects SET teacher_id = NULL WHERE teacher_id = ?').run(teacher_id);
-      await db.prepare('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?').run(teacher_id);
-      await db.prepare('UPDATE teachers SET specialization = ? WHERE id = ?').run('[]', teacher_id);
-    })();
+    await db.prepare('UPDATE subjects SET teacher_id = NULL WHERE teacher_id = ?').run(teacherId);
+    await db.prepare('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?').run(teacherId);
+    await db.prepare('UPDATE teachers SET specialization = ? WHERE id = ?').run('[]', teacherId);
 
     return success({ message: 'تم إلغاء التعيينات بنجاح' });
   } catch (error) {
     console.error('Unassign teacher error:', error);
-    return serverError('فشل في إلغاء التعيينات');
+    return serverError('فشل في إلغاء التعيينات: ' + (error instanceof Error ? error.message : ''));
   }
 }
