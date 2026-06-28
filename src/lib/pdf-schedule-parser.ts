@@ -1,4 +1,4 @@
-import { PDFParse } from 'pdf-parse';
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 export interface ParsedEntry {
   classId: string;
@@ -39,81 +39,106 @@ function normalizeArabic(text: string): string {
 function parseCell(cell: string): { subject: string; teacher: string } | null {
   const lines = cell.split('\n').filter((l: string) => l.trim());
   if (lines.length < 2) return null;
-
   if (lines.length === 2) {
     return { subject: lines[0].trim(), teacher: lines[1].trim() };
   }
-
   if (lines.length === 3) {
     if (/^\d+$/.test(lines[1].trim())) {
       return { subject: lines[0].trim(), teacher: lines[2].trim() };
     }
     return { subject: lines[0].trim() + ' ' + lines[1].trim(), teacher: lines[2].trim() };
   }
-
   return { subject: lines[0].trim(), teacher: lines[lines.length - 1].trim() };
 }
 
+interface TextItem {
+  str: string;
+  x: number;
+  y: number;
+}
+
+function extractTextItems(ctx: { textContent: any }): TextItem[] {
+  const items: TextItem[] = [];
+  for (const item of (ctx.textContent?.items || []) as any[]) {
+    const tx = item.transform;
+    items.push({ str: normalizeArabic(item.str), x: tx[4], y: tx[5] });
+  }
+  return items.sort((a, b) => b.y - a.y || a.x - b.x);
+}
+
+function buildGrid(items: TextItem[], rowGap = 6, colGap = 10): string[][] {
+  const rows: { y: number; cells: Map<number, string[]> }[] = [];
+  for (const item of items) {
+    let row = rows.find(r => Math.abs(r.y - item.y) < rowGap);
+    if (!row) { row = { y: item.y, cells: new Map() }; rows.push(row); }
+    let col = -1;
+    for (const [cx] of row.cells) {
+      if (Math.abs(item.x - cx) < colGap) { col = cx; break; }
+    }
+    if (col < 0) col = item.x;
+    if (!row.cells.has(col)) row.cells.set(col, []);
+    row.cells.get(col)!.push(item.str);
+  }
+  rows.sort((a, b) => b.y - a.y);
+  const grid: string[][] = [];
+  for (const row of rows) {
+    const cols = Array.from(row.cells.entries()).sort(([a], [b]) => a - b);
+    grid.push(cols.map(([, texts]) => texts.join(' ')));
+  }
+  return grid;
+}
+
 export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedule> {
-  const instance = new PDFParse(buffer);
-  await (instance as any).load();
-
-  const [tablesResult, textResult] = await Promise.all([
-    instance.getTable(),
-    instance.getText(),
-  ]) as any;
-
-  const pages = tablesResult?.pages;
-  if (!pages?.length) throw new Error('لم يتم العثور على جداول في ملف PDF');
-
-  const textPages = textResult?.pages || [];
-
+  const doc = await pdfjs.getDocument({ data: buffer }).promise;
   const entries: ParsedEntry[] = [];
   const subjectsSet = new Set<string>();
   const teachersSet = new Set<string>();
   const classesMap = new Map<string, { grade: string; section: string }>();
 
-  const classIdByNum = new Map<number, string>();
-  for (const tp of textPages) {
-      const lines = normalizeArabic(tp.text).split('\n').filter((l: string) => l.trim());
-    const last = lines[lines.length - 1]?.trim();
-    if (last && /^\d+-\d+$/.test(last)) {
-      classIdByNum.set(tp.num, last);
-    }
-  }
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const textContent = await page.getTextContent();
+    const items = extractTextItems({ textContent });
+    const allText = items.map(it => it.str).join(' ');
 
-  for (const page of pages) {
-    const t = page.tables?.[0];
-    if (!t || t.length < 6) continue;
-
-    const classId = classIdByNum.get(page.num);
-    if (!classId) continue;
-
+    const classIdMatch = allText.match(/(\d+-\d+)\s*$/);
+    if (!classIdMatch) { page.cleanup(); continue; }
+    const classId = classIdMatch[1];
     const [grade, section] = classId.split('-');
     if (!classesMap.has(classId)) classesMap.set(classId, { grade, section });
 
-    for (let dayIdx = 1; dayIdx <= 5; dayIdx++) {
-      const row = t[dayIdx];
-      if (!row || row.length < 8) continue;
+    const grid = buildGrid(items);
+    if (grid.length < 6) { page.cleanup(); continue; }
 
-      const dayLabel = normalizeArabic(row[row.length - 1]?.trim() || '');
-      const day = DAY_MAP[dayLabel];
-      if (!day) continue;
+    const dayRows: { day: string; cells: string[] }[] = [];
+    for (const row of grid) {
+      const joined = row.join(' ');
+      for (const [label, dayKey] of Object.entries(DAY_MAP)) {
+        if (joined.includes(label)) {
+          dayRows.push({ day: dayKey, cells: row });
+          break;
+        }
+      }
+    }
 
-      for (let colIdx = 0; colIdx < 7; colIdx++) {
-        const cell = normalizeArabic(row[colIdx] || '');
-        const periodNum = 7 - colIdx;
+    for (const dr of dayRows) {
+      const cells = dr.cells;
+      const dayColIdx = cells.findIndex(c => Object.keys(DAY_MAP).some(k => c.includes(k)));
+      let periodCells = cells;
+      if (dayColIdx >= 0) {
+        periodCells = cells.slice(0, dayColIdx);
+      }
+      for (let ci = 0; ci < periodCells.length; ci++) {
+        const periodNum = periodCells.length - ci;
         const periodIdx = periodNum - 1;
         if (periodIdx < 0 || periodIdx >= PERIOD_TIMES.length) continue;
-
-        const parsed = parseCell(cell);
+        const parsed = parseCell(periodCells[ci]);
         if (!parsed) continue;
-
         subjectsSet.add(parsed.subject);
         teachersSet.add(parsed.teacher);
         entries.push({
           classId,
-          day,
+          day: dr.day,
           period: periodNum,
           startTime: PERIOD_TIMES[periodIdx].start,
           endTime: PERIOD_TIMES[periodIdx].end,
@@ -122,6 +147,7 @@ export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedu
         });
       }
     }
+    page.cleanup();
   }
 
   if (entries.length === 0) throw new Error('لم يتم استخراج أي بيانات جدول من PDF');
