@@ -4,6 +4,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  experimental: {
+    serverComponentsExternalPackages: ['pdf-parse', 'pdfjs-dist'],
+  },
   headers: async () => {
     return [
       {

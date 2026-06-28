@@ -56,4 +56,15 @@ export const api = {
 
   delete: (endpoint: string, token?: string | null, body?: unknown) =>
     apiRequest(endpoint, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined, token: token ?? undefined }),
+
+  upload: async (endpoint: string, formData: FormData, token?: string | null) => {
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(`${API_URL}${endpoint}`, { method: 'POST', headers, body: formData });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `Request failed with status ${response.status}`);
+    }
+    return response.json();
+  },
 };

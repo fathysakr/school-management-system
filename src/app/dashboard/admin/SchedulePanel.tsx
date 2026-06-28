@@ -2,10 +2,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box, Typography, Paper, Button, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Alert, CircularProgress,
+  DialogActions, TextField, Alert, CircularProgress, IconButton,
   FormControl, InputLabel, Select, MenuItem, Tabs, Tab, Grid, Chip
 } from '@mui/material';
-import { Add, CalendarToday, FileDownload, AutoAwesome, Person, School, MeetingRoom } from '@mui/icons-material';
+import { Add, CalendarToday, FileDownload, AutoAwesome, Person, School, MeetingRoom, CloudUpload, Close as CloseIcon } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
@@ -53,6 +53,14 @@ export default function SchedulePanel() {
   const [genClear, setGenClear] = useState(true);
   const [genLoading, setGenLoading] = useState(false);
   const [genResult, setGenResult] = useState<any>(null);
+
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfSchool, setPdfSchool] = useState('middle');
+  const [pdfClear, setPdfClear] = useState(true);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfResult, setPdfResult] = useState<any>(null);
+  const [pdfDragOver, setPdfDragOver] = useState(false);
 
   const loadData = useCallback(() => {
     if (!token) return;
@@ -271,6 +279,7 @@ export default function SchedulePanel() {
         </Box>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button size="small" variant="contained" color="success" startIcon={<AutoAwesome />} onClick={() => setGenDialogOpen(true)}>توليد</Button>
+          <Button size="small" variant="contained" color="info" startIcon={<CloudUpload />} onClick={() => { setPdfDialogOpen(true); setPdfFile(null); setPdfResult(null); }}>PDF</Button>
           <Button size="small" variant="outlined" startIcon={<FileDownload />} onClick={handleExport}>تصدير</Button>
           <Button size="small" variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>إضافة</Button>
         </Box>
@@ -336,6 +345,87 @@ export default function SchedulePanel() {
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setGenDialogOpen(false)} disabled={genLoading}>إلغاء</Button>
           <Button variant="contained" color="success" onClick={handleGenerate} disabled={genLoading} startIcon={genLoading ? <CircularProgress size={18} /> : <AutoAwesome />}>{genLoading ? 'جاري التوليد...' : 'بدء التوليد'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={pdfDialogOpen} onClose={() => !pdfLoading && setPdfDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ bgcolor: 'info.main', color: 'white' }}>
+          <CloudUpload sx={{ verticalAlign: 'middle', ml: 1 }} />استيراد جدول من PDF
+          <IconButton onClick={() => setPdfDialogOpen(false)} sx={{ position: 'absolute', left: 8, top: 8, color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: '24px !important' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            قم برفع ملف PDF للجدول الدراسي (من برنامج aSc Timetables) ليتم استيراد جميع الحصص والمواد والمعلمين تلقائياً.
+          </Typography>
+          <Box
+            sx={{
+              border: '2px dashed', borderRadius: 2, p: 4, textAlign: 'center', cursor: 'pointer', mb: 2,
+              borderColor: pdfDragOver ? 'info.main' : pdfFile ? 'success.main' : 'grey.400',
+              bgcolor: pdfDragOver ? '#e3f2fd' : 'grey.50',
+              transition: '0.2s',
+            }}
+            onDragOver={(e) => { e.preventDefault(); setPdfDragOver(true); }}
+            onDragLeave={() => setPdfDragOver(false)}
+            onDrop={(e) => { e.preventDefault(); setPdfDragOver(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.pdf')) setPdfFile(f); }}
+            onClick={() => document.getElementById('pdf-upload-input-admin')?.click()}
+          >
+            <input id="pdf-upload-input-admin" type="file" accept=".pdf" hidden
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) setPdfFile(f); }} />
+            <CloudUpload sx={{ fontSize: 48, color: pdfFile ? 'success.main' : 'text.disabled', mb: 1 }} />
+            <Typography color={pdfFile ? 'success.main' : 'text.secondary'}>
+              {pdfFile ? pdfFile.name : 'اسحب ملف PDF هنا أو اضغط للاختيار'}
+            </Typography>
+          </Box>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small"><InputLabel>المرحلة</InputLabel>
+                <Select value={pdfSchool} label="المرحلة" onChange={(e) => setPdfSchool(e.target.value)}>
+                  <MenuItem value="middle">متوسط</MenuItem><MenuItem value="high">ثانوي</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small"><InputLabel>الاستيراد</InputLabel>
+                <Select value={pdfClear ? 'clear' : 'keep'} label="الاستيراد" onChange={(e) => setPdfClear(e.target.value === 'clear')}>
+                  <MenuItem value="clear">مسح الجدول الحالي</MenuItem>
+                  <MenuItem value="keep">إضافة للفصول الفارغة</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+          {pdfResult && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              <Typography fontWeight="bold" gutterBottom>تم الاستيراد</Typography>
+              <Typography variant="caption" display="block">الفصول: {pdfResult.summary.classes} (جديد: {pdfResult.summary.created_classes})</Typography>
+              <Typography variant="caption" display="block">المعلمون: {pdfResult.summary.teachers} (جديد: {pdfResult.summary.created_teachers})</Typography>
+              <Typography variant="caption" display="block">المواد: {pdfResult.summary.subjects} (جديد: {pdfResult.summary.created_subjects})</Typography>
+              <Typography variant="caption" display="block">الحصص المدرجة: {pdfResult.summary.schedules}</Typography>
+              {pdfResult.summary.skipped_existing > 0 && <Typography variant="caption" display="block">تخطي: {pdfResult.summary.skipped_existing} موجودة</Typography>}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setPdfDialogOpen(false)} disabled={pdfLoading}>إلغاء</Button>
+          <Button variant="contained" color="info"
+            onClick={async () => {
+              if (!token || !pdfFile) return;
+              setPdfLoading(true); setPdfResult(null);
+              try {
+                const fd = new FormData();
+                fd.append('file', pdfFile);
+                fd.append('school', pdfSchool);
+                fd.append('clear_existing', String(pdfClear));
+                const res = await api.upload('/schedules/upload-pdf', fd, token);
+                setPdfResult(res);
+                loadData();
+              } catch (err: any) { setError(err?.message || 'فشل استيراد PDF'); }
+              finally { setPdfLoading(false); }
+            }}
+            disabled={pdfLoading || !pdfFile}
+            startIcon={pdfLoading ? <CircularProgress size={18} /> : <CloudUpload />}
+          >{pdfLoading ? 'جاري...' : 'استيراد'}</Button>
         </DialogActions>
       </Dialog>
     </Box>
