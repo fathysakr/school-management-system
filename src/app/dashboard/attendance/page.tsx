@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
@@ -61,7 +61,7 @@ export default function AttendancePage() {
     }
   };
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = useCallback(async () => {
     if (!token) return;
     try {
       const params = new URLSearchParams();
@@ -75,17 +75,17 @@ export default function AttendancePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, filters.class_id, filters.date, filters.period, schoolParam]);
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     if (!token) return;
     try {
       const res = await api.get(`/classes?page=1&limit=100${schoolParam}`, token);
       setClasses(res.classes || []);
     } catch {}
-  };
+  }, [token, schoolParam]);
 
-  useEffect(() => { fetchAttendance(); fetchClasses(); }, [token, filters.class_id, filters.date, filters.period]);
+  useEffect(() => { fetchAttendance(); fetchClasses(); }, [token, filters.class_id, filters.date, filters.period, fetchAttendance, fetchClasses]);
 
   // Load students when class_id changes and populate attendance map
   useEffect(() => {
@@ -112,7 +112,7 @@ export default function AttendancePage() {
       }
     };
     load();
-  }, [filters.class_id]);
+  }, [filters.class_id, token, records]);
 
   // Update map when records change (from fetch)
   useEffect(() => {
@@ -124,7 +124,7 @@ export default function AttendancePage() {
       }
       return newMap;
     });
-  }, [records]);
+  }, [records, students]);
 
   const handleBulkSave = async () => {
     if (!token || !filters.class_id || students.length === 0) return;

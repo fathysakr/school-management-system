@@ -42,7 +42,7 @@ export default function SubstitutionsPage() {
     api.get(`/teachers?page=1&limit=200${schoolParam}`, token)
       .then(res => setTeachers(res.teachers || []))
       .catch(() => setError('فشل تحميل المعلمين'));
-  }, [token, canView]);
+  }, [token, canView, schoolParam]);
 
   const fetchHistory = useCallback(async () => {
     if (!token || !canView) return;

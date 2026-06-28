@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box, Typography, Paper, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Chip, Alert, CircularProgress, Table, TableBody,
@@ -26,7 +26,7 @@ export default function SubstitutionPanel() {
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState<any>(null);
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     if (!token) return;
     setLoading(true);
     let cancelled = false;
@@ -38,8 +38,8 @@ export default function SubstitutionPanel() {
     }).catch(() => { if (!cancelled) setError('فشل تحميل البدائل'); })
     .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  };
-  useEffect(() => { loadData() }, []);
+  }, [token]);
+  useEffect(() => { loadData() }, [loadData]);
 
   const stats = useMemo(() => ({
     total: allSubs.length,

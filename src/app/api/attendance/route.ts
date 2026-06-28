@@ -3,6 +3,7 @@ import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
 import { hasPermission, getSchoolFilter } from '@/lib/permissions';
+import { createNotification } from '@/lib/notifications';
 
 
 export async function GET(request: NextRequest) {
@@ -73,8 +74,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { student_id, class_id, attendance_date, period, status, remarks } = body;
-    const periodVal = period ? parseInt(period) : 1;
-    if (period && isNaN(periodVal)) return badRequest('رقم الحصة غير صالح');
+    const periodVal = period !== undefined && period !== null && period !== '' ? parseInt(period) : 1;
+    if (period !== undefined && period !== null && period !== '' && isNaN(periodVal)) return badRequest('رقم الحصة غير صالح');
 
     if (!student_id || !class_id || !attendance_date || !status) {
       return badRequest('معرف الطالب والفصل والتاريخ والحالة مطلوبة');
@@ -150,8 +151,8 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
     const { class_id, attendance_date, period, records } = body;
-    const periodVal = period ? parseInt(period) : 1;
-    if (period && isNaN(periodVal)) return badRequest('رقم الحصة غير صالح');
+    const periodVal = period !== undefined && period !== null && period !== '' ? parseInt(period) : 1;
+    if (period !== undefined && period !== null && period !== '' && isNaN(periodVal)) return badRequest('رقم الحصة غير صالح');
 
     if (!class_id || !attendance_date || !Array.isArray(records)) {
       return badRequest('معرف الفصل والتاريخ وسجل الحضور مطلوبة');
@@ -226,7 +227,6 @@ async function notifyEscapeAlert(student_id: number, class_id: number, attendanc
     ).all(supervisorRole, counselorRole) as any[];
 
     for (const u of targetUsers) {
-      const { createNotification } = await import('@/lib/notifications');
       await createNotification(u.id, title, message, 'urgent', '/dashboard/attendance');
     }
   } catch (err) {

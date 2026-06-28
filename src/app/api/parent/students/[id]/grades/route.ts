@@ -32,7 +32,8 @@ export async function GET(
       ORDER BY g.created_at DESC
     `).all(studentId) as any[];
 
-    return success({ grades });
+    const studentName = `${student.first_name} ${student.last_name}`;
+    return success({ grades, student_name: studentName });
   } catch (error) {
     console.error('Get student grades error:', error);
     return serverError('فشل في جلب درجات الطالب');

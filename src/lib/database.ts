@@ -1493,4 +1493,4 @@ export function getDbStatus() {
 }
 
 export default db;
-export { ensureTursoReady, getOrCreateTeacher };
+export { ensureTursoReady };

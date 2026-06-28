@@ -33,10 +33,11 @@ export async function POST(req: NextRequest) {
       const cls = classes.length > 0 ? classes[Math.floor(Math.random() * classes.length)] : null;
       const schoolStage = cls ? (cls.grade?.includes('متوسط') ? 'middle' : 'high') : (school === 'all' ? (i % 2 === 0 ? 'middle' : 'high') : school);
 
+      const dob = new Date(Date.now() - (14 + Math.floor(Math.random() * 4)) * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const result = await db.prepare(
-        `INSERT INTO students (student_id, first_name, last_name, email, phone, school, status)
-         VALUES (?, ?, ?, ?, ?, ?, 'active')`
-      ).run(sid, firstName, lastName, `${sid}@example.com`, `05${Math.floor(10000000 + Math.random() * 90000000)}`, schoolStage);
+        `INSERT INTO students (student_id, first_name, last_name, date_of_birth, email, phone, school, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'active')`
+      ).run(sid, firstName, lastName, dob, `${sid}@example.com`, `05${Math.floor(10000000 + Math.random() * 90000000)}`, schoolStage);
       const studentId = result.lastInsertRowid as number;
 
       if (cls && studentId) {

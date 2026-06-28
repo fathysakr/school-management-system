@@ -14,10 +14,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const school = searchParams.get('school') || '';
 
-    const roleConditions = MANAGEMENT_ROLES.map(r => `u.role = '${r}'`).join(' OR ');
-
-    let whereClause = `WHERE (${roleConditions})`;
-    const params: any[] = [];
+    let whereClause = 'WHERE (u.role IN (' + MANAGEMENT_ROLES.map(() => '?').join(',') + '))';
+    const params: any[] = [...MANAGEMENT_ROLES];
 
     if (school) {
       whereClause += ' AND (t.school = ? OR t.school IS NULL)';

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box, Typography, Paper, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Alert, CircularProgress,
@@ -54,7 +54,7 @@ export default function SchedulePanel() {
   const [genLoading, setGenLoading] = useState(false);
   const [genResult, setGenResult] = useState<any>(null);
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     if (!token) return;
     setLoading(true);
     let cancelled = false;
@@ -69,8 +69,8 @@ export default function SchedulePanel() {
     }).catch(() => { if (!cancelled) setError('فشل تحميل الجداول'); })
     .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  };
-  useEffect(() => { loadData() }, []);
+  }, [token]);
+  useEffect(() => { loadData() }, [loadData]);
 
   const uniqueRooms = useMemo(() => [...new Set(schedules.filter(s => s.room_number).map(s => s.room_number))].sort(), [schedules]);
   const uniqueSubjects = useMemo(() => [...new Set(schedules.map(s => s.subject))].sort(), [schedules]);

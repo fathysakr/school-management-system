@@ -33,7 +33,8 @@ export async function GET(
       ORDER BY r.created_at DESC
     `).all(studentId) as any[];
 
-    return success({ reports });
+    const studentName = `${student.first_name} ${student.last_name}`;
+    return success({ reports, student_name: studentName });
   } catch (error) {
     console.error('Get student reports error:', error);
     return serverError('فشل في جلب تقارير الطالب');

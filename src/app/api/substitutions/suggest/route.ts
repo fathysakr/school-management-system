@@ -9,7 +9,7 @@ function getDayOfWeek(dateStr: string): string | null {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return null;
   const day = d.getDay();
-  return DAY_NAMES[day === 6 ? 0 : day + 1] || null;
+  return DAY_NAMES[day] || null;
 }
 
 export async function POST(request: NextRequest) {

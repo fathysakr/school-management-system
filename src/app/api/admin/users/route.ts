@@ -3,7 +3,7 @@ import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, hashPassword, forbidden, unauthorized, badRequest, notFound, serverError, success } from '@/lib/auth';
 import { sanitizeString } from '@/lib/validation';
 
-const ALLOWED_ROLES = ['middle_supervisor', 'high_supervisor', 'middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal'];
+const ALLOWED_ROLES = ['admin', 'middle_supervisor', 'high_supervisor', 'middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor', 'middle_principal', 'high_principal', 'middle_monitor', 'high_monitor', 'middle_admin_staff', 'high_admin_staff'];
 
 export async function GET(request: NextRequest) {
   try {

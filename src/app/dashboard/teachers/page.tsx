@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
@@ -56,7 +56,7 @@ export default function TeachersPage() {
   const [importTab, setImportTab] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchTeachers = async () => {
+  const fetchTeachers = useCallback(async () => {
     if (!token) return;
     try {
       const res = await api.get(`/teachers?page=${page + 1}&limit=${rowsPerPage}${schoolParam}`, token);
@@ -67,9 +67,9 @@ export default function TeachersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, page, rowsPerPage, schoolParam]);
 
-  useEffect(() => { fetchTeachers(); }, [token, page, rowsPerPage]);
+  useEffect(() => { fetchTeachers(); }, [token, page, rowsPerPage, fetchTeachers]);
 
   const handleOpenDialog = (teacher?: any) => {
     if (teacher) {
@@ -151,7 +151,7 @@ export default function TeachersPage() {
     if (passwordForm.password.length < 6) { setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
     try {
       await api.put(`/admin/users?id=${passwordDialog.teacher.user_id}`, { password: passwordForm.password }, token);
-      setSuccess(`تم تغيير كلمة المرور للمعلم ${passwordDialog.teacher.first_name} ${passwordDialog.teacher.last_name}\nكلمة المرور الجديدة: ${passwordForm.password}`);
+      setSuccess(`تم تغيير كلمة المرور للمعلم ${passwordDialog.teacher.first_name} ${passwordDialog.teacher.last_name}`);
       setPasswordDialog(null);
       setPasswordForm({ password: '', show: false });
     } catch { setError('فشل تغيير كلمة المرور'); }

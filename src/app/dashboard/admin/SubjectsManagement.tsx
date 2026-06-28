@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Paper, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Select, MenuItem, FormControl, InputLabel, Chip, CircularProgress, Alert,
@@ -24,7 +24,7 @@ export default function SubjectsManagement() {
   const [message, setMessage] = useState('');
   const [schoolFilter, setSchoolFilter] = useState('high');
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     if (!token) return;
     let cancelled = false;
     api.get(`/subjects?school=${schoolFilter}`, token).then((s: any) => {
@@ -43,9 +43,9 @@ export default function SubjectsManagement() {
       if (!cancelled) setMessage('فشل تحميل الفصول');
     });
     setLoading(false);
-  };
+  }, [token, schoolFilter]);
 
-  useEffect(() => { loadData() }, [token, schoolFilter]);
+  useEffect(() => { loadData() }, [loadData]);
 
   const openAdd = () => {
     setEditing(null);

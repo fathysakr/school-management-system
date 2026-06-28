@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
@@ -163,16 +163,16 @@ export default function ReportsPage() {
       } catch {}
     };
     fetchMeta();
-  }, [token, canEditReport]);
+  }, [token, canEditReport, schoolParam]);
 
   useEffect(() => {
     if (!token || !selectedClass) { setStudents([]); return; }
     api.get(`/students?page=1&limit=200&class_id=${selectedClass}${schoolParam}`, token)
       .then(res => setStudents(res.students || []))
       .catch(() => setError('فشل تحميل الطلاب'));
-  }, [token, selectedClass]);
+  }, [token, selectedClass, schoolParam]);
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
@@ -189,9 +189,9 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, currentType, selectedClass, selectedStudent, selectedTeacher, schoolParam]);
 
-  useEffect(() => { fetchReports(); }, [token, currentType, selectedClass, selectedStudent, selectedTeacher]);
+  useEffect(() => { fetchReports(); }, [token, currentType, selectedClass, selectedStudent, selectedTeacher, fetchReports]);
 
   const dialogStudents = useMemo(() => {
     if (!formData.class_id) return allStudents;

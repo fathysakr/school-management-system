@@ -32,7 +32,8 @@ export async function GET(
       LIMIT 1
     `).get(studentId) as any;
 
-    if (!enrollment) return success({ schedule: [] });
+    const studentName = `${student.first_name} ${student.last_name}`;
+    if (!enrollment) return success({ schedule: [], student_name: studentName });
 
     const schedule = await db.prepare(`
       SELECT s.subject, s.day_of_week, s.start_time, s.end_time, s.room_number,
@@ -43,7 +44,7 @@ export async function GET(
       ORDER BY s.day_of_week, s.start_time
     `).all(enrollment.class_id) as any[];
 
-    return success({ schedule });
+    return success({ schedule, student_name: studentName });
   } catch (error) {
     console.error('Get student schedule error:', error);
     return serverError('فشل في جلب جدول الطالب');

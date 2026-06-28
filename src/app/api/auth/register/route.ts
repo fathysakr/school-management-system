@@ -16,6 +16,11 @@ export async function POST(request: NextRequest) {
       return badRequest('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return badRequest('البريد الإلكتروني غير صالح');
+    }
+
     const ALLOWED_SELF_REGISTER_ROLES = ['middle_teacher', 'high_teacher', 'middle_counselor', 'high_counselor'];
     const role = ALLOWED_SELF_REGISTER_ROLES.includes(rawRole) ? rawRole : 'middle_teacher';
 

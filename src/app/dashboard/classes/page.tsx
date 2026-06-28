@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
@@ -45,7 +45,7 @@ export default function ClassesPage() {
   const [uploadPreviewOpen, setUploadPreviewOpen] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     if (!token) return;
     try {
       const res = await api.get(`/classes?page=1&limit=500${schoolParam}`, token);
@@ -55,17 +55,17 @@ export default function ClassesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, schoolParam]);
 
-  const fetchTeachers = async () => {
+  const fetchTeachers = useCallback(async () => {
     if (!token) return;
     try {
       const res = await api.get(`/teachers?page=1&limit=100${schoolParam}`, token);
       setTeachers(res.teachers || []);
     } catch {}
-  };
+  }, [token, schoolParam]);
 
-  useEffect(() => { fetchClasses(); fetchTeachers(); }, [token]);
+  useEffect(() => { fetchClasses(); fetchTeachers(); }, [token, fetchClasses, fetchTeachers]);
 
   const gradeGroups = useMemo(() => {
     const map: Record<string, any[]> = {};

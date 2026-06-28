@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const { name, school, sessions_per_week, teacher_id } = body;
     if (!name || !school) return badRequest('اسم المادة والمرحلة مطلوبان');
     if (!['middle', 'high'].includes(school)) return badRequest('المرحلة غير صحيحة');
-    const existing = await db.prepare('SELECT id FROM subjects WHERE name = ? AND school = ? AND grade IS NOT DISTINCT FROM ?').get(name, school, body.grade || null) as any;
+    const existing = await db.prepare('SELECT id FROM subjects WHERE name = ? AND school = ? AND (grade = ? OR (grade IS NULL AND ? IS NULL))').get(name, school, body.grade || null, body.grade || null) as any;
     if (existing) return badRequest('المادة موجودة مسبقاً');
     const stmt = await db.prepare(
       'INSERT INTO subjects (name, school, sessions_per_week, grade, teacher_id) VALUES (?, ?, ?, ?, ?)'

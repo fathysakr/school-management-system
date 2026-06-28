@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           const fn = parts[0] || firstName;
           const ln = parts.slice(1).join(' ') || lastName || firstName;
           const r = await db.prepare(`INSERT INTO students (student_id, first_name, last_name, date_of_birth, enrollment_date, school, semester, status, grade) VALUES (?,?,?,?,?,?,?,?,?)`).run(
-            studentId, fn, ln, '2007-01-01', new Date().toISOString().split('T')[0], classRow.grade.includes('ثانوي') ? 'high' : 'middle', '', 'active', classRow.grade
+            studentId, fn, ln, s.date_of_birth || new Date(Date.now() - 14 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], new Date().toISOString().split('T')[0], classRow.grade.includes('ثانوي') ? 'high' : 'middle', '', 'active', classRow.grade
           );
           studentDbId = r.lastInsertRowid as number;
           created++;

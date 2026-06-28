@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
@@ -47,7 +47,7 @@ export default function GradesPage() {
   const canEditGrade = hasPermission(user?.role, 'grades:edit');
   const canDeleteGrade = hasPermission(user?.role, 'grades:delete');
 
-  const fetchGrades = async () => {
+  const fetchGrades = useCallback(async () => {
     if (!token) return;
     try {
       const params = new URLSearchParams();
@@ -61,25 +61,25 @@ export default function GradesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, filters.student_id, filters.class_id, filters.subject, schoolParam]);
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     if (!token) return;
     try {
       const res = await api.get(`/students?page=1&limit=100${schoolParam}`, token);
       setStudents(res.students || []);
     } catch {}
-  };
+  }, [token, schoolParam]);
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     if (!token) return;
     try {
       const res = await api.get(`/classes?page=1&limit=100${schoolParam}`, token);
       setClasses(res.classes || []);
     } catch {}
-  };
+  }, [token, schoolParam]);
 
-  useEffect(() => { fetchGrades(); fetchStudents(); fetchClasses(); }, [token, filters.student_id, filters.class_id, filters.subject]);
+  useEffect(() => { fetchGrades(); fetchStudents(); fetchClasses(); }, [token, filters.student_id, filters.class_id, filters.subject, fetchGrades, fetchStudents, fetchClasses]);
 
   const handleSubmit = async () => {
     if (!token) return;

@@ -31,7 +31,8 @@ export async function GET(
       ORDER BY a.attendance_date DESC
     `).all(studentId) as any[];
 
-    return success({ attendance });
+    const studentName = `${student.first_name} ${student.last_name}`;
+    return success({ attendance, student_name: studentName });
   } catch (error) {
     console.error('Get student attendance error:', error);
     return serverError('فشل في جلب سجل الحضور');

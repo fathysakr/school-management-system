@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -105,7 +105,7 @@ export default function DashboardPage() {
 
   const todayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'][new Date().getDay() === 6 ? 0 : new Date().getDay() - 1] || 'sunday';
 
-  const fetchAll = async (silent = false) => {
+  const fetchAll = useCallback(async (silent = false) => {
     if (!token) return;
     if (!silent) setLoading(true);
     else setRefreshing(true);
@@ -153,13 +153,13 @@ export default function DashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [token, schoolParam, todayKey, isTeacher]);
 
   useEffect(() => {
     if (!token) return;
     setLastLogin(localStorage.getItem('lastLogin') || '');
     fetchAll();
-  }, [token, todayKey, selectedSchool]);
+  }, [token, todayKey, selectedSchool, fetchAll]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';

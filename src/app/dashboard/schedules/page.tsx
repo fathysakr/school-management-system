@@ -84,7 +84,7 @@ export default function SchedulesPage() {
       setClasses(classesRes.classes || []);
       setTeachers(teachersRes.teachers || []);
     }).catch(() => setError('فشل في جلب البيانات'));
-  }, [token]);
+  }, [token, schoolParam]);
 
   useEffect(() => {
     if (!token) return;
@@ -93,7 +93,7 @@ api.get(`/schedules${selectedClass ? `?class_id=${selectedClass}${schoolParam}` 
       .then(res => setSchedules(res.schedules || []))
       .catch(() => setError('فشل في جلب الجدول'))
       .finally(() => setLoading(false));
-  }, [token, selectedClass]);
+  }, [token, selectedClass, schoolParam]);
 
   const timeSlots = Array.from({ length: 8 }, (_, i) => {
     const start = 8 + i;

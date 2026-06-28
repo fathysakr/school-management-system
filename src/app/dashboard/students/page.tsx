@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
@@ -44,7 +44,7 @@ export default function StudentsPage() {
   const [importTab, setImportTab] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     if (!token) return;
     try {
       const [studentsRes, classesRes] = await Promise.all([
@@ -59,9 +59,9 @@ export default function StudentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, schoolParam]);
 
-  useEffect(() => { fetchStudents(); }, [token]);
+  useEffect(() => { fetchStudents(); }, [token, fetchStudents]);
 
   const parsePhones = (student: any): string[] => {
     if (student.parent_phones) {

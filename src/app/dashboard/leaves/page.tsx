@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
@@ -47,20 +47,20 @@ export default function LeavesPage() {
   const [message, setMessage] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    if (!token) return;
-    loadLeaves();
-  }, [user, token]);
-
-  const loadLeaves = async () => {
+  const loadLeaves = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get('/leaves', token);
       setLeaves(res.leaves || []);
     } catch { setMessage('فشل تحميل الإجازات'); }
     finally { setLoading(false); }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!token) return;
+    loadLeaves();
+  }, [user, token, loadLeaves]);
 
   const submitLeave = async () => {
     if (!form.start_date || !form.end_date) { setMessage('تاريخ البداية والنهاية مطلوبان'); return; }
@@ -97,8 +97,7 @@ export default function LeavesPage() {
         <CalendarMonth sx={{ fontSize: 32, color: 'primary.main' }} />
         <Typography variant="h4" fontWeight="bold">طلبات الإجازات</Typography>
         <Box sx={{ flexGrow: 1 }} />
-        {hasPermission(user?.role, 'settings:edit') && <Button variant="contained" startIcon={<Add />} onClick={() => setDialogOpen(true)}>تقديم إجازة</Button>}
-        {!hasPermission(user?.role, 'settings:edit') && <Button variant="contained" startIcon={<Add />} onClick={() => setDialogOpen(true)}>تقديم إجازة</Button>}
+        <Button variant="contained" startIcon={<Add />} onClick={() => setDialogOpen(true)}>تقديم إجازة</Button>
       </Box>
       {message && <Alert severity={message.includes('فشل') ? 'error' : 'success'} sx={{ mb: 2 }} onClose={() => setMessage('')}>{message}</Alert>}
       <TableContainer component={Paper} variant="outlined">

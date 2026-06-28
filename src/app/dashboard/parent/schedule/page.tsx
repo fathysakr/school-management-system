@@ -49,7 +49,7 @@ export default function ParentSchedulePage() {
     const fetchSchedule = async () => {
       try {
         const res = await api.get(`/parent/students/${studentId}/schedule`, token);
-        setSchedules(res.schedules || []);
+        setSchedules(res.schedule || []);
         setStudentName(res.student_name || '');
       } catch {
         setError('فشل في جلب الجدول الدراسي');

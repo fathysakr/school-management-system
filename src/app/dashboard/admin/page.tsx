@@ -100,12 +100,6 @@ export default function AdminPage() {
   const [backupSuccess, setBackupSuccess] = useState('');
   const [backupStats, setBackupStats] = useState<Record<string, number> | null>(null);
 
-  if (!user) return null;
-  if (user.role !== 'admin') {
-    router.push('/dashboard');
-    return null;
-  }
-
   const fetchUsers = async () => {
     if (!token) return;
     setUserLoading(true);
@@ -135,6 +129,7 @@ export default function AdminPage() {
     if (token && tab === 2) {
       fetchUsers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, tab]);
 
   const loadPermissions = async (userId: string) => {
@@ -305,7 +300,7 @@ export default function AdminPage() {
     if (passwordForm.password.length < 6) { setUserError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
     try {
       await api.put(`/admin/users?id=${passwordDialog.user.id}`, { password: passwordForm.password }, token);
-      setUserSuccess(`تم تغيير كلمة المرور للحساب: ${passwordDialog.user.email}\nكلمة المرور الجديدة: ${passwordForm.password}`);
+      setUserSuccess(`تم تغيير كلمة المرور للحساب: ${passwordDialog.user.email}`);
       setPasswordDialog(null);
       setPasswordForm({ password: '', show: false });
     } catch { setUserError('فشل تغيير كلمة المرور'); }
@@ -340,6 +335,12 @@ export default function AdminPage() {
     );
     setUserSuccess('تم تصدير الحسابات بنجاح');
   };
+
+  if (!user) return null;
+  if (user.role !== 'admin') {
+    router.push('/dashboard');
+    return null;
+  }
 
   return (
     <Box>

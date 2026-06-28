@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
@@ -74,11 +74,11 @@ export default function ManagementPage() {
   const [assignDialog, setAssignDialog] = useState<{ position: any } | null>(null);
   const [allUsers, setAllUsers] = useState<any[]>([]);
 
-  const fetchStaff = async () => {
+  const fetchStaff = useCallback(async () => {
     if (!token) return;
     try {
       const filterSchool = schoolFilter !== 'all' ? schoolFilter : (selectedSchool && selectedSchool !== 'all' ? selectedSchool : '');
-      const params = filterSchool ? `?school=${filterSchool}` : '';
+      const params = filterSchool ? `?school=${encodeURIComponent(filterSchool)}` : '';
       const res = await api.get(`/management${params}`, token);
       setStaff(res.staff || []);
     } catch {
@@ -86,24 +86,24 @@ export default function ManagementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, schoolFilter, selectedSchool]);
 
-  const fetchTeachers = async () => {
+  const fetchTeachers = useCallback(async () => {
     if (!token) return;
     try {
       const res = await api.get('/teachers?limit=500', token);
       setTeachers(res.teachers || []);
     } catch { setError('فشل تحميل المعلمين'); }
-  };
+  }, [token]);
 
-  useEffect(() => { fetchStaff(); fetchTeachers(); }, [token, selectedSchool, schoolFilter]);
+  useEffect(() => { fetchStaff(); fetchTeachers(); }, [token, selectedSchool, schoolFilter, fetchStaff, fetchTeachers]);
 
   const handlePasswordReset = async () => {
     if (!token || !passwordDialog || !passwordForm.password) return;
     if (passwordForm.password.length < 6) { setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
     try {
       await api.put(`/admin/users?id=${passwordDialog.member.user_id}`, { password: passwordForm.password }, token);
-      setSuccess(`تم تغيير كلمة المرور لـ ${passwordDialog.member.first_name || passwordDialog.member.email}\nكلمة المرور الجديدة: ${passwordForm.password}`);
+      setSuccess(`تم تغيير كلمة المرور لـ ${passwordDialog.member.first_name || passwordDialog.member.email}`);
       setPasswordDialog(null);
       setPasswordForm({ password: '', show: false });
     } catch { setError('فشل تغيير كلمة المرور'); }

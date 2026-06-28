@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
@@ -40,7 +40,7 @@ export default function AnnouncementsPage() {
   const canEditAnnouncement = hasPermission(user?.role, 'announcements:edit');
   const canDeleteAnnouncement = hasPermission(user?.role, 'announcements:delete');
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
     if (!token) return;
     try {
       const res = await api.get(`/announcements?${schoolParam.replace('&', '')}`, token);
@@ -50,17 +50,17 @@ export default function AnnouncementsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, schoolParam]);
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     if (!token) return;
     try {
       const res = await api.get(`/classes?page=1&limit=100${schoolParam}`, token);
       setClasses(res.classes || []);
     } catch {}
-  };
+  }, [token, schoolParam]);
 
-  useEffect(() => { fetchAnnouncements(); if (canCreateAnnouncement) fetchClasses(); }, [token]);
+  useEffect(() => { fetchAnnouncements(); if (canCreateAnnouncement) fetchClasses(); }, [token, canCreateAnnouncement, fetchAnnouncements, fetchClasses]);
 
   const handleOpenDialog = (announcement?: any) => {
     if (announcement) {
