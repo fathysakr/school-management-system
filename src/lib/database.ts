@@ -513,6 +513,8 @@ function applyMigrations(bsql: any) {
               name TEXT NOT NULL,
               school TEXT NOT NULL CHECK (school IN ('middle', 'high')),
               sessions_per_week INTEGER NOT NULL DEFAULT 3,
+              grade TEXT,
+              teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL,
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             INSERT INTO subjects (name, school, sessions_per_week) VALUES
@@ -1042,6 +1044,8 @@ async function _ensureTursoReady() {
       teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+    try { await db.exec(`ALTER TABLE subjects ADD COLUMN grade TEXT`); } catch {}
+    try { await db.exec(`ALTER TABLE subjects ADD COLUMN teacher_id INTEGER REFERENCES teachers(id) ON DELETE SET NULL`); } catch {}
     await db.exec(`CREATE TABLE IF NOT EXISTS management_positions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
