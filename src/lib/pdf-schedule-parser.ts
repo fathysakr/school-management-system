@@ -50,7 +50,7 @@ function parseCell(cell: string): { subject: string; teacher: string } | null {
 }
 
 export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedule> {
-  const pdfjs: any = await import('pdfjs-dist');
+  const pdfjs: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const doc = await pdfjs.getDocument({ data: buffer }).promise;
 
   const entries: ParsedEntry[] = [];

@@ -7,12 +7,11 @@ export async function GET(_request: NextRequest) {
   results.hasDOMMatrix = typeof globalThis.DOMMatrix !== 'undefined';
 
   try {
-    const mod: any = await import('pdfjs-dist');
+    const mod: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
     results.pdfLoad = 'ok';
     results.hasGetDocument = typeof mod.getDocument === 'function';
     results.hasGlobalWorkerOptions = typeof mod.GlobalWorkerOptions !== 'undefined';
 
-    mod.GlobalWorkerOptions.workerSrc = '';
     await mod.getDocument({ data: new Uint8Array([37,80,68,70,45,49,46,10]) }).promise;
     results.docCreated = 'ok';
     results.docError = 'invalid pdf (expected)';
@@ -41,9 +40,8 @@ export async function POST(request: NextRequest) {
       return Response.json(results);
     }
 
-    const mod: any = await import('pdfjs-dist');
+    const mod: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
     results.pdfLoad = 'ok';
-    mod.GlobalWorkerOptions.workerSrc = '';
 
     const buffer = new Uint8Array(await file.arrayBuffer());
     results.bufferSize = buffer.length;
