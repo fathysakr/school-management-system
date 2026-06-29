@@ -7,6 +7,7 @@ export async function GET(_request: NextRequest) {
   results.hasDOMMatrix = typeof globalThis.DOMMatrix !== 'undefined';
 
   try {
+    await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
     const mod: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
     results.pdfLoad = 'ok';
     results.hasGetDocument = typeof mod.getDocument === 'function';
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
       return Response.json(results);
     }
 
+    await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
     const mod: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
     results.pdfLoad = 'ok';
 
