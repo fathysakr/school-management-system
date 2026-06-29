@@ -1,4 +1,13 @@
 import { NextRequest } from 'next/server';
+import path from 'path';
+
+async function loadPdfjs() {
+  await import('../../../../lib/pdf.worker.mjs');
+  const mod: any = await import('pdfjs-dist/build/pdf.min.mjs');
+  const workerPath = path.join(process.cwd(), 'src', 'lib', 'pdf.worker.mjs');
+  mod.GlobalWorkerOptions.workerSrc = workerPath;
+  return mod;
+}
 
 export async function GET(_request: NextRequest) {
   const results: Record<string, any> = {};
@@ -7,8 +16,7 @@ export async function GET(_request: NextRequest) {
   results.hasDOMMatrix = typeof globalThis.DOMMatrix !== 'undefined';
 
   try {
-    await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
-    const mod: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const mod = await loadPdfjs();
     results.pdfLoad = 'ok';
     results.hasGetDocument = typeof mod.getDocument === 'function';
     results.hasGlobalWorkerOptions = typeof mod.GlobalWorkerOptions !== 'undefined';
@@ -41,8 +49,7 @@ export async function POST(request: NextRequest) {
       return Response.json(results);
     }
 
-    await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
-    const mod: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const mod = await loadPdfjs();
     results.pdfLoad = 'ok';
 
     const buffer = new Uint8Array(await file.arrayBuffer());
