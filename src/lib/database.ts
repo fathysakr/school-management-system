@@ -1441,11 +1441,13 @@ async function _ensureTursoReady() {
       'CREATE INDEX IF NOT EXISTS idx_substitutions_absent ON substitutions(absent_teacher_id)',
     ];
     for (const cmd of idxCmds) {
-      try { await db.exec(cmd); } catch {}
+      try { await db.exec(cmd); } catch (e: any) { console.error('Index creation error:', e?.message); }
     }
     await db.prepare("INSERT OR IGNORE INTO _init_done (flag) VALUES (1)").run();
     tursoReady = true;
-  } catch {}
+  } catch (e: any) {
+    console.error('_ensureTursoReady failed:', e?.message, e?.stack);
+  }
 }
 
 export async function getOrCreateTeacher(user: { id: number; email: string; role: string }): Promise<number | null> {
