@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const results: Record<string, any> = { test: 'GET' };
   results.nodeVersion = process.version;
   results.platform = process.platform;
