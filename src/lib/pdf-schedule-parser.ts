@@ -1,5 +1,3 @@
-import { PDFParse } from 'pdf-parse';
-
 export interface ParsedEntry {
   classId: string;
   day: string;
@@ -52,74 +50,92 @@ function parseCell(cell: string): { subject: string; teacher: string } | null {
 }
 
 export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedule> {
-  const instance = new PDFParse(buffer);
-  await (instance as any).load();
+  const pdfjs: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  await import('pdfjs-dist/legacy/build/pdf.worker.mjs' as string);
 
-  const [tablesResult, textResult] = await Promise.all([
-    instance.getTable(),
-    instance.getText(),
-  ]) as any;
-
-  const pages = tablesResult?.pages;
-  if (!pages?.length) throw new Error('لم يتم العثور على جداول في ملف PDF');
-
-  const textPages = textResult?.pages || [];
+  const doc = await pdfjs.getDocument({ data: buffer }).promise;
 
   const entries: ParsedEntry[] = [];
   const subjectsSet = new Set<string>();
   const teachersSet = new Set<string>();
   const classesMap = new Map<string, { grade: string; section: string }>();
 
-  const classIdByNum = new Map<number, string>();
-  for (const tp of textPages) {
-    const lines = normalizeArabic(tp.text).split('\n').filter((l: string) => l.trim());
-    const last = lines[lines.length - 1]?.trim();
-    if (last && /^\d+-\d+$/.test(last)) {
-      classIdByNum.set(tp.num, last);
+  for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+    const page = await doc.getPage(pageNum);
+    const content = await page.getTextContent();
+
+    const rawItems = content.items.map((item: any) => item.str || '').filter(Boolean);
+    const fullText = normalizeArabic(rawItems.join('\n'));
+
+    const lines = fullText.split('\n').filter((l: string) => l.trim());
+    let classIdLine = '';
+    for (const line of lines) {
+      const match = line.trim().match(/\b(\d+)\s*[-–]\s*(\d+)\b/);
+      if (match) {
+        classIdLine = `${match[1]}-${match[2]}`;
+        break;
+      }
     }
-  }
 
-  for (const page of pages) {
-    const t = page.tables?.[0];
-    if (!t || t.length < 6) continue;
+    if (!classIdLine) continue;
+    const [grade, section] = classIdLine.split('-');
+    if (!classesMap.has(classIdLine)) classesMap.set(classIdLine, { grade, section });
 
-    const classId = classIdByNum.get(page.num);
-    if (!classId) continue;
+    const cellRows = content.items.reduce((acc: any[], item: any, idx: number, arr: any[]) => {
+      if (idx > 0) {
+        const prevY = arr[idx - 1].transform?.[5] || 0;
+        const currY = item.transform?.[5] || 0;
+        if (Math.abs(currY - prevY) > 5) acc.push([]);
+      } else {
+        acc.push([]);
+      }
+      acc[acc.length - 1].push(normalizeArabic(item.str || ''));
+      return acc;
+    }, [] as any[][]);
 
-    const [grade, section] = classId.split('-');
-    if (!classesMap.has(classId)) classesMap.set(classId, { grade, section });
+    const merged: string[][] = [];
+    for (const row of cellRows) {
+      if (row.length >= 6) {
+        const joined = row.join('|');
+        if (/\d/.test(joined) || /[اإأآ]/u.test(joined)) {
+          merged.push(row);
+        }
+      }
+    }
 
-    for (let dayIdx = 1; dayIdx <= 5; dayIdx++) {
-      const row = t[dayIdx];
-      if (!row || row.length < 8) continue;
+    if (merged.length > 5) {
+      for (let dayIdx = 0; dayIdx < merged.length; dayIdx++) {
+        const row = merged[dayIdx];
+        const dayLabel = normalizeArabic(row[row.length - 1]?.trim() || '');
+        const day = DAY_MAP[dayLabel];
+        if (!day) continue;
 
-      const dayLabel = normalizeArabic(row[row.length - 1]?.trim() || '');
-      const day = DAY_MAP[dayLabel];
-      if (!day) continue;
+        const dataCells = row.slice(0, row.length - 1);
+        for (let ci = 0; ci < dataCells.length; ci++) {
+          const periodNum = dataCells.length - ci;
+          const periodIdx = periodNum - 1;
+          if (periodIdx < 0 || periodIdx >= PERIOD_TIMES.length) continue;
 
-      for (let colIdx = 0; colIdx < 7; colIdx++) {
-        const cell = normalizeArabic(row[colIdx] || '');
-        const periodNum = 7 - colIdx;
-        const periodIdx = periodNum - 1;
-        if (periodIdx < 0 || periodIdx >= PERIOD_TIMES.length) continue;
+          const parsed = parseCell(dataCells[ci]);
+          if (!parsed) continue;
 
-        const parsed = parseCell(cell);
-        if (!parsed) continue;
-
-        subjectsSet.add(parsed.subject);
-        teachersSet.add(parsed.teacher);
-        entries.push({
-          classId,
-          day,
-          period: periodNum,
-          startTime: PERIOD_TIMES[periodIdx].start,
-          endTime: PERIOD_TIMES[periodIdx].end,
-          subject: parsed.subject,
-          teacher: parsed.teacher,
-        });
+          subjectsSet.add(parsed.subject);
+          teachersSet.add(parsed.teacher);
+          entries.push({
+            classId: classIdLine,
+            day,
+            period: periodNum,
+            startTime: PERIOD_TIMES[periodIdx].start,
+            endTime: PERIOD_TIMES[periodIdx].end,
+            subject: parsed.subject,
+            teacher: parsed.teacher,
+          });
+        }
       }
     }
   }
+
+  await doc.destroy();
 
   if (entries.length === 0) throw new Error('لم يتم استخراج أي بيانات جدول من PDF');
 

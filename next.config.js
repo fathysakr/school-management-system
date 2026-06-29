@@ -5,7 +5,7 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   experimental: {
-    serverComponentsExternalPackages: ['pdf-parse'],
+    serverComponentsExternalPackages: ['pdfjs-dist'],
   },
   headers: async () => {
     return [
