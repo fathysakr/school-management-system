@@ -33,16 +33,36 @@ export async function getPdfjs(): Promise<any> {
   }
 
   cachedPdfjs = (async () => {
-    const [workerMod, pdfjsMod] = await Promise.all([
-      import('./pdf.worker.mjs'),
-      import('pdfjs-dist/legacy/build/pdf.mjs'),
-    ]);
+    const workerMod = await import('./pdf.worker.mjs');
+    const pdfjsMod = await import('pdfjs-dist/legacy/build/pdf.mjs');
 
-    const port = createLoopbackPort();
-    workerMod.WorkerMessageHandler.initializeFromPort(port);
-    pdfjsMod.GlobalWorkerOptions.workerPort = port;
+    pdfjsMod.PDFWorker.prototype._setupFakeWorker = function () {
+      const port = createLoopbackPort();
+      workerMod.WorkerMessageHandler.initializeFromPort(port);
+      this._port = port;
+      this._messageHandler = new pdfjsMod.MessageHandler('main', 'worker', port);
+      this._messageHandler.on('ready', function () {});
+      this._readyCapability.resolve();
+      this._messageHandler.send('configure', { verbosity: this.verbosity });
+    };
 
-    return pdfjsMod;
+    const origGetDocument = pdfjsMod.getDocument.bind(pdfjsMod);
+    const wrappedGetDocument = function (src: any) {
+      if (typeof src === 'string' || src instanceof URL || src instanceof ArrayBuffer || ArrayBuffer.isView(src)) {
+        src = typeof src === 'string' || src instanceof URL ? { url: src } : { data: src };
+      }
+      if (typeof src !== 'object') {
+        throw new Error('Invalid parameter in getDocument, need parameter object.');
+      }
+      return origGetDocument(src);
+    };
+
+    return new Proxy(pdfjsMod, {
+      get(target, prop) {
+        if (prop === 'getDocument') return wrappedGetDocument;
+        return Reflect.get(target, prop);
+      },
+    });
   })();
 
   return cachedPdfjs;
