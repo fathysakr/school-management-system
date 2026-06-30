@@ -3,7 +3,7 @@ import path from 'path';
 
 async function loadPdfjs() {
   await import('../../../../lib/pdf.worker.mjs');
-  const mod: any = await import('pdfjs-dist/build/pdf.min.mjs');
+  const mod: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const workerPath = path.join(process.cwd(), 'src', 'lib', 'pdf.worker.mjs');
   mod.GlobalWorkerOptions.workerSrc = workerPath;
   return mod;
