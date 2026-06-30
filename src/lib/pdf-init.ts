@@ -44,7 +44,7 @@ export async function getPdfjs(): Promise<any> {
     cachedWorker = new pdfjsMod.PDFWorker({ port });
 
     const origGetDocument = pdfjsMod.getDocument.bind(pdfjsMod);
-    pdfjsMod.getDocument = function (src: any) {
+    const wrappedGetDocument = function (src: any) {
       if (typeof src === 'string' || src instanceof URL || src instanceof ArrayBuffer || ArrayBuffer.isView(src)) {
         src = typeof src === 'string' || src instanceof URL ? { url: src } : { data: src };
       }
@@ -54,7 +54,12 @@ export async function getPdfjs(): Promise<any> {
       return origGetDocument({ ...src, worker: cachedWorker });
     };
 
-    return pdfjsMod;
+    return new Proxy(pdfjsMod, {
+      get(target, prop) {
+        if (prop === 'getDocument') return wrappedGetDocument;
+        return Reflect.get(target, prop);
+      },
+    });
   })();
 
   return cachedPdfjs;
