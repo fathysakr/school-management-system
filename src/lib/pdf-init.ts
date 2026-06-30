@@ -1,17 +1,26 @@
-let pdfjsModPromise: Promise<any> | null = null;
+let cachedPdfjs: Promise<any> | null = null;
 
 export async function getPdfjs(): Promise<any> {
-  if (pdfjsModPromise) {
-    return pdfjsModPromise;
+  if (cachedPdfjs) {
+    return cachedPdfjs;
   }
 
-  pdfjsModPromise = (async () => {
-    const workerMod = await import('./pdf.worker.mjs');
+  cachedPdfjs = (async () => {
+    const [workerMod, pdfjsMod] = await Promise.all([
+      import('./pdf.worker.mjs'),
+      import('pdfjs-dist/legacy/build/pdf.mjs'),
+    ]);
+
     (globalThis as any).pdfjsWorker = workerMod;
 
-    const pdfjsMod = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    Object.defineProperty(pdfjsMod.PDFWorker, '_setupFakeWorkerGlobal', {
+      value: Promise.resolve(workerMod.WorkerMessageHandler),
+      configurable: true,
+      writable: false,
+    });
+
     return pdfjsMod;
   })();
 
-  return pdfjsModPromise;
+  return cachedPdfjs;
 }
