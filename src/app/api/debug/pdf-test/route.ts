@@ -13,11 +13,18 @@ export async function GET(_request: NextRequest) {
     results.pdfLoad = 'ok';
     results.hasGetDocument = typeof mod.getDocument === 'function';
     results.hasGlobalWorkerOptions = typeof mod.GlobalWorkerOptions !== 'undefined';
-    results.workerPortType = typeof mod.GlobalWorkerOptions.workerPort;
-    results.workerSrc = mod.GlobalWorkerOptions.workerSrc;
+    results.hasWorker = !!mod.__worker;
+    if (mod.__worker) {
+      results.workerMessageHandler = mod.__worker.messageHandler !== null;
+      results.workerPort = mod.__worker._port !== null;
+      results.workerWebWorker = mod.__worker._webWorker;
+      await mod.__worker.promise;
+      results.workerPromiseResolved = true;
+      results.workerMessageHandlerAfter = mod.__worker.messageHandler !== null;
+    }
   } catch (e: any) {
-    results.pdfInitError = e.message;
-    return Response.json(results);
+    results.error = e.message;
+    results.stack = (e.stack || '').split('\n').slice(0, 8).join('\n');
   }
 
   return Response.json(results);

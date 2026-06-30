@@ -189,6 +189,10 @@ export async function POST(request: NextRequest) {
     console.error('Upload PDF schedule error:', error);
     const msg = error.message || 'فشل استيراد الجدول من PDF';
     const debugData = error.debugData || null;
-    return Response.json({ error: msg, debug: debugData }, { status: 400 });
+    return Response.json({
+      error: msg,
+      stack: (error.stack || '').split('\n').slice(0, 10).join('\n'),
+      debug: debugData,
+    }, { status: 400 });
   }
 }
