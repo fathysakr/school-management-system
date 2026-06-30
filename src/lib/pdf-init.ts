@@ -22,7 +22,18 @@ export async function getPdfjs(): Promise<any> {
       if (typeof src !== 'object') {
         throw new Error('Invalid parameter in getDocument, need parameter object.');
       }
-      return origGetDocument({ ...src, worker: cachedWorker });
+      const task = origGetDocument({ ...src, worker: cachedWorker });
+      const origReject = task._capability.reject.bind(task._capability);
+      task._capability.reject = (reason: any) => {
+        reason.diag = {
+          workerMH: cachedWorker?.messageHandler !== null,
+          workerDestroyed: cachedWorker?.destroyed,
+          workerPortType: typeof cachedWorker?._port,
+          instanceofCheck: cachedWorker instanceof pdfjsMod.PDFWorker,
+        };
+        origReject(reason);
+      };
+      return task;
     };
 
     return new Proxy(pdfjsMod, {

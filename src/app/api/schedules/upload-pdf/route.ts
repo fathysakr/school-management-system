@@ -193,6 +193,7 @@ export async function POST(request: NextRequest) {
       error: msg,
       stack: (error.stack || '').split('\n').slice(0, 10).join('\n'),
       debug: debugData,
+      diag: error.diag || null,
     }, { status: 400 });
   }
 }
