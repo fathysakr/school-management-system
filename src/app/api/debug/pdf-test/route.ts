@@ -61,6 +61,14 @@ export async function POST(request: NextRequest) {
     const page = await doc.getPage(1);
     const content = await page.getTextContent();
     results.itemsCount = content.items.length;
+    results.first20Items = content.items.slice(0, 20).map((item: any) => ({
+      str: (item.str || '').slice(0, 100),
+      x: item.transform?.[4]?.toFixed(1),
+      y: item.transform?.[5]?.toFixed(1),
+      width: item.width?.toFixed(1),
+      height: item.height?.toFixed(1),
+    }));
+    results.allText = content.items.map((item: any) => item.str || '').join(' ').slice(0, 500);
     await doc.destroy();
   } catch (e: any) {
     results.error = e.message;
