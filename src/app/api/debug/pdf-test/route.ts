@@ -13,15 +13,6 @@ export async function GET(_request: NextRequest) {
     results.pdfLoad = 'ok';
     results.hasGetDocument = typeof mod.getDocument === 'function';
     results.hasGlobalWorkerOptions = typeof mod.GlobalWorkerOptions !== 'undefined';
-    results.hasWorker = !!mod.__worker;
-    if (mod.__worker) {
-      results.workerMessageHandler = mod.__worker.messageHandler !== null;
-      results.workerPort = mod.__worker._port !== null;
-      results.workerWebWorker = mod.__worker._webWorker;
-      await mod.__worker.promise;
-      results.workerPromiseResolved = true;
-      results.workerMessageHandlerAfter = mod.__worker.messageHandler !== null;
-    }
   } catch (e: any) {
     results.error = e.message;
     results.stack = (e.stack || '').split('\n').slice(0, 8).join('\n');

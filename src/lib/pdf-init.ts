@@ -1,4 +1,5 @@
 let cachedPdfjs: Promise<any> | null = null;
+let cachedWorker: any = null;
 
 function createLoopbackPort(): any {
   const listeners = new Set<Function>();
@@ -40,7 +41,7 @@ export async function getPdfjs(): Promise<any> {
 
     const port = createLoopbackPort();
     workerMod.WorkerMessageHandler.initializeFromPort(port);
-    pdfjsMod.__worker = new pdfjsMod.PDFWorker({ port });
+    cachedWorker = new pdfjsMod.PDFWorker({ port });
 
     const origGetDocument = pdfjsMod.getDocument.bind(pdfjsMod);
     pdfjsMod.getDocument = function (src: any) {
@@ -50,7 +51,7 @@ export async function getPdfjs(): Promise<any> {
       if (typeof src !== 'object') {
         throw new Error('Invalid parameter in getDocument, need parameter object.');
       }
-      return origGetDocument({ ...src, worker: pdfjsMod.__worker });
+      return origGetDocument({ ...src, worker: cachedWorker });
     };
 
     return pdfjsMod;
