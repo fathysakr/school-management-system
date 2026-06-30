@@ -13,6 +13,15 @@ export async function GET(_request: NextRequest) {
     results.pdfLoad = 'ok';
     results.hasGetDocument = typeof mod.getDocument === 'function';
     results.hasGlobalWorkerOptions = typeof mod.GlobalWorkerOptions !== 'undefined';
+    results.hasPDFWorker = typeof mod.PDFWorker === 'function';
+
+    const worker = new mod.PDFWorker({ name: 'test' });
+    results.workerMessageHandlerBefore = worker.messageHandler !== null;
+    results.workerDestroyed = worker.destroyed;
+    await worker.promise;
+    results.workerMessageHandlerAfter = worker.messageHandler !== null;
+    results.workerMessageHandlerType = typeof worker.messageHandler;
+    await worker.destroy();
   } catch (e: any) {
     results.error = e.message;
     results.stack = (e.stack || '').split('\n').slice(0, 8).join('\n');
@@ -40,6 +49,19 @@ export async function POST(request: NextRequest) {
 
     const mod = await getPdfjs();
     results.pdfLoad = 'ok';
+    results.hasPDFWorker = typeof mod.PDFWorker === 'function';
+
+    const worker = new mod.PDFWorker({ name: 'worker-test' });
+    results.workerMHBefore = worker.messageHandler !== null;
+    results.workerDestroyed = worker.destroyed;
+    await worker.promise;
+    results.workerMHAfter = worker.messageHandler !== null;
+    results.workerMHType = typeof worker.messageHandler;
+
+    if (!worker.messageHandler) {
+      results.error = 'worker.messageHandler is null after promise resolved';
+      return Response.json(results);
+    }
 
     const buffer = new Uint8Array(await file.arrayBuffer());
     results.bufferSize = buffer.length;
@@ -59,6 +81,7 @@ export async function POST(request: NextRequest) {
     }));
     results.allText = content.items.map((item: any) => item.str || '').join(' ').slice(0, 500);
     await doc.destroy();
+    await worker.destroy();
   } catch (e: any) {
     results.error = e.message;
     results.stack = e.stack?.split('\n').slice(0, 8).join('\n');
