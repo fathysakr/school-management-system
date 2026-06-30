@@ -1,19 +1,21 @@
-let pdfjs: any = null;
+import { MessageChannel } from 'worker_threads';
+
+let initialized = false;
 
 export async function getPdfjs(): Promise<any> {
-  if (pdfjs) return pdfjs;
+  if (initialized) {
+    return import('pdfjs-dist/legacy/build/pdf.mjs');
+  }
 
   const [workerMod, pdfjsMod] = await Promise.all([
     import('./pdf.worker.mjs'),
     import('pdfjs-dist/legacy/build/pdf.mjs'),
   ]);
 
-  Object.defineProperty(pdfjsMod.PDFWorker, '_setupFakeWorkerGlobal', {
-    value: Promise.resolve(workerMod.WorkerMessageHandler),
-    writable: true,
-    configurable: true,
-  });
+  const { port1, port2 } = new MessageChannel();
+  workerMod.WorkerMessageHandler.initializeFromPort(port1);
+  pdfjsMod.GlobalWorkerOptions.workerPort = port2;
 
-  pdfjs = pdfjsMod;
-  return pdfjs;
+  initialized = true;
+  return pdfjsMod;
 }
