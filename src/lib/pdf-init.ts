@@ -8,7 +8,11 @@ export async function getPdfjs(): Promise<any> {
     import('pdfjs-dist/legacy/build/pdf.mjs'),
   ]);
 
-  pdfjsMod.PDFWorker._setupFakeWorkerGlobal = Promise.resolve(workerMod.WorkerMessageHandler);
+  Object.defineProperty(pdfjsMod.PDFWorker, '_setupFakeWorkerGlobal', {
+    value: Promise.resolve(workerMod.WorkerMessageHandler),
+    writable: true,
+    configurable: true,
+  });
 
   pdfjs = pdfjsMod;
   return pdfjs;
