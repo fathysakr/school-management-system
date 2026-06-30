@@ -140,7 +140,16 @@ export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedu
 
   await doc.destroy();
 
-  if (entries.length === 0) throw new Error('لم يتم استخراج أي بيانات جدول من PDF');
+  if (entries.length === 0) {
+    const page1 = await doc.getPage(1);
+    const c1 = await page1.getTextContent();
+    const rawLines = c1.items.map((i: any) => `[x:${i.transform?.[4]?.toFixed()},y:${i.transform?.[5]?.toFixed()}] ${i.str || ''}`).slice(0, 100);
+    const textSample = rawLines.join('\n');
+    await doc.destroy();
+    const err: any = new Error('لم يتم استخراج أي بيانات جدول من PDF');
+    err.debugData = { numPages: doc.numPages, itemsPerPage: [c1.items.length], textSample };
+    throw err;
+  }
 
   return {
     classes: Array.from(classesMap.entries()).map(([classId, info]) => ({

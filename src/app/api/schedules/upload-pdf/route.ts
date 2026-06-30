@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
-import { authenticate, unauthorized, forbidden, badRequest, serverError, success } from '@/lib/auth';
+import { authenticate, unauthorized, forbidden, badRequest, success } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { sanitizeString } from '@/lib/validation';
 import { parseSchedulePdf } from '@/lib/pdf-schedule-parser';
@@ -187,6 +187,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Upload PDF schedule error:', error);
-    return serverError(error.message || 'فشل استيراد الجدول من PDF');
+    const msg = error.message || 'فشل استيراد الجدول من PDF';
+    const debugData = error.debugData || null;
+    return Response.json({ error: msg, debug: debugData }, { status: 400 });
   }
 }
