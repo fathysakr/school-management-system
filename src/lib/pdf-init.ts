@@ -6,7 +6,7 @@ function createLoopbackPort(): any {
     postMessage(obj: any, transfers?: any[]) {
       const event = {
         data: typeof structuredClone === 'function'
-          ? structuredClone(obj, transfers ? { transfer: transfers } : null)
+          ? structuredClone(obj, transfers ? { transfer: transfers } : undefined) as any
           : obj,
       };
       Promise.resolve().then(() => {
