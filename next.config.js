@@ -6,6 +6,9 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ['pdfjs-dist'],
+    outputFileTracingIncludes: {
+      '/api/**': ['./src/lib/pdf.worker.mjs'],
+    },
   },
   headers: async () => {
     return [

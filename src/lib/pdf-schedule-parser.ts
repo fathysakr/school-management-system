@@ -1,4 +1,7 @@
 import path from 'path';
+import { pathToFileURL } from 'url';
+
+const workerUrl = pathToFileURL(path.join(process.cwd(), 'src', 'lib', 'pdf.worker.mjs')).href;
 
 export interface ParsedEntry {
   classId: string;
@@ -52,10 +55,8 @@ function parseCell(cell: string): { subject: string; teacher: string } | null {
 }
 
 export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedule> {
-  await import('./pdf.worker.mjs');
   const pdfjs: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const workerPath = path.join(process.cwd(), 'src', 'lib', 'pdf.worker.mjs');
-  pdfjs.GlobalWorkerOptions.workerSrc = workerPath;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
   const doc = await pdfjs.getDocument({ data: buffer }).promise;
 
   const entries: ParsedEntry[] = [];

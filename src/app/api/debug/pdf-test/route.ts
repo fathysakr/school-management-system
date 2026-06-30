@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
 import path from 'path';
+import { pathToFileURL } from 'url';
+
+const workerUrl = pathToFileURL(path.join(process.cwd(), 'src', 'lib', 'pdf.worker.mjs')).href;
 
 async function loadPdfjs() {
-  await import('../../../../lib/pdf.worker.mjs');
   const mod: any = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const workerPath = path.join(process.cwd(), 'src', 'lib', 'pdf.worker.mjs');
-  mod.GlobalWorkerOptions.workerSrc = workerPath;
+  mod.GlobalWorkerOptions.workerSrc = workerUrl;
   return mod;
 }
 
