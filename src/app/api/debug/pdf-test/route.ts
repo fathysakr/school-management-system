@@ -6,19 +6,18 @@ export async function GET(_request: NextRequest) {
   results.nodeVersion = process.version;
   results.platform = process.platform;
   results.hasDOMMatrix = typeof globalThis.DOMMatrix !== 'undefined';
+  results.hasPdfjsWorker = typeof (globalThis as any).pdfjsWorker !== 'undefined';
 
   try {
     const mod = await getPdfjs();
     results.pdfLoad = 'ok';
     results.hasGetDocument = typeof mod.getDocument === 'function';
     results.hasGlobalWorkerOptions = typeof mod.GlobalWorkerOptions !== 'undefined';
-
-    await mod.getDocument({ data: new Uint8Array([37,80,68,70,45,49,46,10]) }).promise;
-    results.docCreated = 'ok';
-    results.docError = 'invalid pdf (expected)';
+    results.workerPortType = typeof mod.GlobalWorkerOptions.workerPort;
+    results.workerSrc = mod.GlobalWorkerOptions.workerSrc;
   } catch (e: any) {
-    results.pdfLoad = 'failed';
-    results.error = e.message;
+    results.pdfInitError = e.message;
+    return Response.json(results);
   }
 
   return Response.json(results);
