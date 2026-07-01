@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
     const debugData = error.debugData || null;
     const gd = (globalThis as any).__pdfjsDiag;
     const diagInfo = gd?.traps?.length > 0
-      ? ` Destroy traps: ${JSON.stringify(gd.traps.map((t: any) => ({ event: t.event, name: t.name, hadMH: t.hadMH })))}`
+      ? ` Destroy traps: ${JSON.stringify(gd.traps)}`
       : ' No destroy traps.';
     return Response.json({
       error: msg + diagInfo,
