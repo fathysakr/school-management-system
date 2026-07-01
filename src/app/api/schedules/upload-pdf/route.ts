@@ -190,8 +190,11 @@ export async function POST(request: NextRequest) {
     const msg = error.message || 'فشل استيراد الجدول من PDF';
     const debugData = error.debugData || null;
     const gd = (globalThis as any).__pdfjsDiag;
+    const diagInfo = gd?.traps?.length > 0
+      ? ` Destroy traps: ${JSON.stringify(gd.traps.map((t: any) => ({ event: t.event, name: t.name, hadMH: t.hadMH })))}`
+      : ' No destroy traps.';
     return Response.json({
-      error: msg,
+      error: msg + diagInfo,
       stack: (error.stack || '').split('\n').slice(0, 10).join('\n'),
       debug: debugData,
       diag: gd ? { destroyTraps: gd.traps } : null,
