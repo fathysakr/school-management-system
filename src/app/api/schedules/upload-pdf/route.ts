@@ -189,10 +189,12 @@ export async function POST(request: NextRequest) {
     console.error('Upload PDF schedule error:', error);
     const msg = error.message || 'فشل استيراد الجدول من PDF';
     const debugData = error.debugData || null;
+    const gd = (globalThis as any).__pdfjsDiag;
     return Response.json({
       error: msg,
       stack: (error.stack || '').split('\n').slice(0, 10).join('\n'),
       debug: debugData,
+      diag: gd ? { destroyTraps: gd.traps } : null,
     }, { status: 400 });
   }
 }
