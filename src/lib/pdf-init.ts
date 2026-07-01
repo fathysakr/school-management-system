@@ -12,16 +12,31 @@ export async function getPdfjs(): Promise<any> {
 
     (globalThis as any).__pdfjsDiag = { traps: [] };
 
-    const origDestroy = pdfjsMod.PDFWorker.prototype.destroy;
+    const origWorkerDestroy = pdfjsMod.PDFWorker.prototype.destroy;
     pdfjsMod.PDFWorker.prototype.destroy = function () {
       (globalThis as any).__pdfjsDiag.traps.push({
-        event: 'destroy',
+        event: 'worker.destroy',
         name: this.name,
         time: Date.now(),
         hadMH: this._messageHandler !== null,
-        stack: new Error().stack?.split('\n').slice(1, 4).join('; '),
+        destroyed: this.destroyed,
+        stack: new Error().stack?.split('\n').slice(1, 6).join('; '),
       });
-      return origDestroy.apply(this, arguments as any);
+      return origWorkerDestroy.apply(this, arguments as any);
+    };
+
+    const origTaskDestroy = pdfjsMod.PDFDocumentLoadingTask.prototype.destroy;
+    pdfjsMod.PDFDocumentLoadingTask.prototype.destroy = function () {
+      (globalThis as any).__pdfjsDiag.traps.push({
+        event: 'task.destroy',
+        time: Date.now(),
+        hasWorker: !!this._worker,
+        workerName: this._worker?.name,
+        workerDestroyed: this._worker?.destroyed,
+        hasTransport: !!this._transport,
+        stack: new Error().stack?.split('\n').slice(1, 6).join('; '),
+      });
+      return origTaskDestroy.apply(this, arguments as any);
     };
 
     return pdfjsMod;
