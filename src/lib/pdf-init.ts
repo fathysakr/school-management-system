@@ -26,25 +26,6 @@ export async function getPdfjs(): Promise<any> {
     };
 
     try {
-      const tmpWorker = new pdfjsMod.PDFWorker({ name: 'tmp-diag' });
-      await tmpWorker.promise;
-      const MHClass = tmpWorker.messageHandler.constructor;
-      const origSendWithPromise = MHClass.prototype.sendWithPromise;
-      MHClass.prototype.sendWithPromise = function (action: string, data: any, transfers?: any) {
-        if (!this.comObj) {
-          (globalThis as any).__pdfjsDiag.traps.push({
-            event: 'sendWithPromise.nullComObj',
-            action,
-            time: Date.now(),
-            stack: new Error().stack?.split('\n').slice(0, 8).join('; '),
-          });
-        }
-        return origSendWithPromise.apply(this, arguments as any);
-      };
-      await tmpWorker.destroy();
-    } catch {}
-
-    try {
       const tmpTask = pdfjsMod.getDocument({ data: new Uint8Array(1) });
       const TaskClass = tmpTask.constructor;
       tmpTask.destroy().catch(() => {});
