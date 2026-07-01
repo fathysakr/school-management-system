@@ -80,15 +80,6 @@ export async function POST(request: NextRequest) {
   } catch (e: any) {
     results.error = e.message;
     results.stack = e.stack?.split('\n').slice(0, 8).join('\n');
-    results.diag = {
-      preWorkerMH: results.preWorkerMH,
-      preWorkerInstanceof: results.preWorkerInstanceof,
-      oldMH: results.oldMH,
-    };
-    const gd = (globalThis as any).__pdfjsDiag;
-    if (gd) {
-      results.destroyTraps = gd.traps;
-    }
   }
 
   return Response.json(results);
