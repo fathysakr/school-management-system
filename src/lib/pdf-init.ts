@@ -25,22 +25,41 @@ export async function getPdfjs(): Promise<any> {
       return origWorkerDestroy.apply(this, arguments as any);
     };
 
-    const tmpTask = pdfjsMod.getDocument({ data: new Uint8Array(1) });
-    const TaskClass = tmpTask.constructor;
-    tmpTask.destroy().catch(() => {});
-    const origTaskDestroy = TaskClass.prototype.destroy;
-    TaskClass.prototype.destroy = function () {
-      (globalThis as any).__pdfjsDiag.traps.push({
-        event: 'task.destroy',
-        time: Date.now(),
-        hasWorker: !!this._worker,
-        workerName: this._worker?.name,
-        workerDestroyed: this._worker?.destroyed,
-        hasTransport: !!this._transport,
-        stack: new Error().stack?.split('\n').slice(1, 6).join('; '),
-      });
-      return origTaskDestroy.apply(this, arguments as any);
-    };
+    Object.defineProperty(pdfjsMod.PDFWorker.prototype, 'messageHandler', {
+      get() {
+        const val = this._messageHandler;
+        if (val === null) {
+          (globalThis as any).__pdfjsDiag.traps.push({
+            event: 'messageHandler.null',
+            time: Date.now(),
+            name: this.name,
+            destroyed: this.destroyed,
+            stack: new Error().stack?.split('\n').slice(0, 8).join('; '),
+          });
+        }
+        return val;
+      },
+      configurable: true,
+    });
+
+    try {
+      const tmpTask = pdfjsMod.getDocument({ data: new Uint8Array(1) });
+      const TaskClass = tmpTask.constructor;
+      tmpTask.destroy().catch(() => {});
+      const origTaskDestroy = TaskClass.prototype.destroy;
+      TaskClass.prototype.destroy = function () {
+        (globalThis as any).__pdfjsDiag.traps.push({
+          event: 'task.destroy',
+          time: Date.now(),
+          hasWorker: !!this._worker,
+          workerName: this._worker?.name,
+          workerDestroyed: this._worker?.destroyed,
+          hasTransport: !!this._transport,
+          stack: new Error().stack?.split('\n').slice(1, 6).join('; '),
+        });
+        return origTaskDestroy.apply(this, arguments as any);
+      };
+    } catch {}
 
     return pdfjsMod;
   })();
