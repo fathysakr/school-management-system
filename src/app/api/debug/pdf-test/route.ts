@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
     results.preWorkerMH = preWorker.messageHandler !== null;
     results.preWorkerInstanceof = preWorker instanceof mod.PDFWorker;
 
+    const oldMH = preWorker.messageHandler;
+    results.oldMH = oldMH !== null;
     const task = mod.getDocument({ data: buffer, worker: preWorker });
     const doc = await task.promise;
     results.numPages = doc.numPages;
@@ -81,7 +83,12 @@ export async function POST(request: NextRequest) {
     results.diag = {
       preWorkerMH: results.preWorkerMH,
       preWorkerInstanceof: results.preWorkerInstanceof,
+      oldMH: results.oldMH,
     };
+    const gd = (globalThis as any).__pdfjsDiag;
+    if (gd) {
+      results.destroyTraps = gd.traps;
+    }
   }
 
   return Response.json(results);
