@@ -49,24 +49,18 @@ export async function POST(request: NextRequest) {
 
     const mod = await getPdfjs();
     results.pdfLoad = 'ok';
-    results.hasPDFWorker = typeof mod.PDFWorker === 'function';
-
-    const worker = new mod.PDFWorker({ name: 'worker-test' });
-    results.workerMHBefore = worker.messageHandler !== null;
-    results.workerDestroyed = worker.destroyed;
-    await worker.promise;
-    results.workerMHAfter = worker.messageHandler !== null;
-    results.workerMHType = typeof worker.messageHandler;
-
-    if (!worker.messageHandler) {
-      results.error = 'worker.messageHandler is null after promise resolved';
-      return Response.json(results);
-    }
 
     const buffer = new Uint8Array(await file.arrayBuffer());
     results.bufferSize = buffer.length;
 
-    const doc = await mod.getDocument({ data: buffer }).promise;
+    // Try with a pre-created worker passed explicitly
+    const preWorker = new mod.PDFWorker({ name: 'pre-worker' });
+    await preWorker.promise;
+    results.preWorkerMH = preWorker.messageHandler !== null;
+    results.preWorkerInstanceof = preWorker instanceof mod.PDFWorker;
+
+    const task = mod.getDocument({ data: buffer, worker: preWorker });
+    const doc = await task.promise;
     results.numPages = doc.numPages;
 
     const page = await doc.getPage(1);
@@ -81,10 +75,13 @@ export async function POST(request: NextRequest) {
     }));
     results.allText = content.items.map((item: any) => item.str || '').join(' ').slice(0, 500);
     await doc.destroy();
-    await worker.destroy();
   } catch (e: any) {
     results.error = e.message;
     results.stack = e.stack?.split('\n').slice(0, 8).join('\n');
+    results.diag = {
+      preWorkerMH: results.preWorkerMH,
+      preWorkerInstanceof: results.preWorkerInstanceof,
+    };
   }
 
   return Response.json(results);
