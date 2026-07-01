@@ -25,22 +25,24 @@ export async function getPdfjs(): Promise<any> {
       return origWorkerDestroy.apply(this, arguments as any);
     };
 
-    Object.defineProperty(pdfjsMod.PDFWorker.prototype, 'messageHandler', {
-      get() {
-        const val = this._messageHandler;
-        if (val === null) {
+    try {
+      const tmpWorker = new pdfjsMod.PDFWorker({ name: 'tmp-diag' });
+      await tmpWorker.promise;
+      const MHClass = tmpWorker.messageHandler.constructor;
+      const origSendWithPromise = MHClass.prototype.sendWithPromise;
+      MHClass.prototype.sendWithPromise = function (action: string, data: any, transfers?: any) {
+        if (!this.comObj) {
           (globalThis as any).__pdfjsDiag.traps.push({
-            event: 'messageHandler.null',
+            event: 'sendWithPromise.nullComObj',
+            action,
             time: Date.now(),
-            name: this.name,
-            destroyed: this.destroyed,
             stack: new Error().stack?.split('\n').slice(0, 8).join('; '),
           });
         }
-        return val;
-      },
-      configurable: true,
-    });
+        return origSendWithPromise.apply(this, arguments as any);
+      };
+      await tmpWorker.destroy();
+    } catch {}
 
     try {
       const tmpTask = pdfjsMod.getDocument({ data: new Uint8Array(1) });
