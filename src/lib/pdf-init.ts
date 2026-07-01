@@ -25,8 +25,11 @@ export async function getPdfjs(): Promise<any> {
       return origWorkerDestroy.apply(this, arguments as any);
     };
 
-    const origTaskDestroy = pdfjsMod.PDFDocumentLoadingTask.prototype.destroy;
-    pdfjsMod.PDFDocumentLoadingTask.prototype.destroy = function () {
+    const tmpTask = pdfjsMod.getDocument({ data: new Uint8Array(1) });
+    const TaskClass = tmpTask.constructor;
+    tmpTask.destroy().catch(() => {});
+    const origTaskDestroy = TaskClass.prototype.destroy;
+    TaskClass.prototype.destroy = function () {
       (globalThis as any).__pdfjsDiag.traps.push({
         event: 'task.destroy',
         time: Date.now(),
