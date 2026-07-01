@@ -8,7 +8,7 @@ export async function getPdfjs(): Promise<any> {
   cachedPdfjs = (async () => {
     const workerMod = await import('./pdf.worker.mjs');
     (globalThis as any).pdfjsWorker = workerMod;
-    const pdfjsMod = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const pdfjsMod = await import('pdfjs-dist/build/pdf.mjs');
 
     (globalThis as any).__pdfjsDiag = { traps: [] };
 
