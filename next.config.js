@@ -5,10 +5,7 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   experimental: {
-    serverComponentsExternalPackages: ['pdfjs-dist'],
-    outputFileTracingIncludes: {
-      '/api/**': ['./src/lib/pdf.worker.mjs'],
-    },
+    serverComponentsExternalPackages: ['pdf-parse'],
   },
   headers: async () => {
     return [
