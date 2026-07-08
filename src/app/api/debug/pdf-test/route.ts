@@ -38,6 +38,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const results: Record<string, any> = {};
 
+  const traceLog: string[] = [];
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -55,7 +57,6 @@ export async function POST(request: NextRequest) {
     // Patch worker prototype to trace destroy/_setupFakeWorker calls
     const origDestroy = mod.PDFWorker.prototype.destroy;
     const origSetupFake = mod.PDFWorker.prototype._setupFakeWorker;
-    const traceLog: string[] = [];
     const wId = 'w' + Date.now();
     mod.PDFWorker.prototype.destroy = function (this: any) {
       traceLog.push(wId + ' destroy called, had mh=' + (this._messageHandler !== null));
