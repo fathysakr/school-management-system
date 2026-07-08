@@ -189,8 +189,13 @@ export async function POST(request: NextRequest) {
     console.error('Upload PDF schedule error:', error);
     const msg = error.message || 'فشل استيراد الجدول من PDF';
     const debugData = error.debugData || null;
+    let fullMsg = msg;
+    if (debugData) {
+      fullMsg += ` (pages: ${debugData.numPages}, items/page1: ${debugData.itemsPerPage?.[0] || '?'})`;
+      fullMsg += `\n\n--- أول 500 حرف من النص ---\n${(debugData.textSample || '').substring(0, 500)}`;
+    }
     return Response.json({
-      error: msg,
+      error: fullMsg,
       stack: (error.stack || '').split('\n').slice(0, 10).join('\n'),
       debug: debugData,
     }, { status: 400 });
