@@ -14,12 +14,110 @@ import {
   DeleteSweep, Warning, School, Grade, Assessment, People,
   Schedule, Campaign, AutoStories, RestartAlt, ManageAccounts,
   Add, Edit, Delete, Refresh, Search, FileDownload, Security,
-  LockReset, Visibility, VisibilityOff, ContentCopy, CloudDownload, CloudUpload, CalendarToday, GroupAdd
+  LockReset, Visibility, VisibilityOff, ContentCopy, CloudDownload, CloudUpload, CalendarToday, GroupAdd, AccessTime, Save
 } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { permissionGroups, permissionLabels, allPermissions } from '@/lib/permissions';
 import AcademicManagement from './AcademicManagement';
 import ParentsManagement from './ParentsManagement';
+
+function PeriodTimesEditor() {
+  const { token } = useAuth();
+  const [periods, setPeriods] = useState<Record<number, { start: string; end: string }>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    if (!token) return;
+    setLoading(true);
+    fetch('/api/settings/periods', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.periods) setPeriods(d.periods); })
+      .catch(() => setError('فشل في تحميل أوقات الحصص'))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const handleSave = async () => {
+    if (!token) return;
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/settings/periods', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ periods }),
+      });
+      const d = await res.json();
+      if (res.ok) setSuccess('تم حفظ أوقات الحصص بنجاح');
+      else setError(d.error || 'فشل في الحفظ');
+    } catch {
+      setError('فشل في الاتصال بالخادم');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateTime = (num: number, field: 'start' | 'end', value: string) => {
+    setPeriods(prev => ({
+      ...prev,
+      [num]: { ...prev[num], [field]: value },
+    }));
+  };
+
+  if (loading) return <Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress /></Box>;
+
+  return (
+    <>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h6" fontWeight="bold">تعديل أوقات بداية ونهاية الحصص</Typography>
+        <Button variant="contained" onClick={handleSave} disabled={saving} startIcon={<Save />}>
+          {saving ? 'جاري الحفظ...' : 'حفظ'}
+        </Button>
+      </Box>
+
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
+
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 'bold' }}>رقم الحصة</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>بداية</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>نهاية</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {Object.entries(periods).sort(([a], [b]) => Number(a) - Number(b)).map(([num, times]) => (
+              <TableRow key={num}>
+                <TableCell>
+                  <Chip label={`الحصة ${num}`} color="primary" variant="outlined" />
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    type="time" size="small" value={times.start}
+                    onChange={(e) => updateTime(Number(num), 'start', e.target.value)}
+                    inputProps={{ sx: { direction: 'ltr', textAlign: 'center' } }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    type="time" size="small" value={times.end}
+                    onChange={(e) => updateTime(Number(num), 'end', e.target.value)}
+                    inputProps={{ sx: { direction: 'ltr', textAlign: 'center' } }}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </>
+  );
+}
 
 const actions = [
   { key: 'delete_all_grades', label: 'حذف جميع الدرجات', icon: <Grade />, color: '#e65100', desc: 'مسح جميع سجلات الدرجات والتقييمات' },
@@ -355,6 +453,7 @@ export default function AdminPage() {
         <Tab icon={<ManageAccounts />} label="إدارة الحسابات" iconPosition="start" />
         <Tab icon={<Security />} label="الصلاحيات" iconPosition="start" />
         <Tab icon={<CloudDownload />} label="النسخ الاحتياطي" iconPosition="start" />
+        <Tab icon={<AccessTime />} label="أوقات الحصص" iconPosition="start" />
         <Tab icon={<CalendarToday />} label="الجدول الدراسي" iconPosition="start" />
         <Tab icon={<GroupAdd />} label="أولياء الأمور" iconPosition="start" />
       </Tabs>
@@ -820,8 +919,9 @@ export default function AdminPage() {
           )}
         </>
       )}
-      {tab === 4 && <AcademicManagement />}
-      {tab === 5 && <ParentsManagement />}
+      {tab === 4 && <PeriodTimesEditor />}
+      {tab === 5 && <AcademicManagement />}
+      {tab === 6 && <ParentsManagement />}
     </Box>
   );
 }

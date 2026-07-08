@@ -22,9 +22,24 @@ export async function POST(request: NextRequest) {
     const schoolParam = (formData.get('school') as string) || 'middle';
     if (!['middle', 'high'].includes(schoolParam)) return badRequest('المرحلة غير صحيحة');
     const clearExisting = formData.get('clear_existing') === 'true';
+    const pageMappingRaw = formData.get('page_mapping') as string | null;
+    let pageMapping: Record<string, number> = {};
+    if (pageMappingRaw) {
+      try { pageMapping = JSON.parse(pageMappingRaw); } catch { return badRequest('page_mapping غير صالح'); }
+    }
 
     const buffer = new Uint8Array(await file.arrayBuffer());
-    const parsed = await parseSchedulePdf(buffer);
+    const ptRows = await db.prepare('SELECT period_number, start_time, end_time FROM period_times ORDER BY period_number').all() as any[];
+    const periodTimes = ptRows.map((r: any) => ({ start: r.start_time, end: r.end_time }));
+    const parsed = await parseSchedulePdf(buffer, periodTimes);
+
+    // Override classId based on pageMapping if provided
+    if (Object.keys(pageMapping).length > 0) {
+      for (const entry of parsed.entries) {
+        const mapped = pageMapping[entry.classId];
+        if (mapped !== undefined) entry.classId = String(mapped);
+      }
+    }
 
     const [existingTeachers, existingClasses, existingSubjects] = await Promise.all([
       db.prepare('SELECT id, first_name, last_name FROM teachers WHERE status = ?').all('active'),

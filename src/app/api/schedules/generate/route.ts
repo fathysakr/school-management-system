@@ -4,8 +4,22 @@ import { authenticate } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'] as const;
-const START_TIMES = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00'];
-const END_TIMES = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
+
+function getPeriodTimes(db: any): { start: string; end: string }[] {
+  try {
+    const rows = db.prepare('SELECT start_time, end_time FROM period_times ORDER BY period_number').all() as any[];
+    if (rows.length > 0) return rows.map((r: any) => ({ start: r.start_time, end: r.end_time }));
+  } catch {}
+  return [
+    { start: '07:15', end: '08:00' },
+    { start: '08:00', end: '08:45' },
+    { start: '09:15', end: '10:00' },
+    { start: '10:00', end: '10:45' },
+    { start: '10:45', end: '11:30' },
+    { start: '11:30', end: '12:15' },
+    { start: '14:00', end: '14:45' },
+  ];
+}
 
 function schoolToGrade(school: string): string | null {
   if (school === 'middle') return 'متوسط';
@@ -120,6 +134,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const periodTimes = getPeriodTimes(db);
+    const numPeriods = periodTimes.length;
+
     const teacherSlots = new Set<string>();
     const existingSchedules = await db.prepare(
       school === 'all'
@@ -130,7 +147,7 @@ export async function POST(req: NextRequest) {
     for (const s of existingSchedules as any[]) {
       const dayIdx = DAYS.indexOf(s.day_of_week);
       if (dayIdx === -1) continue;
-      const periodIdx = START_TIMES.indexOf(s.start_time);
+      const periodIdx = periodTimes.findIndex(pt => pt.start === s.start_time);
       if (periodIdx === -1) continue;
       if (s.teacher_id) {
         teacherSlots.add(`${s.teacher_id}-${dayIdx}-${periodIdx}`);
@@ -154,11 +171,11 @@ export async function POST(req: NextRequest) {
       }
 
       const interleaved = interleave(sessions, s => s.subject);
-      const grid: GridSlot[][] = Array.from({ length: 5 }, () => Array(8).fill(null));
+      const grid: GridSlot[][] = Array.from({ length: 5 }, () => Array(numPeriods).fill(null));
       let si = 0;
 
       for (let d = 0; d < 5 && si < interleaved.length; d++) {
-        for (let p = 0; p < 8 && si < interleaved.length; p++) {
+        for (let p = 0; p < numPeriods && si < interleaved.length; p++) {
           const session = interleaved[si];
           const tid = findAvailableTeacher(session.subject, teachers, d, p, teacherSlots, session.teacher_id);
           if (!tid) {
@@ -173,7 +190,7 @@ export async function POST(req: NextRequest) {
       }
 
       for (let d = 0; d < 5; d++) {
-        for (let p = 0; p < 8; p++) {
+        for (let p = 0; p < numPeriods; p++) {
           const slot = grid[d][p];
           if (!slot) continue;
           allEntries.push({
@@ -181,8 +198,8 @@ export async function POST(req: NextRequest) {
             teacher_id: slot.teacher_id,
             subject: slot.subject,
             day_of_week: DAYS[d],
-            start_time: START_TIMES[p],
-            end_time: END_TIMES[p],
+            start_time: periodTimes[p].start,
+            end_time: periodTimes[p].end,
           });
           totalGenerated++;
         }

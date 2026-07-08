@@ -62,6 +62,12 @@ export default function SchedulePanel() {
   const [pdfResult, setPdfResult] = useState<any>(null);
   const [pdfDragOver, setPdfDragOver] = useState(false);
 
+  // Two-step PDF upload: preview → map pages → save
+  const [pdfPreview, setPdfPreview] = useState<any>(null);
+  const [pdfAllClasses, setPdfAllClasses] = useState<any[]>([]);
+  const [pdfPageMapping, setPdfPageMapping] = useState<Record<string, string>>({});
+  const [pdfError, setPdfError] = useState('');
+
   const loadData = useCallback(() => {
     if (!token) return;
     setLoading(true);
@@ -279,7 +285,7 @@ export default function SchedulePanel() {
         </Box>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button size="small" variant="contained" color="success" startIcon={<AutoAwesome />} onClick={() => setGenDialogOpen(true)}>توليد</Button>
-          <Button size="small" variant="contained" color="info" startIcon={<CloudUpload />} onClick={() => { setPdfDialogOpen(true); setPdfFile(null); setPdfResult(null); }}>PDF</Button>
+          <Button size="small" variant="contained" color="info" startIcon={<CloudUpload />} onClick={() => { setPdfDialogOpen(true); setPdfFile(null); setPdfResult(null); setPdfPreview(null); setPdfPageMapping({}); setPdfError(''); }}>PDF</Button>
           <Button size="small" variant="outlined" startIcon={<FileDownload />} onClick={handleExport}>تصدير</Button>
           <Button size="small" variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>إضافة</Button>
         </Box>
@@ -348,7 +354,7 @@ export default function SchedulePanel() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={pdfDialogOpen} onClose={() => !pdfLoading && setPdfDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={pdfDialogOpen} onClose={() => !pdfLoading && setPdfDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ bgcolor: 'info.main', color: 'white' }}>
           <CloudUpload sx={{ verticalAlign: 'middle', ml: 1 }} />استيراد جدول من PDF
           <IconButton onClick={() => setPdfDialogOpen(false)} sx={{ position: 'absolute', left: 8, top: 8, color: 'white' }}>
@@ -356,45 +362,87 @@ export default function SchedulePanel() {
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ pt: '24px !important' }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            قم برفع ملف PDF للجدول الدراسي (من برنامج aSc Timetables) ليتم استيراد جميع الحصص والمواد والمعلمين تلقائياً.
-          </Typography>
-          <Box
-            sx={{
-              border: '2px dashed', borderRadius: 2, p: 4, textAlign: 'center', cursor: 'pointer', mb: 2,
-              borderColor: pdfDragOver ? 'info.main' : pdfFile ? 'success.main' : 'grey.400',
-              bgcolor: pdfDragOver ? '#e3f2fd' : 'grey.50',
-              transition: '0.2s',
-            }}
-            onDragOver={(e) => { e.preventDefault(); setPdfDragOver(true); }}
-            onDragLeave={() => setPdfDragOver(false)}
-            onDrop={(e) => { e.preventDefault(); setPdfDragOver(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.pdf')) setPdfFile(f); }}
-            onClick={() => document.getElementById('pdf-upload-input-admin')?.click()}
-          >
-            <input id="pdf-upload-input-admin" type="file" accept=".pdf" hidden
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) setPdfFile(f); }} />
-            <CloudUpload sx={{ fontSize: 48, color: pdfFile ? 'success.main' : 'text.disabled', mb: 1 }} />
-            <Typography color={pdfFile ? 'success.main' : 'text.secondary'}>
-              {pdfFile ? pdfFile.name : 'اسحب ملف PDF هنا أو اضغط للاختيار'}
-            </Typography>
-          </Box>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth size="small"><InputLabel>المرحلة</InputLabel>
-                <Select value={pdfSchool} label="المرحلة" onChange={(e) => setPdfSchool(e.target.value)}>
-                  <MenuItem value="middle">متوسط</MenuItem><MenuItem value="high">ثانوي</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth size="small"><InputLabel>الاستيراد</InputLabel>
-                <Select value={pdfClear ? 'clear' : 'keep'} label="الاستيراد" onChange={(e) => setPdfClear(e.target.value === 'clear')}>
-                  <MenuItem value="clear">مسح الجدول الحالي</MenuItem>
-                  <MenuItem value="keep">إضافة للفصول الفارغة</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+          {pdfError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPdfError('')}>{pdfError}</Alert>}
+
+          {!pdfPreview ? (
+            <>
+              {/* Step 1: Upload file */}
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                قم برفع ملف PDF للجدول الدراسي (من برنامج aSc Timetables) ليتم استيراد جميع الحصص والمواد والمعلمين.
+              </Typography>
+              <Box
+                sx={{
+                  border: '2px dashed', borderRadius: 2, p: 4, textAlign: 'center', cursor: 'pointer', mb: 2,
+                  borderColor: pdfDragOver ? 'info.main' : pdfFile ? 'success.main' : 'grey.400',
+                  bgcolor: pdfDragOver ? '#e3f2fd' : 'grey.50',
+                  transition: '0.2s',
+                }}
+                onDragOver={(e) => { e.preventDefault(); setPdfDragOver(true); }}
+                onDragLeave={() => setPdfDragOver(false)}
+                onDrop={(e) => { e.preventDefault(); setPdfDragOver(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.pdf')) setPdfFile(f); }}
+                onClick={() => document.getElementById('pdf-upload-input-admin')?.click()}
+              >
+                <input id="pdf-upload-input-admin" type="file" accept=".pdf" hidden
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) setPdfFile(f); }} />
+                <CloudUpload sx={{ fontSize: 48, color: pdfFile ? 'success.main' : 'text.disabled', mb: 1 }} />
+                <Typography color={pdfFile ? 'success.main' : 'text.secondary'}>
+                  {pdfFile ? pdfFile.name : 'اسحب ملف PDF هنا أو اضغط للاختيار'}
+                </Typography>
+              </Box>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth size="small"><InputLabel>المرحلة</InputLabel>
+                    <Select value={pdfSchool} label="المرحلة" onChange={(e) => setPdfSchool(e.target.value)}>
+                      <MenuItem value="middle">متوسط</MenuItem><MenuItem value="high">ثانوي</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth size="small"><InputLabel>الاستيراد</InputLabel>
+                    <Select value={pdfClear ? 'clear' : 'keep'} label="الاستيراد" onChange={(e) => setPdfClear(e.target.value === 'clear')}>
+                      <MenuItem value="clear">مسح الجدول الحالي</MenuItem>
+                      <MenuItem value="keep">إضافة للفصول الفارغة</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+            </>
+          ) : (
+            <>
+              {/* Step 2: Map pages to classes */}
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                تم استخراج {pdfPreview.preview.numPages} صفحة. اختر الفصل المناسب لكل صفحة:
+              </Typography>
+              <Box sx={{ maxHeight: 360, overflow: 'auto', mb: 2 }}>
+                {pdfPreview.preview.pages.map((pg: any) => (
+                  <Paper key={pg.pageIndex} variant="outlined" sx={{ p: 1.5, mb: 1, borderRadius: 1.5, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                    <Typography sx={{ minWidth: 70, fontWeight: 'bold', fontSize: 14 }}>
+                      الصفحة {pg.pageIndex}
+                      <Chip size="small" label={`${pg.entryCount} حصة`} sx={{ mr: 1, fontSize: 11 }} />
+                    </Typography>
+                    <FormControl size="small" sx={{ minWidth: 180 }}>
+                      <InputLabel>الفصل</InputLabel>
+                      <Select
+                        value={pdfPageMapping[pg.pageIndex] || ''}
+                        label="الفصل"
+                        onChange={(e) => setPdfPageMapping(prev => ({ ...prev, [String(pg.pageIndex)]: e.target.value }))}
+                      >
+                        <MenuItem value="">-- اختر الفصل --</MenuItem>
+                        {pdfAllClasses.map((c: any) => (
+                          <MenuItem key={c.id} value={String(c.id)}>{c.class_name} {c.grade ? `(${c.grade})` : ''}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <Box sx={{ fontSize: 11, color: 'text.secondary', flex: 1 }}>
+                      <Typography variant="caption" display="block">المواد: {pg.subjects.slice(0, 5).join('، ')}{pg.subjects.length > 5 ? '...' : ''}</Typography>
+                      <Typography variant="caption" display="block">المعلمون: {pg.teachers.slice(0, 5).join('، ')}{pg.teachers.length > 5 ? '...' : ''}</Typography>
+                    </Box>
+                  </Paper>
+                ))}
+              </Box>
+            </>
+          )}
+
           {pdfResult && (
             <Alert severity="success" sx={{ mt: 2 }}>
               <Typography fontWeight="bold" gutterBottom>تم الاستيراد</Typography>
@@ -407,25 +455,66 @@ export default function SchedulePanel() {
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setPdfDialogOpen(false)} disabled={pdfLoading}>إلغاء</Button>
-          <Button variant="contained" color="info"
-            onClick={async () => {
-              if (!token || !pdfFile) return;
-              setPdfLoading(true); setPdfResult(null);
-              try {
-                const fd = new FormData();
-                fd.append('file', pdfFile);
-                fd.append('school', pdfSchool);
-                fd.append('clear_existing', String(pdfClear));
-                const res = await api.upload('/schedules/upload-pdf', fd, token);
-                setPdfResult(res);
-                loadData();
-              } catch (err: any) { setError(err?.message || 'فشل استيراد PDF'); }
-              finally { setPdfLoading(false); }
-            }}
-            disabled={pdfLoading || !pdfFile}
-            startIcon={pdfLoading ? <CircularProgress size={18} /> : <CloudUpload />}
-          >{pdfLoading ? 'جاري...' : 'استيراد'}</Button>
+          <Button onClick={() => { setPdfDialogOpen(false); setPdfPreview(null); }} disabled={pdfLoading}>إلغاء</Button>
+          {!pdfPreview ? (
+            <Button variant="contained" color="info"
+              onClick={async () => {
+                if (!token || !pdfFile) return;
+                setPdfLoading(true); setPdfResult(null); setPdfError('');
+                try {
+                  const fd = new FormData();
+                  fd.append('file', pdfFile);
+                  const res = await api.upload('/schedules/preview-pdf', fd, token);
+                  setPdfPreview(res);
+                  setPdfAllClasses(res.classes || []);
+                  // Auto-map based on classId if it looks like a grade-section
+                  if (res.preview?.pages) {
+                    const mapping: Record<string, string> = {};
+                    for (const pg of res.preview.pages) {
+                      const cls = (res.classes || []).find((c: any) =>
+                        c.grade && c.section && `${c.grade}-${c.section}` === String(pg.pageIndex)
+                      );
+                      if (cls) mapping[String(pg.pageIndex)] = String(cls.id);
+                    }
+                    setPdfPageMapping(mapping);
+                  }
+                } catch (err: any) { setPdfError(err?.message || 'فشل معاينة PDF'); }
+                finally { setPdfLoading(false); }
+              }}
+              disabled={pdfLoading || !pdfFile}
+              startIcon={pdfLoading ? <CircularProgress size={18} /> : <CloudUpload />}
+            >{pdfLoading ? 'جاري المعاينة...' : 'معاينة'}</Button>
+          ) : (
+            <Button variant="contained" color="success"
+              onClick={async () => {
+                if (!token || !pdfFile) return;
+                // Build pageMapping: map each page's original classId to the selected class
+                const mapping: Record<string, string> = {};
+                for (const pg of pdfPreview.preview.pages) {
+                  const selected = pdfPageMapping[String(pg.pageIndex)];
+                  if (selected) mapping[`page-${pg.pageIndex}`] = selected;
+                }
+                const unmapped = pdfPreview.preview.pages.filter((p: any) => !pdfPageMapping[String(p.pageIndex)]);
+                if (unmapped.length > 0) {
+                  if (!confirm(`⚠️ ${unmapped.length} صفحة بدون تحديد فصل. هل تريد المتابعة؟`)) return;
+                }
+                setPdfLoading(true); setPdfResult(null); setPdfError('');
+                try {
+                  const fd = new FormData();
+                  fd.append('file', pdfFile);
+                  fd.append('school', pdfSchool);
+                  fd.append('clear_existing', String(pdfClear));
+                  fd.append('page_mapping', JSON.stringify(mapping));
+                  const res = await api.upload('/schedules/upload-pdf', fd, token);
+                  setPdfResult(res);
+                  loadData();
+                } catch (err: any) { setPdfError(err?.message || 'فشل استيراد PDF'); }
+                finally { setPdfLoading(false); }
+              }}
+              disabled={pdfLoading}
+              startIcon={pdfLoading ? <CircularProgress size={18} /> : <CloudUpload />}
+            >{pdfLoading ? 'جاري الاستيراد...' : 'استيراد'}</Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

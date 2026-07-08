@@ -763,6 +763,25 @@ function applyMigrations(bsql: any) {
         `;
       })()
     },
+    {
+      name: '024_period_times',
+      sql: `
+        CREATE TABLE IF NOT EXISTS period_times (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          period_number INTEGER NOT NULL UNIQUE,
+          start_time TEXT NOT NULL,
+          end_time TEXT NOT NULL
+        );
+        INSERT OR IGNORE INTO period_times (period_number, start_time, end_time) VALUES
+          (1, '07:15', '08:00'),
+          (2, '08:00', '08:45'),
+          (3, '09:15', '10:00'),
+          (4, '10:00', '10:45'),
+          (5, '10:45', '11:30'),
+          (6, '11:30', '12:15'),
+          (7, '14:00', '14:45');
+      `
+    },
   ];
 
   for (const migration of migrations) {
@@ -1335,6 +1354,21 @@ async function _ensureTursoReady() {
       sessions_per_week INTEGER NOT NULL DEFAULT 0,
       UNIQUE(subject_id, class_id)
     )`); } catch {}
+
+    try { await db.exec(`CREATE TABLE IF NOT EXISTS period_times (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      period_number INTEGER NOT NULL UNIQUE,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL
+    )`); } catch {}
+    await db.exec(`INSERT OR IGNORE INTO period_times (period_number, start_time, end_time) VALUES
+      (1, '07:15', '08:00'),
+      (2, '08:00', '08:45'),
+      (3, '09:15', '10:00'),
+      (4, '10:00', '10:45'),
+      (5, '10:45', '11:30'),
+      (6, '11:30', '12:15'),
+      (7, '14:00', '14:45')`);
 
     const seedAdminEmail = process.env.ADMIN_EMAIL || 'admin@school.com';
     const seedAdminPass = process.env.ADMIN_PASSWORD ? await bcrypt.hash(process.env.ADMIN_PASSWORD, 10) : await bcrypt.hash('admin123', 10);
