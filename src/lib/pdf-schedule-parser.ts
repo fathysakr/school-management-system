@@ -116,10 +116,9 @@ export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedu
 
       columns.sort((a, b) => a.x - b.x);
 
-      // Remove day-name column (rightmost) from the data columns
+      // Remove day-name column from the data columns (check each item, not the joined text)
       const dataCols = columns.filter((c) => {
-        const t = c.items.map((i) => i.str).join(' ').trim();
-        return !DAY_MAP[t];
+        return !c.items.some((i) => DAY_MAP[i.str.trim()]);
       });
 
       if (dataCols.length < 6) continue;
