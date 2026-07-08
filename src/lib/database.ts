@@ -1035,6 +1035,19 @@ async function _ensureTursoReady() {
       // _init_done table can't be created (read-only FS) — skip table creation & seed
       return;
     }
+
+    // Ensure period_times exists (no-op if already created)
+    try { await db.exec(`CREATE TABLE IF NOT EXISTS period_times (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      period_number INTEGER NOT NULL UNIQUE,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL
+    )`); } catch {}
+    try { await db.exec(`INSERT OR IGNORE INTO period_times (period_number, start_time, end_time) VALUES
+      (1, '07:15', '08:00'), (2, '08:00', '08:45'), (3, '09:15', '10:00'),
+      (4, '10:00', '10:45'), (5, '10:45', '11:30'), (6, '11:30', '12:15'),
+      (7, '14:00', '14:45')`); } catch {}
+
     const done = await db.prepare("SELECT 1 FROM _init_done WHERE flag = 1").get().catch(() => null) as any;
     if (done) { return; }
 
