@@ -136,13 +136,20 @@ export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedu
   }
 
   if (entries.length === 0) {
-    const page1 = await doc.getPage(1);
-    const c1 = await page1.getTextContent();
-    const rawLines = c1.items.map((i: any) => `[x:${i.transform?.[4]?.toFixed()},y:${i.transform?.[5]?.toFixed()}] ${i.str || ''}`).slice(0, 100);
-    const textSample = rawLines.join('\n');
+    // Full dump of every page for debugging
+    const allPagesText: string[] = [];
+    const itemsPerPage: number[] = [];
+    for (let pn = 1; pn <= Math.min(doc.numPages, 3); pn++) {
+      const pg = await doc.getPage(pn);
+      const ct = await pg.getTextContent();
+      itemsPerPage.push(ct.items.length);
+      const lines = ct.items.map((i: any) => `[x:${i.transform?.[4]?.toFixed()},y:${i.transform?.[5]?.toFixed()}] ${i.str || ''}`);
+      allPagesText.push(`--- الصفحة ${pn} (${ct.items.length} عنصر) ---\n` + lines.join('\n'));
+    }
+    const textSample = allPagesText.join('\n\n');
     await doc.destroy();
     const err: any = new Error('لم يتم استخراج أي بيانات جدول من PDF');
-    err.debugData = { numPages: doc.numPages, itemsPerPage: [c1.items.length], textSample };
+    err.debugData = { numPages: doc.numPages, itemsPerPage, textSample };
     throw err;
   }
 
