@@ -191,8 +191,8 @@ export async function POST(request: NextRequest) {
     const debugData = error.debugData || null;
     let fullMsg = msg;
     if (debugData) {
-      fullMsg += ` (pages: ${debugData.numPages}, items/page1: ${debugData.itemsPerPage?.[0] || '?'})`;
-      fullMsg += `\n\n--- أول 500 حرف من النص ---\n${(debugData.textSample || '').substring(0, 500)}`;
+      fullMsg += ` (pages: ${debugData.numPages}, items per page: [${(debugData.itemsPerPage || []).join(',')}])`;
+      fullMsg += `\n\n--- النص الكامل ---\n${(debugData.textSample || '').substring(0, 5000)}`;
     }
     return Response.json({
       error: fullMsg,
