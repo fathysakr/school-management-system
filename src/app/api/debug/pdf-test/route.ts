@@ -52,16 +52,29 @@ export async function POST(request: NextRequest) {
 
     const buffer = new Uint8Array(await file.arrayBuffer());
 
-    // Step-by-step test
-    // First test: can we create a worker?
-    const testWorker = new mod.PDFWorker('test-' + Date.now());
-    results.twDestroyed = testWorker.destroyed;
-    results.twMhBefore = testWorker.messageHandler !== null;
-    await testWorker.promise;
-    results.twMhAfter = testWorker.messageHandler !== null;
-    results.twMhType = typeof testWorker.messageHandler;
+    // Patch worker prototype to trace destroy/_setupFakeWorker calls
+    const origDestroy = mod.PDFWorker.prototype.destroy;
+    const origSetupFake = mod.PDFWorker.prototype._setupFakeWorker;
+    const traceLog: string[] = [];
+    const wId = 'w' + Date.now();
+    mod.PDFWorker.prototype.destroy = function (this: any) {
+      traceLog.push(wId + ' destroy called, had mh=' + (this._messageHandler !== null));
+      return origDestroy.apply(this, arguments as any);
+    };
+    mod.PDFWorker.prototype._setupFakeWorker = function (this: any) {
+      traceLog.push(wId + ' _setupFakeWorker called');
+      origSetupFake.apply(this, arguments as any);
+    };
+    // Also trace _initialize
+    const origInit = mod.PDFWorker.prototype._initialize;
+    if (origInit) {
+      mod.PDFWorker.prototype._initialize = function (this: any) {
+        traceLog.push(wId + ' _initialize called');
+        origInit.apply(this, arguments as any);
+      };
+    }
 
-    // Second test: create worker through getDocument
+    // Step-by-step test
     const task = mod.getDocument({ data: buffer });
     results.taskType = typeof task;
     results.hasPromise = typeof task.promise;
@@ -71,7 +84,6 @@ export async function POST(request: NextRequest) {
     if (task._worker) {
       results.workerDestroyed = task._worker.destroyed;
       results.mhBeforePromise = task._worker.messageHandler !== null;
-      results.workerIsTest = task._worker === testWorker;
     }
 
     const doc = await task.promise;
@@ -88,9 +100,11 @@ export async function POST(request: NextRequest) {
     results.allText = content.items.map((item: any) => item.str || '').join(' ').substring(0, 500);
     await doc.destroy();
     results.success = true;
+    results.traceLog = traceLog;
   } catch (e: any) {
     results.error = e.message;
-    results.stack = e.stack?.split('\n').slice(0, 8).join('\n');
+    results.stack = e.stack?.split('\n').slice(0, 12).join('\n');
+    results.traceLog = traceLog;
   }
 
   return Response.json(results);
