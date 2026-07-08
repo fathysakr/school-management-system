@@ -31,10 +31,11 @@ export async function POST(request: NextRequest) {
     const buffer = new Uint8Array(await file.arrayBuffer());
     const ptRows = await db.prepare('SELECT period_number, start_time, end_time FROM period_times ORDER BY period_number').all() as any[];
     const periodTimes = ptRows.map((r: any) => ({ start: r.start_time, end: r.end_time }));
-    const parsed = await parseSchedulePdf(buffer, periodTimes);
+    const hasMapping = Object.keys(pageMapping).length > 0;
+    const parsed = await parseSchedulePdf(buffer, periodTimes, hasMapping);
 
     // Override classId based on pageMapping if provided
-    if (Object.keys(pageMapping).length > 0) {
+    if (hasMapping) {
       for (const entry of parsed.entries) {
         const mapped = pageMapping[entry.classId];
         if (mapped !== undefined) entry.classId = String(mapped);

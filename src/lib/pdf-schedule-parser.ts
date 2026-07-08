@@ -209,7 +209,7 @@ export async function previewPdfPages(buffer: Uint8Array, periodTimes?: { start:
   };
 }
 
-export async function parseSchedulePdf(buffer: Uint8Array, periodTimes?: { start: string; end: string }[]): Promise<ParsedSchedule> {
+export async function parseSchedulePdf(buffer: Uint8Array, periodTimes?: { start: string; end: string }[], forcePageClassId?: boolean): Promise<ParsedSchedule> {
   const pdfjs: any = await getPdfjs();
   const doc = await pdfjs.getDocument({ data: buffer });
 
@@ -231,8 +231,7 @@ export async function parseSchedulePdf(buffer: Uint8Array, periodTimes?: { start
 
     const fullText = items.map((i) => i.str).join('\n');
 
-    let classIdLine = autoDetectClassId(fullText);
-    if (!classIdLine) classIdLine = `page-${pageNum}`;
+    let classIdLine = forcePageClassId ? `page-${pageNum}` : (autoDetectClassId(fullText) || `page-${pageNum}`);
     const [grade, section] = classIdLine.includes('-') ? classIdLine.split('-') : ['0', classIdLine];
     if (!classesMap.has(classIdLine)) classesMap.set(classIdLine, { grade, section });
 
