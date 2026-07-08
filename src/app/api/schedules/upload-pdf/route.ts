@@ -73,9 +73,17 @@ export async function POST(request: NextRequest) {
 
     if (clearExisting) {
       const classIds = new Set<number>();
-      for (const cls of parsed.classes) {
-        const existingId = classByKey.get(cls.classId);
-        if (existingId) classIds.add(existingId);
+      if (hasMapping) {
+        // Use the mapped class IDs
+        for (const val of Object.values(pageMapping)) {
+          const id = Number(val);
+          if (!isNaN(id)) classIds.add(id);
+        }
+      } else {
+        for (const cls of parsed.classes) {
+          const existingId = classByKey.get(cls.classId);
+          if (existingId) classIds.add(existingId);
+        }
       }
       if (classIds.size > 0) {
         const ids = Array.from(classIds);
@@ -142,40 +150,84 @@ export async function POST(request: NextRequest) {
     );
 
     const teacherSubjects = new Map<number, Map<string, { sessions: Set<string>; classes: Set<number> }>>();
+    const processedPairs = new Set<string>();
 
-    for (const cls of parsed.classes) {
-      const grade = cls.grade;
-      const school = SCHOOL_MAP[grade] || schoolParam;
-      const dbClassId = await getOrCreateClass(cls.classId, grade, cls.section);
+    if (hasMapping) {
+      // When pageMapping is provided, entries already have DB class_id as their classId
+      // Group entries by their mapped classId directly
+      const entriesByClass = new Map<string, typeof parsed.entries>();
+      for (const entry of parsed.entries) {
+        const arr = entriesByClass.get(entry.classId) || [];
+        arr.push(entry);
+        entriesByClass.set(entry.classId, arr);
+      }
 
-      const processedPairs = new Set<string>();
+      for (const [dbClassIdStr, classEntries] of entriesByClass) {
+        const dbClassId = parseInt(dbClassIdStr);
+        if (isNaN(dbClassId)) continue;
 
-      for (const entry of parsed.entries.filter(e => e.classId === cls.classId)) {
-        const teacherId = await getOrCreateTeacher(entry.teacher);
-        const subjectId = await getOrCreateSubject(entry.subject, school, grade);
+        for (const entry of classEntries) {
+          const teacherId = await getOrCreateTeacher(entry.teacher);
+          const school = SCHOOL_MAP[entry.classId] || schoolParam;
+          const subjectId = await getOrCreateSubject(entry.subject, school, '');
 
-        const pairKey = `${subjectId}:${dbClassId}`;
-        if (!processedPairs.has(pairKey)) {
-          await linkSubjectClass.run(subjectId, dbClassId, 3);
-          processedPairs.add(pairKey);
+          const pairKey = `${subjectId}:${dbClassId}`;
+          if (!processedPairs.has(pairKey)) {
+            await linkSubjectClass.run(subjectId, dbClassId, 3);
+            processedPairs.add(pairKey);
+          }
+
+          if (!clearExisting) {
+            const existing = await db.prepare(
+              'SELECT id FROM schedules WHERE class_id = ? AND day_of_week = ? AND start_time = ? AND status = ?'
+            ).get(dbClassId, entry.day, entry.startTime, 'active') as any;
+            if (existing) { skippedExisting++; continue; }
+          }
+
+          await insertSchedule.run(dbClassId, teacherId, sanitizeString(entry.subject), entry.day, entry.startTime, entry.endTime);
+          insertedSchedules++;
+
+          let subMap = teacherSubjects.get(teacherId);
+          if (!subMap) { subMap = new Map(); teacherSubjects.set(teacherId, subMap); }
+          let subData = subMap.get(entry.subject);
+          if (!subData) { subData = { sessions: new Set(), classes: new Set() }; subMap.set(entry.subject, subData); }
+          subData.sessions.add(`${entry.day}-${entry.startTime}`);
+          subData.classes.add(dbClassId);
         }
+      }
+    } else {
+      for (const cls of parsed.classes) {
+        const grade = cls.grade;
+        const school = SCHOOL_MAP[grade] || schoolParam;
+        const dbClassId = await getOrCreateClass(cls.classId, grade, cls.section);
 
-        if (!clearExisting) {
-          const existing = await db.prepare(
-            'SELECT id FROM schedules WHERE class_id = ? AND day_of_week = ? AND start_time = ? AND status = ?'
-          ).get(dbClassId, entry.day, entry.startTime, 'active') as any;
-          if (existing) { skippedExisting++; continue; }
+        for (const entry of parsed.entries.filter(e => e.classId === cls.classId)) {
+          const teacherId = await getOrCreateTeacher(entry.teacher);
+          const subjectId = await getOrCreateSubject(entry.subject, school, grade);
+
+          const pairKey = `${subjectId}:${dbClassId}`;
+          if (!processedPairs.has(pairKey)) {
+            await linkSubjectClass.run(subjectId, dbClassId, 3);
+            processedPairs.add(pairKey);
+          }
+
+          if (!clearExisting) {
+            const existing = await db.prepare(
+              'SELECT id FROM schedules WHERE class_id = ? AND day_of_week = ? AND start_time = ? AND status = ?'
+            ).get(dbClassId, entry.day, entry.startTime, 'active') as any;
+            if (existing) { skippedExisting++; continue; }
+          }
+
+          await insertSchedule.run(dbClassId, teacherId, sanitizeString(entry.subject), entry.day, entry.startTime, entry.endTime);
+          insertedSchedules++;
+
+          let subMap = teacherSubjects.get(teacherId);
+          if (!subMap) { subMap = new Map(); teacherSubjects.set(teacherId, subMap); }
+          let subData = subMap.get(entry.subject);
+          if (!subData) { subData = { sessions: new Set(), classes: new Set() }; subMap.set(entry.subject, subData); }
+          subData.sessions.add(`${entry.day}-${entry.startTime}`);
+          subData.classes.add(dbClassId);
         }
-
-        await insertSchedule.run(dbClassId, teacherId, sanitizeString(entry.subject), entry.day, entry.startTime, entry.endTime);
-        insertedSchedules++;
-
-        let subMap = teacherSubjects.get(teacherId);
-        if (!subMap) { subMap = new Map(); teacherSubjects.set(teacherId, subMap); }
-        let subData = subMap.get(entry.subject);
-        if (!subData) { subData = { sessions: new Set(), classes: new Set() }; subMap.set(entry.subject, subData); }
-        subData.sessions.add(`${entry.day}-${entry.startTime}`);
-        subData.classes.add(dbClassId);
       }
     }
 
@@ -191,7 +243,7 @@ export async function POST(request: NextRequest) {
     return success({
       message: 'تم استيراد الجدول بنجاح',
       summary: {
-        classes: parsed.classes.length,
+        classes: hasMapping ? new Set(Object.values(pageMapping)).size : parsed.classes.length,
         created_classes: createdClasses.length,
         teachers: parsed.teachers.length,
         created_teachers: createdTeachers.length,
