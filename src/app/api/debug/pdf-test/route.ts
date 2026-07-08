@@ -19,6 +19,8 @@ export async function GET() {
       const worker = new mod.PDFWorker('test-worker');
       results.workerDestroyed = worker.destroyed;
       results.mhBeforePromise = worker.messageHandler !== null;
+      results.hasWorkerGlobal = typeof Worker;
+      results.hasWindowGlobal = typeof window;
       await worker.promise;
       results.mhAfterPromise = worker.messageHandler !== null;
       results.mhType = typeof worker.messageHandler;
@@ -51,6 +53,15 @@ export async function POST(request: NextRequest) {
     const buffer = new Uint8Array(await file.arrayBuffer());
 
     // Step-by-step test
+    // First test: can we create a worker?
+    const testWorker = new mod.PDFWorker('test-' + Date.now());
+    results.twDestroyed = testWorker.destroyed;
+    results.twMhBefore = testWorker.messageHandler !== null;
+    await testWorker.promise;
+    results.twMhAfter = testWorker.messageHandler !== null;
+    results.twMhType = typeof testWorker.messageHandler;
+
+    // Second test: create worker through getDocument
     const task = mod.getDocument({ data: buffer });
     results.taskType = typeof task;
     results.hasPromise = typeof task.promise;
@@ -60,6 +71,7 @@ export async function POST(request: NextRequest) {
     if (task._worker) {
       results.workerDestroyed = task._worker.destroyed;
       results.mhBeforePromise = task._worker.messageHandler !== null;
+      results.workerIsTest = task._worker === testWorker;
     }
 
     const doc = await task.promise;

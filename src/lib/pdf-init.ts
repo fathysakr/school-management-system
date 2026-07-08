@@ -12,6 +12,7 @@ export async function getPdfjs(): Promise<any> {
 
     const pdfjsMod = require('pdf-parse/lib/pdf.js/v1.10.100/build/pdf.js');
     pdfjsMod.disableWorker = true;
+    pdfjsMod.PDFJS.disableWorker = true;
     return pdfjsMod;
   })();
 
