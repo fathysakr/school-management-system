@@ -135,8 +135,6 @@ export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedu
     }
   }
 
-  await doc.destroy();
-
   if (entries.length === 0) {
     const page1 = await doc.getPage(1);
     const c1 = await page1.getTextContent();
@@ -147,6 +145,8 @@ export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedu
     err.debugData = { numPages: doc.numPages, itemsPerPage: [c1.items.length], textSample };
     throw err;
   }
+
+  await doc.destroy();
 
   return {
     classes: Array.from(classesMap.entries()).map(([classId, info]) => ({
