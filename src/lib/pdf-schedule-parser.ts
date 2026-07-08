@@ -86,7 +86,7 @@ export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedu
 
     // For each day, collect items in its vertical band
     for (const dayInfo of dayYPositions) {
-      const bandItems = items.filter((item) => Math.abs(item.y - dayInfo.y) < 80);
+      const bandItems = items.filter((item) => Math.abs(item.y - dayInfo.y) < 45);
 
       // Group items by x proximity into columns
       const colThreshold = 50;
@@ -116,30 +116,44 @@ export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedu
 
       columns.sort((a, b) => a.x - b.x);
 
-      if (columns.length < 6) continue;
+      // Remove day-name column (rightmost) from the data columns
+      const dataCols = columns.filter((c) => {
+        const t = c.items.map((i) => i.str).join(' ').trim();
+        return !DAY_MAP[t];
+      });
 
-      const numCols = columns.length;
-      for (let ci = 0; ci < numCols; ci++) {
-        const colItems = columns[ci].items;
-        const colText = colItems.map((i) => i.str).join(' ').trim();
+      if (dataCols.length < 6) continue;
 
-        if (DAY_MAP[colText]) continue;
+      for (let ci = 0; ci < dataCols.length; ci++) {
+        const colItems = dataCols[ci].items;
 
-        const periodNum = numCols - ci;
+        const periodNum = dataCols.length - ci;
         const periodIdx = periodNum - 1;
         if (periodIdx < 0 || periodIdx >= PERIOD_TIMES.length) continue;
 
-        // Filter: keep items that look like subject or teacher name
-        const cellItems = colItems.filter((i) => {
-          const s = i.str.trim();
-          if (!s || /^\d+$/.test(s) || DAY_MAP[s] || s.includes(':')) return false;
-          return true;
-        });
+        // Group cell items by y into bands (subject parts vs teacher)
+        const sorted = [...colItems].sort((a, b) => b.y - a.y);
+        const bands: string[][] = [];
+        let currentBand: typeof sorted = [sorted[0]];
+        for (let i = 1; i < sorted.length; i++) {
+          const prev = sorted[i - 1].y;
+          const curr = sorted[i].y;
+          if (Math.abs(prev - curr) > 15) {
+            bands.push(currentBand.map((x) => x.str.trim()));
+            currentBand = [sorted[i]];
+          } else {
+            currentBand.push(sorted[i]);
+          }
+        }
+        if (currentBand.length > 0) bands.push(currentBand.map((x) => x.str.trim()));
 
-        if (cellItems.length < 2) continue;
+        // Skip pure-number bands, filter out day labels and time strings
+        const textBands = bands.map((b) => b.filter((s) => !/^\d+$/.test(s) && !/^[\u0660-\u0669]+$/.test(s) && !DAY_MAP[s] && !s.includes(':') && s !== '-' && s !== '–').join(' ').trim()).filter(Boolean);
 
-        const subject = cellItems[0].str.trim();
-        const teacher = cellItems[cellItems.length - 1].str.trim();
+        if (textBands.length < 2) continue;
+
+        const subject = textBands.slice(0, -1).join(' ');
+        const teacher = textBands[textBands.length - 1];
 
         if (!subject || !teacher) continue;
 
