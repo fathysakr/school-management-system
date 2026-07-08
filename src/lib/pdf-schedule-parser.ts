@@ -33,23 +33,9 @@ const PERIOD_TIMES: { start: string; end: string }[] = [
 ];
 
 function normalizeArabic(text: string): string {
-  return text.normalize('NFKC').replace(/\u06CC/g, '\u064A');
+  return text.normalize('NFKC').replace(/\u06CC/g, '\u064A').replace(/\u0649/g, '\u064A');
 }
 
-function parseCell(cell: string): { subject: string; teacher: string } | null {
-  const lines = cell.split('\n').filter((l: string) => l.trim());
-  if (lines.length < 2) return null;
-  if (lines.length === 2) {
-    return { subject: lines[0].trim(), teacher: lines[1].trim() };
-  }
-  if (lines.length === 3) {
-    if (/^\d+$/.test(lines[1].trim())) {
-      return { subject: lines[0].trim(), teacher: lines[2].trim() };
-    }
-    return { subject: lines[0].trim() + ' ' + lines[1].trim(), teacher: lines[2].trim() };
-  }
-  return { subject: lines[0].trim(), teacher: lines[lines.length - 1].trim() };
-}
 
 export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedule> {
   const pdfjs: any = await getPdfjs();
@@ -64,79 +50,115 @@ export async function parseSchedulePdf(buffer: Uint8Array): Promise<ParsedSchedu
     const page = await doc.getPage(pageNum);
     const content = await page.getTextContent();
 
-    const rawItems = content.items.map((item: any) => item.str || '').filter(Boolean);
-    const fullText = normalizeArabic(rawItems.join('\n'));
+    const items: { str: string; x: number; y: number }[] = content.items.map((item: any) => ({
+      str: normalizeArabic(item.str || ''),
+      x: item.transform?.[4] || 0,
+      y: item.transform?.[5] || 0,
+    }));
 
-    const lines = fullText.split('\n').filter((l: string) => l.trim());
+    const fullText = items.map((i) => i.str).join('\n');
+
+    // Find class ID (pattern like "1-1" anywhere on page)
     let classIdLine = '';
-    for (const line of lines) {
+    for (const line of fullText.split('\n')) {
       const match = line.trim().match(/\b(\d+)\s*[-–]\s*(\d+)\b/);
       if (match) {
         classIdLine = `${match[1]}-${match[2]}`;
         break;
       }
     }
-
     if (!classIdLine) continue;
     const [grade, section] = classIdLine.split('-');
     if (!classesMap.has(classIdLine)) classesMap.set(classIdLine, { grade, section });
 
-    const cellRows = content.items.reduce((acc: any[], item: any, idx: number, arr: any[]) => {
-      if (idx > 0) {
-        const prevY = arr[idx - 1].transform?.[5] || 0;
-        const currY = item.transform?.[5] || 0;
-        if (Math.abs(currY - prevY) > 5) acc.push([]);
-      } else {
-        acc.push([]);
-      }
-      acc[acc.length - 1].push(normalizeArabic(item.str || ''));
-      return acc;
-    }, [] as any[][]);
-
-    const merged: string[][] = [];
-    for (const row of cellRows) {
-      if (row.length >= 6) {
-        const joined = row.join('|');
-        if (/\d/.test(joined) || /[اإأآ]/u.test(joined)) {
-          merged.push(row);
-        }
+    // Find day labels and their y positions (ignore header/footer text)
+    const dayYPositions: { day: string; y: number }[] = [];
+    for (const item of items) {
+      const s = item.str.trim();
+      if (DAY_MAP[s]) {
+        dayYPositions.push({ day: DAY_MAP[s], y: item.y });
       }
     }
+    if (dayYPositions.length === 0) continue;
 
-    if (merged.length > 5) {
-      for (let dayIdx = 0; dayIdx < merged.length; dayIdx++) {
-        const row = merged[dayIdx];
-        const dayLabel = normalizeArabic(row[row.length - 1]?.trim() || '');
-        const day = DAY_MAP[dayLabel];
-        if (!day) continue;
+    // Sort day positions top-to-bottom (largest y first = first on page)
+    dayYPositions.sort((a, b) => b.y - a.y);
 
-        const dataCells = row.slice(0, row.length - 1);
-        for (let ci = 0; ci < dataCells.length; ci++) {
-          const periodNum = dataCells.length - ci;
-          const periodIdx = periodNum - 1;
-          if (periodIdx < 0 || periodIdx >= PERIOD_TIMES.length) continue;
+    // For each day, collect items in its vertical band
+    for (const dayInfo of dayYPositions) {
+      const bandItems = items.filter((item) => Math.abs(item.y - dayInfo.y) < 80);
 
-          const parsed = parseCell(dataCells[ci]);
-          if (!parsed) continue;
+      // Group items by x proximity into columns
+      const colThreshold = 50;
+      const columns: { x: number; items: typeof bandItems }[] = [];
+      const assigned = new Array(bandItems.length).fill(false);
 
-          subjectsSet.add(parsed.subject);
-          teachersSet.add(parsed.teacher);
-          entries.push({
-            classId: classIdLine,
-            day,
-            period: periodNum,
-            startTime: PERIOD_TIMES[periodIdx].start,
-            endTime: PERIOD_TIMES[periodIdx].end,
-            subject: parsed.subject,
-            teacher: parsed.teacher,
-          });
+      for (let i = 0; i < bandItems.length; i++) {
+        if (assigned[i]) continue;
+        const item = bandItems[i];
+        const cluster = [item];
+        assigned[i] = true;
+
+        for (let j = i + 1; j < bandItems.length; j++) {
+          if (assigned[j]) continue;
+          const other = bandItems[j];
+          if (Math.abs(other.x - item.x) < colThreshold) {
+            cluster.push(other);
+            assigned[j] = true;
+          }
         }
+
+        columns.push({
+          x: item.x,
+          items: cluster.sort((a, b) => b.y - a.y),
+        });
+      }
+
+      columns.sort((a, b) => a.x - b.x);
+
+      if (columns.length < 6) continue;
+
+      const numCols = columns.length;
+      for (let ci = 0; ci < numCols; ci++) {
+        const colItems = columns[ci].items;
+        const colText = colItems.map((i) => i.str).join(' ').trim();
+
+        if (DAY_MAP[colText]) continue;
+
+        const periodNum = numCols - ci;
+        const periodIdx = periodNum - 1;
+        if (periodIdx < 0 || periodIdx >= PERIOD_TIMES.length) continue;
+
+        // Filter: keep items that look like subject or teacher name
+        const cellItems = colItems.filter((i) => {
+          const s = i.str.trim();
+          if (!s || /^\d+$/.test(s) || DAY_MAP[s] || s.includes(':')) return false;
+          return true;
+        });
+
+        if (cellItems.length < 2) continue;
+
+        const subject = cellItems[0].str.trim();
+        const teacher = cellItems[cellItems.length - 1].str.trim();
+
+        if (!subject || !teacher) continue;
+
+        subjectsSet.add(subject);
+        teachersSet.add(teacher);
+        entries.push({
+          classId: classIdLine,
+          day: dayInfo.day,
+          period: periodNum,
+          startTime: PERIOD_TIMES[periodIdx].start,
+          endTime: PERIOD_TIMES[periodIdx].end,
+          subject,
+          teacher,
+        });
       }
     }
   }
 
   if (entries.length === 0) {
-    // Full dump of every page for debugging
     const allPagesText: string[] = [];
     const itemsPerPage: number[] = [];
     for (let pn = 1; pn <= Math.min(doc.numPages, 3); pn++) {
