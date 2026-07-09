@@ -182,6 +182,7 @@ export default function SchedulePanel() {
         <Box key={s.id} sx={{ borderRadius: 1.5, p: 1, mb: 0.5, bgcolor: `${color}18`, borderLeft: `3px solid ${color}`, cursor: 'pointer', '&:hover': { boxShadow: 2, transform: 'scale(1.02)' }, transition: '0.15s' }}
           onClick={() => handleOpenDialog(s)}>
           <Typography sx={{ fontWeight: 700, fontSize: 12, color }}>{s.subject}</Typography>
+          <Typography sx={{ fontSize: 9, color: '#888' }}>{s.class_name}</Typography>
           <Typography sx={{ fontSize: 10, color: '#555' }}>{s.teacher_first} {s.teacher_last}</Typography>
           {s.room_number && <Typography sx={{ fontSize: 9, color: '#888' }}>📍 {s.room_number}</Typography>}
         </Box>
