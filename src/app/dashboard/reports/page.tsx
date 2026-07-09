@@ -7,7 +7,7 @@ import {
   Box, Typography, Button, Paper, TextField, Chip, Alert, CircularProgress,
   FormControl, InputLabel, Select, MenuItem, Grid, Card, CardContent,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Avatar,
-  Divider
+  Divider, Tooltip
 } from '@mui/material';
 import {
   Add, Edit, Delete, Close, Assignment, Warning, Psychology, MenuBook,
@@ -414,6 +414,27 @@ export default function ReportsPage() {
           {reports.length > 0 && (
             <Button size="small" variant="outlined" startIcon={<FileDownload />} onClick={handleExport}>تصدير Excel</Button>
           )}
+              {reports.length > 0 && (
+            <Button size="small" variant="outlined" startIcon={<FileDownload />} onClick={async () => {
+              if (!token) return;
+              const ids = reports.map(r => r.id);
+              for (const id of ids) {
+                try {
+                  const res = await fetch('/api/export/docx', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ reportType: 'teacher_report', ids: [id] }),
+                  });
+                  if (!res.ok) continue;
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url; a.download = `report-${id}.docx`; a.click();
+                  URL.revokeObjectURL(url);
+                } catch {}
+              }
+              setSuccess('تم تصدير التقارير');
+            }}>تصدير Word</Button>
+          )}
           {isSupervisor && (
             <Button size="small" variant="outlined" startIcon={<PersonSearch />} onClick={() => setStudentFileOpen(true)} sx={{ borderColor: currentCfg?.color, color: currentCfg?.color }}>
               ملف طالب
@@ -508,12 +529,24 @@ export default function ReportsPage() {
                         </Typography>
                       </Box>
                     </Box>
-                    {(canEditReport || canDeleteReport) && (
-                      <Box sx={{ display: 'flex', gap: 0.5, mr: 1, flexShrink: 0 }}>
-                        {canEditReport && <IconButton size="small" sx={{ color: 'primary.main' }} onClick={() => handleOpenDialog(r)}><Edit fontSize="small" /></IconButton>}
-                        {canDeleteReport && <IconButton size="small" color="error" onClick={() => handleDelete(r.id)}><Delete fontSize="small" /></IconButton>}
-                      </Box>
-                    )}
+                    <Box sx={{ display: 'flex', gap: 0.5, mr: 1, flexShrink: 0 }}>
+                      <Tooltip title="تصدير Word">
+                        <IconButton size="small" onClick={async () => {
+                          if (!token) return;
+                          const res = await fetch('/api/export/docx', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ reportType: 'teacher_report', ids: [r.id] }),
+                          });
+                          const blob = await res.blob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a'); a.href = url; a.download = `report-${r.id}.docx`; a.click();
+                          URL.revokeObjectURL(url);
+                        }}><FileDownload fontSize="small" /></IconButton>
+                      </Tooltip>
+                      {canEditReport && <IconButton size="small" sx={{ color: 'primary.main' }} onClick={() => handleOpenDialog(r)}><Edit fontSize="small" /></IconButton>}
+                      {canDeleteReport && <IconButton size="small" color="error" onClick={() => handleDelete(r.id)}><Delete fontSize="small" /></IconButton>}
+                    </Box>
                   </Box>
                 </CardContent>
               </Card>

@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import {
   Psychology, MenuBook,
-  Add, Edit, Delete, Visibility, Search,
+  Add, Edit, Delete, Visibility, Search, FileDownload,
   CheckCircle, Warning, Assignment,
   EmojiObjects, Favorite, Handshake,
 } from '@mui/icons-material';
@@ -377,6 +377,18 @@ export default function CounselingPage() {
                   )}
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Tooltip title="Word"><IconButton size="small" onClick={async () => {
+                        const et = getEntityForTab(tabIndex);
+                        const res = await fetch('/api/export/docx', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({ reportType: et, ids: [record.id] }),
+                        });
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a'); a.href = url; a.download = `${et}-${record.id}.docx`; a.click();
+                        URL.revokeObjectURL(url);
+                      }}><FileDownload fontSize="small" /></IconButton></Tooltip>
                       <Tooltip title="عرض"><IconButton size="small" onClick={() => openViewDialog(record)}><Visibility fontSize="small" /></IconButton></Tooltip>
                       <Tooltip title="تعديل"><IconButton size="small" onClick={() => openEditDialog(record)}><Edit fontSize="small" /></IconButton></Tooltip>
                       <Tooltip title="حذف"><IconButton size="small" color="error" onClick={() => handleDelete(record.id)}><Delete fontSize="small" /></IconButton></Tooltip>
