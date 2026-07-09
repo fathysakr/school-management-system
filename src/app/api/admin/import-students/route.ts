@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
-import { authenticate, unauthorized, serverError, success } from '@/lib/auth';
-import studentsData from '@/data/import-students.json';
+import { authenticate, unauthorized, badRequest, serverError, success } from '@/lib/auth';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,10 +10,17 @@ export async function POST(request: NextRequest) {
     const user = await authenticate(request);
     if (!user || user.role !== 'admin') return unauthorized();
 
-    const students = studentsData;
+    const filePath = join(process.cwd(), 'src', 'data', 'import-students.json');
+    if (!existsSync(filePath)) {
+      return badRequest('ملف استيراد الطلاب غير موجود (src/data/import-students.json). استخدم استيراد Excel بدلاً من ذلك.');
+    }
+    const students = JSON.parse(readFileSync(filePath, 'utf-8'));
+    if (!Array.isArray(students) || students.length === 0) {
+      return badRequest('ملف استيراد الطلاب فارغ أو غير صالح');
+    }
+
     let created = 0, enrolled = 0, errors = 0;
 
-    // Ensure classes exist
     const classKeys = new Set<string>();
     for (const s of students) {
       const key = `${s.grade}|${s.class_name}`;
