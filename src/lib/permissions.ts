@@ -10,7 +10,8 @@ export type Permission =
   | 'attendance:delete'
   | 'announcements:view' | 'announcements:create' | 'announcements:edit' | 'announcements:delete'
   | 'dashboard:stats'
-  | 'settings:edit';
+  | 'settings:edit'
+  | 'counseling:view' | 'counseling:create' | 'counseling:edit' | 'counseling:delete';
 
 export type UserRole = 'admin' | 'middle_supervisor' | 'high_supervisor' | 'middle_teacher' | 'high_teacher' | 'middle_counselor' | 'high_counselor' | 'middle_principal' | 'high_principal' | 'middle_monitor' | 'high_monitor' | 'middle_admin_staff' | 'high_admin_staff' | 'parent';
 
@@ -26,6 +27,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
     'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'dashboard:stats', 'settings:edit',
+    'counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete',
   ],
   middle_supervisor: [
     'teachers:view', 'teachers:create', 'teachers:edit',
@@ -38,6 +40,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
     'announcements:view', 'announcements:create', 'announcements:edit',
     'dashboard:stats',
+    'counseling:view', 'counseling:create', 'counseling:edit',
   ],
   high_supervisor: [
     'teachers:view', 'teachers:create', 'teachers:edit',
@@ -50,6 +53,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
     'announcements:view', 'announcements:create', 'announcements:edit',
     'dashboard:stats',
+    'counseling:view', 'counseling:create', 'counseling:edit',
   ],
   middle_teacher: [
     'students:view',
@@ -83,6 +87,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'schedules:view',
     'announcements:view',
     'dashboard:stats',
+    'counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete',
   ],
   high_counselor: [
     'teachers:view',
@@ -94,6 +99,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'schedules:view',
     'announcements:view',
     'dashboard:stats',
+    'counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete',
   ],
   middle_monitor: [
     'teachers:view',
@@ -128,6 +134,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'substitutions:view', 'substitutions:create', 'substitutions:edit',
     'announcements:view', 'announcements:create', 'announcements:edit',
     'dashboard:stats',
+    'counseling:view', 'counseling:create', 'counseling:edit',
   ],
   high_admin_staff: [
     'teachers:view', 'teachers:create', 'teachers:edit',
@@ -140,6 +147,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'substitutions:view', 'substitutions:create', 'substitutions:edit',
     'announcements:view', 'announcements:create', 'announcements:edit',
     'dashboard:stats',
+    'counseling:view', 'counseling:create', 'counseling:edit',
   ],
   middle_principal: [
     'teachers:view', 'teachers:create', 'teachers:edit', 'teachers:delete',
@@ -152,6 +160,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
     'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'dashboard:stats',
+    'counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete',
   ],
   high_principal: [
     'teachers:view', 'teachers:create', 'teachers:edit', 'teachers:delete',
@@ -164,6 +173,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
     'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'dashboard:stats',
+    'counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete',
   ],
   parent: [
     'students:view',
@@ -185,6 +195,7 @@ const allPermissions: Permission[] = [
   'substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete',
   'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
   'dashboard:stats',
+  'counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete',
 ];
 
 const permissionLabels: Record<Permission, string> = {
@@ -226,6 +237,10 @@ const permissionLabels: Record<Permission, string> = {
   'announcements:delete': 'حذف إعلان',
   'dashboard:stats': 'عرض الإحصائيات',
   'settings:edit': 'إدارة الإعدادات',
+  'counseling:view': 'عرض الإرشاد',
+  'counseling:create': 'إضافة سجل إرشادي',
+  'counseling:edit': 'تعديل سجل إرشادي',
+  'counseling:delete': 'حذف سجل إرشادي',
 };
 
 const permissionGroups: { label: string; keys: Permission[] }[] = [
@@ -238,6 +253,7 @@ const permissionGroups: { label: string; keys: Permission[] }[] = [
   { label: 'الجداول', keys: ['schedules:view', 'schedules:create', 'schedules:edit', 'schedules:delete'] },
   { label: 'البدائل', keys: ['substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete'] },
   { label: 'الإعلانات', keys: ['announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete'] },
+  { label: 'الإرشاد الطلابي', keys: ['counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete'] },
   { label: 'عام', keys: ['dashboard:stats', 'settings:edit'] },
 ];
 

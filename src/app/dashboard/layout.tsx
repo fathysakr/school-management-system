@@ -62,11 +62,16 @@ const menuGroups = [
     ],
   },
   {
+    label: 'الإرشاد الطلابي',
+    items: [
+      { text: 'الإرشاد الطلابي', icon: <Psychology />, path: '/dashboard/counseling', roles: allRoles },
+    ],
+  },
+  {
     label: 'أخرى',
     items: [
       { text: 'الإعلانات', icon: <Campaign />, path: '/dashboard/announcements', roles: announcementRoles },
       { text: 'التحليلات', icon: <Assessment />, path: '/dashboard/analytics', roles: ['admin', 'middle_supervisor', 'high_supervisor', 'middle_principal', 'high_principal'] },
-      { text: 'الإرشاد الطلابي', icon: <Psychology />, path: '/dashboard/counseling', roles: allRoles },
       { text: 'الملف الشخصي', icon: <Person />, path: '/dashboard/profile', roles: allRoles },
     ],
   },
