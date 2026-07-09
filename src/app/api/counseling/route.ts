@@ -155,9 +155,9 @@ export async function GET(request: NextRequest) {
       label: entityLabels[key],
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get counseling error:', error);
-    return serverError('فشل في جلب البيانات');
+    return new Response(JSON.stringify({ error: error?.message || error?.toString() || 'فشل في جلب البيانات', stack: error?.stack?.split('\n').slice(0, 5).join('\n') }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }
 
