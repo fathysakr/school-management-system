@@ -13,7 +13,7 @@ import {
 import {
   People, School, Class as ClassIcon, EventNote, Grade,
   Person, Logout, Menu as MenuIcon, ChevronRight, Notifications, Campaign,
-  Schedule,   Assessment, AutoStories, Speed, Build, AdminPanelSettings, SwapHoriz, CalendarMonth, VerifiedUser
+  Schedule,   Assessment, AutoStories, Speed, Build, AdminPanelSettings, VerifiedUser, CalendarMonth, SwapHoriz, Psychology
 } from '@mui/icons-material';
 import { ToggleButtonGroup, ToggleButton } from '@mui/material';
 
@@ -31,36 +31,42 @@ const menuGroups = [
     label: 'الرئيسية',
     items: [
       { text: 'لوحة التحكم', icon: <Speed />, path: '/dashboard', roles: allRoles },
-      { text: 'الإدارة', icon: <VerifiedUser />, path: '/dashboard/management', roles: managementViewRoles },
-      { text: 'المعلمون', icon: <People />, path: '/dashboard/teachers', roles: managementViewRoles },
       { text: 'إدارة النظام', icon: <Build />, path: '/dashboard/admin', roles: ['admin'] },
       { text: 'شؤون المدرسة', icon: <AdminPanelSettings />, path: '/dashboard/principal', roles: ['middle_principal', 'high_principal'] },
-      { text: 'الطلاب', icon: <School />, path: '/dashboard/students', roles: allRoles },
-      { text: 'الفصول', icon: <ClassIcon />, path: '/dashboard/classes', roles: allRoles },
     ],
   },
   {
-    label: 'التعليم',
+    label: 'إدارة المعلمين',
     items: [
-      { text: 'الجدول الدراسي', icon: <Schedule />, path: '/dashboard/schedules', roles: allRoles },
+      { text: 'المعلمون', icon: <People />, path: '/dashboard/teachers', roles: managementViewRoles },
+      { text: 'الإجازات', icon: <CalendarMonth />, path: '/dashboard/leaves', roles: allRoles },
       { text: 'حصص الانتظار', icon: <SwapHoriz />, path: '/dashboard/substitutions', roles: substitutionRoles },
+      { text: 'الإدارة', icon: <VerifiedUser />, path: '/dashboard/management', roles: managementViewRoles },
+    ],
+  },
+  {
+    label: 'إدارة الطلاب',
+    items: [
+      { text: 'الطلاب', icon: <School />, path: '/dashboard/students', roles: allRoles },
       { text: 'الحضور', icon: <EventNote />, path: '/dashboard/attendance', roles: allRoles },
       { text: 'الدرجات', icon: <Grade />, path: '/dashboard/grades', roles: allRoles },
-      { text: 'الإجازات', icon: <CalendarMonth />, path: '/dashboard/leaves', roles: allRoles },
-    ],
-  },
-  {
-    label: 'التقارير',
-    items: [
       { text: 'التقارير', icon: <Assessment />, path: '/dashboard/reports', roles: allRoles },
       { text: 'كشف الدرجات', icon: <Grade />, path: '/dashboard/report-card', roles: allRoles },
-      { text: 'التحليلات', icon: <Speed />, path: '/dashboard/analytics', roles: ['admin', 'middle_supervisor', 'high_supervisor', 'middle_principal', 'high_principal'] },
-      { text: 'الإعلانات', icon: <Campaign />, path: '/dashboard/announcements', roles: announcementRoles },
     ],
   },
   {
-    label: 'الحساب',
+    label: 'إدارة الفصول',
     items: [
+      { text: 'الفصول', icon: <ClassIcon />, path: '/dashboard/classes', roles: allRoles },
+      { text: 'الجدول الدراسي', icon: <Schedule />, path: '/dashboard/schedules', roles: allRoles },
+    ],
+  },
+  {
+    label: 'أخرى',
+    items: [
+      { text: 'الإعلانات', icon: <Campaign />, path: '/dashboard/announcements', roles: announcementRoles },
+      { text: 'التحليلات', icon: <Assessment />, path: '/dashboard/analytics', roles: ['admin', 'middle_supervisor', 'high_supervisor', 'middle_principal', 'high_principal'] },
+      { text: 'الإرشاد الطلابي', icon: <Psychology />, path: '/dashboard/counseling', roles: allRoles },
       { text: 'الملف الشخصي', icon: <Person />, path: '/dashboard/profile', roles: allRoles },
     ],
   },

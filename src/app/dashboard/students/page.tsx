@@ -7,8 +7,9 @@ import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, IconButton, Chip, Alert, CircularProgress,
-  Grid, Tabs, Tab, Select, Accordion, AccordionSummary, AccordionDetails} from '@mui/material';
-import { Add, Edit, Delete, Visibility, Close, FileUpload, FileDownload, CloudUpload, Phone, RemoveCircleOutline, DeleteSweep, AutoAwesome, ExpandMore } from '@mui/icons-material';
+  Grid, Tabs, Tab, Select, Accordion, AccordionSummary, AccordionDetails,
+  Paper, Divider } from '@mui/material';
+import { Add, Edit, Delete, Visibility, Close, FileUpload, FileDownload, CloudUpload, Phone, RemoveCircleOutline, DeleteSweep, AutoAwesome, ExpandMore, Assignment, EmojiEvents, Warning, MenuBook, CalendarMonth } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
@@ -26,6 +27,8 @@ export default function StudentsPage() {
   const [viewDialog, setViewDialog] = useState(false);
   const [importDialog, setImportDialog] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [studentReports, setStudentReports] = useState<any[]>([]);
+  const [loadingReports, setLoadingReports] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
@@ -166,11 +169,18 @@ export default function StudentsPage() {
   const handleView = async (id: number) => {
     if (!token) return;
     try {
-      const res = await api.get(`/students/${id}`, token);
-      setSelectedStudent(res.student);
+      setLoadingReports(true);
       setViewDialog(true);
+      const [studentRes, reportsRes] = await Promise.all([
+        api.get(`/students/${id}`, token),
+        api.get(`/teacher-reports?student_id=${id}&limit=200${schoolParam}`, token).catch(() => ({ reports: [] })),
+      ]);
+      setSelectedStudent(studentRes.student);
+      setStudentReports(reportsRes.reports || []);
     } catch {
       setError('فشل في جلب بيانات الطالب');
+    } finally {
+      setLoadingReports(false);
     }
   };
 
@@ -723,34 +733,108 @@ export default function StudentsPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={viewDialog} onClose={() => setViewDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>بيانات الطالب</DialogTitle>
+      <Dialog open={viewDialog} onClose={() => setViewDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Visibility color="primary" />
+            <Typography fontWeight="bold">بيانات الطالب</Typography>
+          </Box>
+        </DialogTitle>
         <DialogContent>
           {selectedStudent && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
-              {[['الرقم', selectedStudent.student_id], ['الاسم', `${selectedStudent.first_name} ${selectedStudent.last_name}`], ['البريد', selectedStudent.email || '-'], ['المرحلة', selectedStudent.school === 'high' ? 'ثانوية' : 'متوسطة'], ['الفصل الدراسي', selectedStudent.semester || '-'], ['الفصل', selectedStudent.class_name ? `${selectedStudent.class_name} (${selectedStudent.class_grade})` : '-'], ['بريد ولي الأمر', selectedStudent.parent_email || '-'], ['الحالة', selectedStudent.status === 'active' ? 'نشط' : selectedStudent.status === 'graduated' ? 'متخرج' : 'غير نشط']].map(([label, value]) => (
-                <Box key={label} sx={{ display: 'flex', borderBottom: 1, borderColor: 'divider', pb: 1 }}>
-                  <Typography fontWeight="bold" sx={{ minWidth: 130 }}>{label}:</Typography>
-                  <Typography>{value}</Typography>
-                </Box>
-              ))}
-              <Box sx={{ display: 'flex', borderBottom: 1, borderColor: 'divider', pb: 1 }}>
-                <Typography fontWeight="bold" sx={{ minWidth: 130 }}>هواتف ولي الأمر:</Typography>
+            <>
+              {/* Student info */}
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 3 }}>
+                <Grid container spacing={1.5}>
+                  {[['الرقم', selectedStudent.student_id], ['الاسم', `${selectedStudent.first_name} ${selectedStudent.last_name}`], ['البريد', selectedStudent.email || '-'], ['المرحلة', selectedStudent.school === 'high' ? 'ثانوية' : 'متوسطة'], ['الفصل الدراسي', selectedStudent.semester || '-'], ['الفصل', selectedStudent.class_name ? `${selectedStudent.class_name} (${selectedStudent.class_grade})` : '-'], ['بريد ولي الأمر', selectedStudent.parent_email || '-'], ['الحالة', selectedStudent.status === 'active' ? 'نشط' : selectedStudent.status === 'graduated' ? 'متخرج' : 'غير نشط']].map(([label, value]) => (
+                    <Grid item xs={12} sm={6} key={label}>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Typography fontWeight="bold" color="text.secondary" variant="body2" sx={{ minWidth: 90 }}>{label}:</Typography>
+                        <Typography variant="body2">{value}</Typography>
+                      </Box>
+                    </Grid>
+                  ))}
+                  <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Typography fontWeight="bold" color="text.secondary" variant="body2" sx={{ minWidth: 90 }}>هواتف ولي الأمر:</Typography>
+                      <Box>
+                        {(() => {
+                          const phones: string[] = (() => {
+                            if (selectedStudent.parent_phones) {
+                              try { const p = JSON.parse(selectedStudent.parent_phones); if (Array.isArray(p)) return p; } catch {}
+                            }
+                            return selectedStudent.parent_phone ? [selectedStudent.parent_phone] : [];
+                          })();
+                          return phones.length > 0
+                            ? phones.map((p, i) => <Chip key={i} label={p} size="small" sx={{ ml: 0.5 }} />)
+                            : <Typography variant="body2">-</Typography>;
+                        })()}
+                      </Box>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Reports section */}
+              <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Assignment sx={{ fontSize: 22 }} />
+                التقارير
+                {studentReports.length > 0 && (
+                  <Chip label={`${studentReports.length} تقرير`} size="small" color="primary" />
+                )}
+              </Typography>
+
+              {loadingReports ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress size={32} /></Box>
+              ) : studentReports.length === 0 ? (
+                <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>لا توجد تقارير لهذا الطالب</Typography>
+              ) : (
                 <Box>
-                  {(() => {
-                    const phones: string[] = (() => {
-                      if (selectedStudent.parent_phones) {
-                        try { const p = JSON.parse(selectedStudent.parent_phones); if (Array.isArray(p)) return p; } catch { console.error('Invalid parent_phones JSON in view'); }
-                      }
-                      return selectedStudent.parent_phone ? [selectedStudent.parent_phone] : [];
-                    })();
-                    return phones.length > 0
-                      ? phones.map((p, i) => <Typography key={i}><Chip label={p} size="small" sx={{ ml: 0.5 }} /></Typography>)
-                      : <Typography>-</Typography>;
-                  })()}
+                  {[
+                    { type: 'positive', label: 'إيجابي', icon: <EmojiEvents />, color: '#2e7d32', lightBg: '#e8f5e9' },
+                    { type: 'activity', label: 'نشاط', icon: <Assignment />, color: '#1976d2', lightBg: '#e3f2fd' },
+                    { type: 'behavioral', label: 'سلوكي', icon: <Warning />, color: '#ed6c02', lightBg: '#fff3e0' },
+                    { type: 'academic_deficiency', label: 'قصور دراسي', icon: <MenuBook />, color: '#d32f2f', lightBg: '#ffebee' },
+                  ].map(cfg => {
+                    const typeReports = studentReports.filter((r: any) => r.report_type === cfg.type);
+                    if (typeReports.length === 0) return null;
+                    return (
+                      <Box key={cfg.type} sx={{ mb: 2.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <Box sx={{ color: cfg.color, display: 'flex' }}>
+                            {cfg.icon}
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography fontWeight="bold" variant="body2" sx={{ color: cfg.color }}>{cfg.label}</Typography>
+                            <Chip label={typeReports.length} size="small" sx={{ bgcolor: cfg.lightBg, color: cfg.color, fontWeight: 600, height: 20 }} />
+                          </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mr: 4 }}>
+                          {typeReports.map((r: any) => (
+                            <Paper key={r.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderRight: `3px solid ${cfg.color}` }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                                <Typography fontWeight="bold" fontSize={13}>{r.title || cfg.label}</Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <CalendarMonth sx={{ fontSize: 12, color: 'text.disabled' }} />
+                                  <Typography variant="caption" color="text.disabled">{r.date ? new Date(r.date).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}</Typography>
+                                </Box>
+                              </Box>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                                {r.teacher_first} {r.teacher_last} · {r.class_name}
+                              </Typography>
+                              <Divider sx={{ mb: 0.5 }} />
+                              <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.7, fontSize: 13 }}>
+                                {r.content}
+                              </Typography>
+                            </Paper>
+                          ))}
+                        </Box>
+                      </Box>
+                    );
+                  })}
                 </Box>
-              </Box>
-            </Box>
+              )}
+            </>
           )}
         </DialogContent>
         <DialogActions>
