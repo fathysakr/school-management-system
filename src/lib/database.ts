@@ -1348,6 +1348,62 @@ async function _ensureTursoReady() {
     )`);
     await db.exec(`PRAGMA foreign_keys=ON`);
 
+    // Counseling tables (always attempt to create, even if _init_done already ran)
+    try { await db.exec(`CREATE TABLE IF NOT EXISTS counseling_programs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL,
+      domain TEXT NOT NULL CHECK (domain IN ('academic','psychological','guidance','community')),
+      description TEXT, goals TEXT, target_group TEXT,
+      start_date DATE, end_date DATE,
+      status TEXT DEFAULT 'active' CHECK (status IN ('active','completed','cancelled')),
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`); } catch {}
+    try { await db.exec(`CREATE TABLE IF NOT EXISTS counseling_attendance_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      class_id INTEGER REFERENCES classes(id) ON DELETE SET NULL,
+      report_type TEXT NOT NULL CHECK (report_type IN ('absence','behavior','academic','general')),
+      description TEXT NOT NULL, actions_taken TEXT, follow_up TEXT,
+      status TEXT DEFAULT 'open' CHECK (status IN ('open','in_progress','resolved','closed')),
+      counselor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`); } catch {}
+    try { await db.exec(`CREATE TABLE IF NOT EXISTS counseling_cases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      class_id INTEGER REFERENCES classes(id) ON DELETE SET NULL,
+      case_type TEXT NOT NULL CHECK (case_type IN ('academic','behavioral','psychological','social','career')),
+      title TEXT NOT NULL, background TEXT, analysis TEXT,
+      intervention TEXT, outcome TEXT, recommendations TEXT,
+      status TEXT DEFAULT 'open' CHECK (status IN ('open','in_progress','resolved','closed','referred')),
+      counselor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`); } catch {}
+    try { await db.exec(`CREATE TABLE IF NOT EXISTS counseling_behavior_contracts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      class_id INTEGER REFERENCES classes(id) ON DELETE SET NULL,
+      title TEXT NOT NULL, terms TEXT NOT NULL,
+      start_date DATE DEFAULT CURRENT_DATE, end_date DATE,
+      status TEXT DEFAULT 'active' CHECK (status IN ('active','completed','breached','cancelled')),
+      student_signed INTEGER DEFAULT 0, parent_signed INTEGER DEFAULT 0,
+      counselor_signed INTEGER DEFAULT 0,
+      counselor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`); } catch {}
+    try { await db.exec(`CREATE TABLE IF NOT EXISTS counseling_behavior_issues (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      class_id INTEGER REFERENCES classes(id) ON DELETE SET NULL,
+      issue_type TEXT NOT NULL CHECK (issue_type IN ('violence','bullying','disruption','cyber','absence','other')),
+      description TEXT NOT NULL,
+      severity TEXT DEFAULT 'medium' CHECK (severity IN ('low','medium','high','critical')),
+      actions_taken TEXT,
+      status TEXT DEFAULT 'open' CHECK (status IN ('open','in_progress','resolved','closed')),
+      counselor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`); } catch {}
+
     try { await db.exec(`ALTER TABLE users ADD COLUMN teacher_id INTEGER`); } catch {}
     try { await db.exec(`UPDATE users SET teacher_id = (SELECT id FROM teachers WHERE teachers.user_id = users.id) WHERE EXISTS (SELECT 1 FROM teachers WHERE teachers.user_id = users.id)`); } catch {}
 
