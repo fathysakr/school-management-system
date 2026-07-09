@@ -103,8 +103,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (key === 'programs' && domain) {
-      whereClauses.push(`${table}.domain = ?`);
-      params.push(domain);
+      const domains = domain.split(',').filter(Boolean);
+      if (domains.length > 0) {
+        whereClauses.push(`${table}.domain IN (${domains.map(() => '?').join(',')})`);
+        params.push(...domains);
+      }
     }
 
     if (key === 'attendance_reports' && report_type) {
@@ -113,8 +116,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (key === 'cases' && case_type) {
-      whereClauses.push(`${table}.case_type = ?`);
-      params.push(case_type);
+      const caseTypes = case_type.split(',').filter(Boolean);
+      if (caseTypes.length > 0) {
+        whereClauses.push(`${table}.case_type IN (${caseTypes.map(() => '?').join(',')})`);
+        params.push(...caseTypes);
+      }
     }
 
     if (key === 'issues') {
