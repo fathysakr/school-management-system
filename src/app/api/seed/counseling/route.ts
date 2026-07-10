@@ -12,11 +12,12 @@ export async function POST(request: NextRequest) {
     const key = body.type || 'all';
     const instructorId = user.id;
 
-    const rget = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+    const rget = <T>(arr: readonly T[]) => arr[Math.floor(Math.random() * arr.length)];
 
     // ——— توزيع الطلاب على الفصول ———
     if (key === 'all' || key === 'distribute') {
-      const students = db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active') as any[];
+      const students = db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active');
+      const classes = db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active');
       const classes = db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active') as any[];
       if (students.length > 0 && classes.length > 0) {
         db.prepare('DELETE FROM enrollments').run();
@@ -35,8 +36,8 @@ export async function POST(request: NextRequest) {
 
     // ——— تقارير المعلمين ———
     if (key === 'all' || key === 'teacher_reports') {
-      const teachers = db.prepare('SELECT id FROM teachers WHERE status = ? ORDER BY id').all('active') as any[];
-      const enrollments = db.prepare('SELECT student_id, class_id FROM enrollments WHERE status = ?').all('active') as any[];
+      const teachers = db.prepare('SELECT id FROM teachers WHERE status = ? ORDER BY id').all('active');
+      const enrollments = db.prepare('SELECT student_id, class_id FROM enrollments WHERE status = ?').all('active');
       const reportTypes = ['activity','positive','behavioral','academic_deficiency'];
       const rtypes: Record<string,string> = {activity:'نشاط',positive:'إيجابي',behavioral:'سلوكي',academic_deficiency:'ضعف دراسي'};
       const contents = [
@@ -64,8 +65,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ——— بيانات الإرشاد الطلابي ———
-    const studentIds = (db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active') as any[]).map((s:any) => s.id);
-    const classIds = (db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active') as any[]).map((c:any) => c.id);
+    const studentIds = (db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active') as any[]).map((s) => s.id);
+    const classIds = (db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active') as any[]).map((c) => c.id);
     if (!studentIds.length || !classIds.length) return badRequest('لا يوجد طلاب أو فصول');
 
     const descSuffix = [
