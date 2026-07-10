@@ -14,16 +14,14 @@ export async function POST(request: NextRequest) {
 
     const rget = <T>(arr: readonly T[]) => arr[Math.floor(Math.random() * arr.length)];
 
-    // ——— توزيع الطلاب على الفصول ———
     if (key === 'all' || key === 'distribute') {
-      const students = db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active');
-      const classes = db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active');
-      const classes = db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active') as any[];
-      if (students.length > 0 && classes.length > 0) {
+      const students: any[] = db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active') as any;
+      const classesArr: any[] = db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active') as any;
+      if (students.length > 0 && classesArr.length > 0) {
         db.prepare('DELETE FROM enrollments').run();
         let enrolled = 0;
         for (let i = 0; i < students.length; i++) {
-          const classId = classes[i % classes.length].id;
+          const classId = classesArr[i % classesArr.length].id;
           const existing = db.prepare('SELECT id FROM enrollments WHERE student_id = ? AND class_id = ?').get(students[i].id, classId);
           if (!existing) {
             db.prepare('INSERT INTO enrollments (student_id, class_id, enrollment_date, status) VALUES (?,?,?,?)').run(students[i].id, classId, '2026-09-01', 'active');
@@ -34,10 +32,9 @@ export async function POST(request: NextRequest) {
       if (key !== 'all') return success({ message: 'تم توزيع الطلاب على الفصول' });
     }
 
-    // ——— تقارير المعلمين ———
     if (key === 'all' || key === 'teacher_reports') {
-      const teachers = db.prepare('SELECT id FROM teachers WHERE status = ? ORDER BY id').all('active');
-      const enrollments = db.prepare('SELECT student_id, class_id FROM enrollments WHERE status = ?').all('active');
+      const teachers: any[] = db.prepare('SELECT id FROM teachers WHERE status = ? ORDER BY id').all('active') as any;
+      const enrollments: any[] = db.prepare('SELECT student_id, class_id FROM enrollments WHERE status = ?').all('active') as any;
       const reportTypes = ['activity','positive','behavioral','academic_deficiency'];
       const rtypes: Record<string,string> = {activity:'نشاط',positive:'إيجابي',behavioral:'سلوكي',academic_deficiency:'ضعف دراسي'};
       const contents = [
@@ -64,9 +61,8 @@ export async function POST(request: NextRequest) {
       if (key !== 'all') return success({ message: `تم إنشاء ${inserted} تقرير للمعلمين` });
     }
 
-    // ——— بيانات الإرشاد الطلابي ———
-    const studentIds = (db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active') as any[]).map((s) => s.id);
-    const classIds = (db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active') as any[]).map((c) => c.id);
+    const studentIds: number[] = (db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active') as any).map((s: any) => s.id);
+    const classIds: number[] = (db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active') as any).map((c: any) => c.id);
     if (!studentIds.length || !classIds.length) return badRequest('لا يوجد طلاب أو فصول');
 
     const descSuffix = [
