@@ -299,6 +299,16 @@ export default function CounselingPage() {
           </Select>
         </FormControl>
         <Box sx={{ flex: 1 }} />
+        <Button variant="outlined" color="success" size="small" startIcon={<FileDownload />} onClick={async () => {
+          try {
+            const res = await fetch('/api/seed/counseling', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({}) });
+            const data = await res.json();
+            setSnackbar({ open: true, message: data.message || data.error || 'تم إنشاء البيانات', severity: data.error ? 'error' : 'success' });
+            if (!data.error) fetchRecords();
+          } catch { setSnackbar({ open: true, message: 'فشل في إنشاء البيانات', severity: 'error' }); }
+        }}>
+          إنشاء بيانات تجريبية
+        </Button>
         <Button variant="contained" startIcon={<Add />} onClick={openCreateDialog}>
           إضافة {entityLabels[et]}
         </Button>
