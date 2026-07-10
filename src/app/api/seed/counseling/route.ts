@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
     const randomPick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
     if (key === 'all' || key === 'distribute') {
-      const students = (db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active') || []) as Row[];
-      const classList = (db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active') || []) as Row[];
+      const students = ((await db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active')) || []) as Row[];
+      const classList = ((await db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active')) || []) as Row[];
       if (students.length && classList.length) {
         db.prepare('DELETE FROM enrollments').run();
         for (let i = 0; i < students.length; i++) {
@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (key === 'all' || key === 'teacher_reports') {
-      const teachers = (db.prepare('SELECT id FROM teachers WHERE status = ? ORDER BY id').all('active') || []) as Row[];
-      const enrollList = (db.prepare('SELECT student_id, class_id FROM enrollments WHERE status = ?').all('active') || []) as Enrollment[];
+      const teachers = ((await db.prepare('SELECT id FROM teachers WHERE status = ? ORDER BY id').all('active')) || []) as Row[];
+      const enrollList = ((await db.prepare('SELECT student_id, class_id FROM enrollments WHERE status = ?').all('active')) || []) as Enrollment[];
       if (teachers.length && enrollList.length) {
         const reportTypes = ['activity','positive','behavioral','academic_deficiency'];
         const rtypeLabels: Record<string,string> = {activity:'نشاط',positive:'إيجابي',behavioral:'سلوكي',academic_deficiency:'ضعف دراسي'};
@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
       if (key !== 'all') return success({ message: 'تم إنشاء تقارير المعلمين' });
     }
 
-    const studentRows = (db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active') || []) as Row[];
-    const classRows = (db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active') || []) as Row[];
+    const studentRows = ((await db.prepare('SELECT id FROM students WHERE status = ? ORDER BY id').all('active')) || []) as Row[];
+    const classRows = ((await db.prepare('SELECT id FROM classes WHERE status = ? ORDER BY id').all('active')) || []) as Row[];
     if (!studentRows.length || !classRows.length) return badRequest('لا يوجد طلاب أو فصول');
     const sIds = studentRows.map(r => r.id);
     const cIds = classRows.map(r => r.id);
