@@ -5,7 +5,10 @@ import { NextRequest, NextResponse } from 'next/server';
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    console.warn('[AUTH] JWT_SECRET not set, using fallback for build');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET environment variable is required in production');
+    }
+    console.warn('[AUTH] JWT_SECRET not set, using fallback for development only');
     return 'build-fallback-secret-do-not-use-in-production';
   }
   return secret;

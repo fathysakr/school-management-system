@@ -34,5 +34,9 @@
     "eslint": "^8",
     "eslint-config-next": "14.0.0",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "@libsql/win32-x64-msvc@0.5.29": true,
+    "better-sqlite3@12.9.0": true
   }
 }

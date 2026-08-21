@@ -8,17 +8,17 @@ const nextConfig = {
     serverComponentsExternalPackages: ['pdf-parse'],
   },
   headers: async () => {
+    const allowedOrigins = [
+      'https://safwa-school.vercel.app',
+      'http://localhost:3000',
+    ];
     return [
       {
         source: '/api/:path*',
         headers: [
           {
-            key: 'Access-Control-Allow-Credentials',
-            value: 'true',
-          },
-          {
             key: 'Access-Control-Allow-Origin',
-            value: process.env.NEXT_PUBLIC_API_URL || '*',
+            value: allowedOrigins[0],
           },
           {
             key: 'Access-Control-Allow-Methods',

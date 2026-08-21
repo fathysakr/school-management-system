@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Paper, Tabs, Tab, Card, CardContent, Grid, Chip,
   Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
@@ -95,10 +95,10 @@ export default function CounselingPage() {
   const [students, setStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
 
-  const tabs = Object.entries(domainConfig).map(([key, cfg]) => ({
+  const tabs = useMemo(() => Object.entries(domainConfig).map(([key, cfg]) => ({
     key,
     ...cfg,
-  }));
+  })), []);
 
   const [form, setForm] = useState<any>({});
 

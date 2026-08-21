@@ -2,9 +2,11 @@ import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, unauthorized, forbidden, badRequest, serverError, success } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await ensureTursoReady();
+    const user = await authenticate(request);
+    if (!user) return unauthorized();
     const rows = await db.prepare('SELECT period_number, start_time, end_time FROM period_times ORDER BY period_number').all() as any[];
     const periods: Record<number, { start: string; end: string }> = {};
     for (const row of rows) {

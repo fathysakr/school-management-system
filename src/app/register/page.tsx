@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
   Box, Container, Card, CardContent, TextField, Button, Typography,
@@ -12,12 +11,12 @@ import { School } from '@mui/icons-material';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('middle_teacher');
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,9 +36,9 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const data = await api.post('/auth/register', { email, password, role });
-      login(data.token, data.user);
-      router.push('/dashboard');
+      await api.post('/auth/register', { email, password, role });
+      setSuccessMsg('تم إنشاء الحساب بنجاح، سيتم تفعيله بعد مراجعة الإدارة. سيتم تحويلك لصفحة تسجيل الدخول...');
+      setTimeout(() => router.push('/login'), 4000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'فشل التسجيل';
       setError(message);
@@ -49,8 +48,6 @@ export default function RegisterPage() {
   };
 
   const roles = [
-    { value: 'middle_supervisor', label: 'مشرف المرحلة المتوسطة' },
-    { value: 'high_supervisor', label: 'مشرف المرحلة الثانوية' },
     { value: 'middle_teacher', label: 'معلم المرحلة المتوسطة' },
     { value: 'high_teacher', label: 'معلم المرحلة الثانوية' },
     { value: 'middle_counselor', label: 'مرشد طلابي - متوسط' },
@@ -76,6 +73,7 @@ export default function RegisterPage() {
             </Typography>
 
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            {successMsg && <Alert severity="success" sx={{ mb: 2 }}>{successMsg}</Alert>}
 
             <form onSubmit={handleSubmit}>
               <TextField

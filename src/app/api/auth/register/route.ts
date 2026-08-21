@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
-import { hashPassword, generateToken, badRequest, serverError, success } from '@/lib/auth';
+import { hashPassword, badRequest, serverError, success } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,27 +33,19 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create user
+    // Create user (pending until admin activates)
     const stmt = db.prepare(`
       INSERT INTO users (email, password, role, status)
-      VALUES (?, ?, ?, 'active')
+      VALUES (?, ?, ?, 'pending')
     `);
 
     const result = await stmt.run(email, hashedPassword, role);
     const userId = result.lastInsertRowid as number;
 
-    // Generate token
-    const token = generateToken({
-      id: userId,
-      email,
-      role: role as any
-    });
-
     return success(
       {
-        message: 'Registration successful',
-        user: { id: userId, email, role },
-        token
+        message: 'تم إنشاء الحساب بنجاح، سيتم تفعيله بعد مراجعة الإدارة',
+        user: { id: userId, email, role, status: 'pending' }
       },
       201
     );
