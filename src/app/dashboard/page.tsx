@@ -17,6 +17,7 @@ import {
   Percent, Speed, Assignment, Refresh, SwapHoriz
 } from '@mui/icons-material';
 import EmptyState from '@/components/empty-state';
+import AttendanceTrendChart from '@/components/attendance-trend-chart';
 
 const roleLabels: Record<string, string> = {
   admin: 'مدير النظام',
@@ -256,6 +257,8 @@ export default function DashboardPage() {
             </Grid>
           </Grid>
 
+          <AttendanceTrendChart days={14} />
+
           {/* Teacher Pending Substitutions */}
           {teacherSubstitutions.length > 0 && (
             <Card sx={{ borderRadius: 3, mb: 3 }}>
@@ -314,9 +317,11 @@ export default function DashboardPage() {
               <StatCard title="المتوسط العام" value={stats.avgScore != null ? `${stats.avgScore}%` : '0%'} icon={<Speed sx={{ color: (stats.avgScore ?? 0) >= 75 ? '#2e7d32' : '#ed6c02' }} />} color={(stats.avgScore ?? 0) >= 75 ? '#2e7d32' : '#ed6c02'} subtitle={stats.totalGrades != null ? `${stats.totalGrades} درجة` : '0 درجة'} />
             </Grid>
             <Grid item xs={12} sm={6} md={2}>
-              <StatCard title="استبدالات معلقة" value={pendingSubstitutions} icon={<Schedule sx={{ color: '#e65100' }} />} color="#e65100" subtitle="قيد الانتظار" />
+              <StatCard title="إحلال في الانتظار" value={pendingSubstitutions} icon={<Schedule sx={{ color: '#e65100' }} />} color="#e65100" subtitle="بحاجة موافقة" />
             </Grid>
           </Grid>
+
+          <AttendanceTrendChart days={14} />
 
           {/* Detailed Attendance */}
           <Grid container spacing={2.5} sx={{ mb: 3 }}>

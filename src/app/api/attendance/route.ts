@@ -4,6 +4,7 @@ import { authenticate, forbidden, unauthorized, badRequest, serverError, success
 import { sanitizeString } from '@/lib/validation';
 import { hasPermission, getSchoolFilter } from '@/lib/permissions';
 import { createNotification } from '@/lib/notifications';
+import { sendAbsenceAlert } from '@/lib/whatsapp';
 
 
 export async function GET(request: NextRequest) {
@@ -97,6 +98,11 @@ export async function POST(request: NextRequest) {
       'SELECT id FROM attendance WHERE student_id = ? AND class_id = ? AND attendance_date = ? AND period = ?'
     ).get(student_id, class_id, attendance_date, periodVal);
 
+    const notifyParentIfAbsent = () => {
+      if (status === 'present' || status === 'excused') return;
+      notifyParentOfAbsence(student_id, class_id, attendance_date, periodVal, status);
+    };
+
     if (existing) {
       // Update
       await db.prepare(
@@ -107,6 +113,7 @@ export async function POST(request: NextRequest) {
       if (status === 'escape') {
         notifyEscapeAlert(student_id, class_id, attendance_date);
       }
+      notifyParentIfAbsent();
 
       return success({ message: 'Attendance updated successfully' });
     } else {
@@ -129,6 +136,7 @@ export async function POST(request: NextRequest) {
       if (status === 'escape') {
         notifyEscapeAlert(student_id, class_id, attendance_date);
       }
+      notifyParentIfAbsent();
 
       return success({
         message: 'Attendance recorded successfully',
@@ -163,6 +171,7 @@ export async function PUT(request: NextRequest) {
 
     let successCount = 0;
     let errorCount = 0;
+    const absentStudentIds: { student_id: number; status: 'absent' | 'late' | 'escape' }[] = [];
 
     for (const record of records) {
       const { student_id, status, remarks } = record;
@@ -193,10 +202,22 @@ export async function PUT(request: NextRequest) {
         if (status === 'escape') {
           notifyEscapeAlert(student_id, class_id, attendance_date);
         }
+        if (status === 'absent' || status === 'late' || status === 'escape') {
+          absentStudentIds.push({ student_id, status });
+        }
         successCount++;
       } catch (err) {
         errorCount++;
       }
+    }
+
+    // Send parent WhatsApp alerts in parallel (non-blocking for the response payload)
+    if (absentStudentIds.length > 0) {
+      await Promise.allSettled(
+        absentStudentIds.map((a) =>
+          notifyParentOfAbsence(a.student_id, Number(class_id), attendance_date, periodVal, a.status)
+        )
+      );
     }
 
     return success({
@@ -231,5 +252,43 @@ async function notifyEscapeAlert(student_id: number, class_id: number, attendanc
     }
   } catch (err) {
     console.error('Escape notification error:', err);
+  }
+}
+
+// Helper: WhatsApp alert to parent on absence / late / escape (fire-and-forget)
+async function notifyParentOfAbsence(
+  student_id: number,
+  class_id: number,
+  attendance_date: string,
+  period: number,
+  status: 'absent' | 'late' | 'escape'
+) {
+  try {
+    const student = await db.prepare(
+      "SELECT first_name, last_name, parent_phone, parent_phones FROM students WHERE id = ?"
+    ).get(student_id) as any;
+    if (!student) return;
+    const cls = await db.prepare("SELECT class_name FROM classes WHERE id = ?").get(class_id) as any;
+
+    const phones = [student.parent_phone, ...(String(student.parent_phones || '').split(','))]
+      .map((p: any) => String(p || '').trim())
+      .filter(Boolean);
+
+    const uniquePhones = Array.from(new Set(phones));
+    if (uniquePhones.length === 0) return;
+
+    const studentName = `${student.first_name} ${student.last_name}`.trim();
+    for (const phone of uniquePhones) {
+      await sendAbsenceAlert({
+        parentPhone: phone,
+        studentName,
+        className: cls?.class_name || '',
+        date: attendance_date,
+        period,
+        status,
+      });
+    }
+  } catch (err) {
+    console.error('Parent absence notification error:', err);
   }
 }

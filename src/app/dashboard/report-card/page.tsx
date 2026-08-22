@@ -102,9 +102,12 @@ export default function ReportCardPage() {
       </Box>
 
       <Paper className="report-card" sx={{ borderRadius: 3, overflow: 'hidden' }}>
-        <Box className="report-card-header" sx={{ bgcolor: '#1a237e', color: 'white', p: 3, textAlign: 'center' }}>
-          <Typography variant="h4" fontWeight="bold">المدرسة</Typography>
-          <Typography variant="h5" sx={{ mt: 1 }}>كشف الدرجات</Typography>
+        <Box className="report-card-header print-keep-color" sx={{ bgcolor: '#1a237e', color: 'white', p: 3, textAlign: 'center', position: 'relative' }}>
+          <Typography variant="h4" fontWeight="bold">مدرسة صفوة الرواد الأهلية</Typography>
+          <Typography variant="subtitle1" sx={{ mt: 0.5, opacity: 0.9 }}>كشف درجات الطالب — {data.class_info?.grade?.includes('ثانوي') ? 'المرحلة الثانوية' : 'المرحلة المتوسطة'}</Typography>
+          {data.class_info?.grade && (
+            <Typography variant="body2" sx={{ opacity: 0.75, mt: 0.5 }}>{data.class_info.grade}</Typography>
+          )}
         </Box>
 
         <Box sx={{ p: 3 }}>
@@ -122,8 +125,8 @@ export default function ReportCardPage() {
               <Typography fontWeight="bold">{data.class_info?.class_name || '-'}</Typography>
             </Grid>
             <Grid item xs={6}>
-              <Typography variant="body2" color="text.secondary">الصف</Typography>
-              <Typography fontWeight="bold">{data.class_info?.grade || '-'}</Typography>
+              <Typography variant="body2" color="text.secondary">تاريخ الإصدار</Typography>
+              <Typography fontWeight="bold">{new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</Typography>
             </Grid>
           </Grid>
 
@@ -202,6 +205,21 @@ export default function ReportCardPage() {
                 </Paper>
               </Grid>
             </Grid>
+          </Box>
+
+          {/* Signature area */}
+          <Box sx={{ mt: 5, pt: 2 }}>
+            <Grid container spacing={4}>
+              {['معلم المادة / رائد الفصل', 'المرشد الطلابي', 'مدير المرحلة'].map((role) => (
+                <Grid item xs={4} key={role} sx={{ textAlign: 'center' }}>
+                  <Typography variant="body2" fontWeight="600">{role}</Typography>
+                  <Box sx={{ borderBottom: '1px solid #999', mt: 4, mx: 'auto', width: '80%' }} />
+                </Grid>
+              ))}
+            </Grid>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 3 }}>
+              هذا الكشف صادر إلكترونياً من نظام إدارة مدرسة صفوة الرواد الأهلية
+            </Typography>
           </Box>
         </Box>
       </Paper>

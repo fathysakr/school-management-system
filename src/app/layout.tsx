@@ -1,3 +1,4 @@
+import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import Providers from '@/components/providers';
 

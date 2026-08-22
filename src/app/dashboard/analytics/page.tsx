@@ -9,6 +9,7 @@ import {
   TableRow, TableCell, Chip, LinearProgress, CircularProgress, Alert
 } from '@mui/material';
 import { School, Warning, EventNote, Grade } from '@mui/icons-material';
+import AttendanceTrendChart from '@/components/attendance-trend-chart';
 
 export default function AnalyticsPage() {
   const { token } = useAuth();
@@ -74,6 +75,8 @@ export default function AnalyticsPage() {
       <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>التحليلات الذكية</Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <AttendanceTrendChart days={30} />
 
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
         {summaryCards.map((card) => (

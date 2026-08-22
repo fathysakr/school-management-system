@@ -1,0 +1,47 @@
+/* Global print stylesheet — applies to any page printed from the system */
+
+@media print {
+  /* Hide app chrome everywhere */
+  header.MuiAppBar-root,
+  aside.MuiDrawer-root,
+  .MuiDrawer-root,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset layout containers so content fills the page */
+  .MuiToolbar-root { display: none !important; }
+  main, .MuiBox-root {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body {
+    font-size: 12pt;
+    background: #fff !important;
+  }
+
+  /* Flatten cards & shadows for clean paper output */
+  .MuiPaper-root {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Keep brand colors on headers */
+  .print-keep-color,
+  .report-card-header {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Avoid awkward page breaks inside rows/cards */
+  tr, .MuiCard-root { page-break-inside: avoid; }
+}

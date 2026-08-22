@@ -8,9 +8,9 @@ import {
   TableHead, TableRow, Paper, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Chip, Alert, CircularProgress,
   FormControl, InputLabel, Select, MenuItem, Grid, IconButton,
-  TablePagination, DialogContentText
+  TablePagination, DialogContentText, Tooltip
 } from '@mui/material';
-import { Edit, Delete, Campaign, FileDownload } from '@mui/icons-material';
+import { Edit, Delete, Campaign, FileDownload, WhatsApp } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
 
@@ -29,6 +29,7 @@ export default function AnnouncementsPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [sendingWhatsapp, setSendingWhatsapp] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const rowsPerPage = 10;
 
@@ -110,6 +111,20 @@ export default function AnnouncementsPage() {
     }
   };
 
+  const handleSendWhatsapp = async (a: any) => {
+    if (!token) return;
+    setSendingWhatsapp(a.id);
+    setError('');
+    try {
+      const res = await api.post(`/announcements/${a.id}/whatsapp`, {}, token);
+      setSuccess(res.message || 'تم الإرسال');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'فشل إرسال الواتساب');
+    } finally {
+      setSendingWhatsapp(null);
+    }
+  };
+
   const handleExport = async () => {
     if (!token) return;
     try {
@@ -176,6 +191,16 @@ export default function AnnouncementsPage() {
                     </TableCell>
                     {(canEditAnnouncement || canDeleteAnnouncement) && (
                       <TableCell>
+                        <Tooltip title="إرسال لأولياء الأمور عبر واتساب">
+                          <IconButton
+                            size="small"
+                            sx={{ color: '#25D366' }}
+                            disabled={sendingWhatsapp === a.id}
+                            onClick={() => handleSendWhatsapp(a)}
+                          >
+                            {sendingWhatsapp === a.id ? <CircularProgress size={16} /> : <WhatsApp fontSize="small" />}
+                          </IconButton>
+                        </Tooltip>
                         {canEditAnnouncement && <IconButton size="small" onClick={() => handleOpenDialog(a)}><Edit fontSize="small" /></IconButton>}
                         {canDeleteAnnouncement && <IconButton size="small" color="error" onClick={() => setDeleteConfirm(a.id)}><Delete fontSize="small" /></IconButton>}
                       </TableCell>
