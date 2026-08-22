@@ -20,7 +20,7 @@ function getAllowedNumbers(): string[] | null {
   if (!raw || !raw.trim()) return null; // no restriction
   return raw
     .split(',')
-    .map((n) => normalizeEgyptianPhone(n))
+    .map((n) => normalizeArabicPhone(n))
     .filter(Boolean) as string[];
 }
 
@@ -31,19 +31,34 @@ export function isNumberAllowed(normalizedPhone: string): boolean {
   return allowed.includes(normalizedPhone);
 }
 
-/** Normalize Egyptian phone numbers to E.164 (+20XXXXXXXXXX) */
-export function normalizeEgyptianPhone(raw: string | null | undefined): string | null {
+/**
+ * Normalize Arabic phone numbers to E.164.
+ * Supports Saudi (+966, local 05XXXXXXXX) and Egyptian (+20, local 01XXXXXXXXX).
+ */
+export function normalizeArabicPhone(raw: string | null | undefined): string | null {
   if (!raw) return null;
   let p = String(raw).replace(/[\s\-()]/g, '').trim();
   if (!p) return null;
-  // Local formats: 010xxxxxxxx, 012..., 011..., 015...
-  const localMatch = p.match(/^0(1[0125]\d{8})$/);
-  if (localMatch) return `+20${localMatch[1]}`;
-  // Already international: +2010... or 002010...
+  // Strip leading zeros used for international dialing (00 / 000)
+  p = p.replace(/^0{2,}/, '00');
+  // --- Saudi Arabia (+966): mobiles start with 5 after country code
+  const saLocal = p.match(/^0(5\d{8})$/);            // 05XXXXXXXX
+  if (saLocal) return `+966${saLocal[1]}`;
+  if (/^\+966\d{9}$/.test(p)) return p;              // +9665XXXXXXXX
+  if (/^00966\d{9}$/.test(p)) return `+${p.slice(2)}`;
+  if (/^966\d{9}$/.test(p)) return `+${p}`;          // 9665XXXXXXXX
+  // --- Egypt (+20): mobiles start with 1 after country code
+  const egLocal = p.match(/^0(1[0125]\d{8})$/);      // 01XXXXXXXXX
+  if (egLocal) return `+20${egLocal[1]}`;
   if (/^\+20\d{10}$/.test(p)) return p;
   if (/^0020\d{10}$/.test(p)) return `+${p.slice(2)}`;
   if (/^20\d{10}$/.test(p)) return `+${p}`;
   return null;
+}
+
+/** @deprecated use normalizeArabicPhone — kept as alias for compatibility */
+export function normalizeEgyptianPhone(raw: string | null | undefined): string | null {
+  return normalizeArabicPhone(raw);
 }
 
 async function sendText(to: string, message: string): Promise<SendResult> {
@@ -96,7 +111,7 @@ export async function sendAbsenceAlert(opts: {
   period?: number;
   status: 'absent' | 'late' | 'escape';
 }): Promise<SendResult> {
-  const phone = normalizeEgyptianPhone(opts.parentPhone);
+  const phone = normalizeArabicPhone(opts.parentPhone);
   if (!phone) return { sent: false, reason: 'invalid-phone' };
 
   const statusLabel = opts.status === 'escape' ? 'الخروج بدون إذن' : opts.status === 'late' ? 'التأخير' : 'الغياب';
@@ -118,7 +133,7 @@ export async function sendAnnouncement(opts: {
   title: string;
   content: string;
 }): Promise<SendResult> {
-  const phone = normalizeEgyptianPhone(opts.parentPhone);
+  const phone = normalizeArabicPhone(opts.parentPhone);
   if (!phone) return { sent: false, reason: 'invalid-phone' };
 
   const message = `📢 *${opts.title}*\nمدرسة صفوة الرواد الأهلية\n\n${opts.content}`;

@@ -152,7 +152,7 @@ export default function FeesPage() {
     }
   };
 
-  const fmt = (n: any) => Number(n || 0).toLocaleString('ar-EG');
+  const fmt = (n: any) => new Intl.NumberFormat('ar-SA-u-nu-latn').format(Number(n || 0));
 
   if (loading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}><CircularProgress /></Box>;
@@ -180,7 +180,7 @@ export default function FeesPage() {
                 <TrendingUp color="primary" />
                 <Typography variant="body2" color="text.secondary">محصل هذا الشهر</Typography>
               </Box>
-              <Typography variant="h5" fontWeight="bold" sx={{ mt: 1 }}>{fmt(summary?.month_total)} جنيه</Typography>
+              <Typography variant="h5" fontWeight="bold" sx={{ mt: 1 }}>{fmt(summary?.month_total)} ريال</Typography>
               <Typography variant="caption" color="text.secondary">{summary?.month_count || 0} دفعة</Typography>
             </CardContent>
           </Card>
@@ -192,7 +192,7 @@ export default function FeesPage() {
                 <PaymentsIcon sx={{ color: '#2e7d32' }} />
                 <Typography variant="body2" color="text.secondary">محصل اليوم</Typography>
               </Box>
-              <Typography variant="h5" fontWeight="bold" sx={{ mt: 1 }}>{fmt(summary?.today_total)} جنيه</Typography>
+              <Typography variant="h5" fontWeight="bold" sx={{ mt: 1 }}>{fmt(summary?.today_total)} ريال</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -214,7 +214,7 @@ export default function FeesPage() {
                 <Savings sx={{ color: '#d32f2f' }} />
                 <Typography variant="body2" color="text.secondary">إجمالي المتأخرات</Typography>
               </Box>
-              <Typography variant="h5" fontWeight="bold" sx={{ mt: 1 }}>{fmt(summary?.arrears_total)} جنيه</Typography>
+              <Typography variant="h5" fontWeight="bold" sx={{ mt: 1 }}>{fmt(summary?.arrears_total)} ريال</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -246,7 +246,7 @@ export default function FeesPage() {
                   <TableRow key={p.id} hover>
                     <TableCell>{p.student_name}<br /><Typography variant="caption" color="text.secondary">{p.student_code}</Typography></TableCell>
                     <TableCell><Chip size="small" label={p.student_school === 'middle' ? 'متوسط' : 'ثانوي'} /></TableCell>
-                    <TableCell><strong>{fmt(p.amount)}</strong> جنيه</TableCell>
+                    <TableCell><strong>{fmt(p.amount)}</strong> ريال</TableCell>
                     <TableCell>{p.term}</TableCell>
                     <TableCell>{METHOD_LABELS[p.method] || p.method}</TableCell>
                     <TableCell>{String(p.payment_date).slice(0, 10)}</TableCell>
@@ -335,7 +335,7 @@ export default function FeesPage() {
               onChange={(_, v) => setSelectedStudent(v)}
               renderInput={(params) => <TextField {...params} label="ابحث عن الطالب بالاسم أو الكود" required />}
             />
-            <TextField label="المبلغ (جنيه)" type="number" value={formData.amount}
+            <TextField label="المبلغ (ريال)" type="number" value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })} required />
             <TextField label="تاريخ الدفع" type="date" value={formData.payment_date}
               onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })} InputLabelProps={{ shrink: true }} />
@@ -363,7 +363,7 @@ export default function FeesPage() {
       <Dialog open={feeDialogOpen} onClose={() => setFeeDialogOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>الرسوم السنوية — {feeStudent?.student_name}</DialogTitle>
         <DialogContent>
-          <TextField autoFocus fullWidth type="number" label="إجمالي الرسوم السنوية (جنيه)"
+          <TextField autoFocus fullWidth type="number" label="إجمالي الرسوم السنوية (ريال)"
             value={feeValue} onChange={(e) => setFeeValue(e.target.value)}
             sx={{ mt: 1 }} helperText="اكتب 0 لإخفاء الطالب من تقرير المتأخرات" />
         </DialogContent>
