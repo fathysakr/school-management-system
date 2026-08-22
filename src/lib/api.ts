@@ -1,5 +1,18 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
+// Endpoints where a 401 is part of normal flow (wrong credentials) — never auto-redirect
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/parent-login'];
+
+function handleAuthFailure(endpoint: string) {
+  if (typeof window === 'undefined') return;
+  if (AUTH_ENDPOINTS.some((e) => endpoint.includes(e))) return;
+  const path = window.location.pathname;
+  if (path.startsWith('/login') || path.startsWith('/register')) return;
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = `/login?expired=1`;
+}
+
 interface RequestOptions extends RequestInit {
   token?: string;
 }
@@ -30,6 +43,7 @@ async function apiRequest(endpoint: string, options: RequestOptions = {}) {
   const data = await response.json();
 
   if (!response.ok) {
+    if (response.status === 401) handleAuthFailure(endpoint);
     throw new Error(data.error || `Request failed with status ${response.status}`);
   }
 
@@ -62,6 +76,7 @@ export const api = {
     if (token) headers.Authorization = `Bearer ${token}`;
     const response = await fetch(`${API_URL}${endpoint}`, { method: 'POST', headers, body: formData });
     if (!response.ok) {
+      if (response.status === 401) handleAuthFailure(endpoint);
       const data = await response.json().catch(() => ({}));
       throw new Error(data.error || `Request failed with status ${response.status}`);
     }

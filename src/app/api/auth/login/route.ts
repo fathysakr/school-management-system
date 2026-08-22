@@ -1,7 +1,8 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
 import { comparePassword, generateToken, badRequest, serverError, success, unauthorized, forbidden } from '@/lib/auth';
 import { getSchoolStage } from '@/lib/permissions';
+import { rateLimit, resetRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,15 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password) {
       return badRequest('اسم المستخدم وكلمة المرور مطلوبان');
+    }
+
+    const limitKey = `login:${getClientIp(request)}:${String(email).toLowerCase()}`;
+    const limit = rateLimit(limitKey);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: `محاولات كثيرة خاطئة. حاول مرة أخرى بعد ${limit.retryAfterSeconds} ثانية` },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } }
+      );
     }
 
     // Get user
@@ -31,8 +41,10 @@ export async function POST(request: NextRequest) {
 
     // Check status
     if (user.status !== 'active') {
-      return badRequest('الحساب غير نشط');
+      return badRequest('الحساب غير نشط، برجاء التواصل مع إدارة المدرسة');
     }
+
+    resetRateLimit(limitKey);
 
     // Validate school access
     const allowedSchool = getSchoolStage(user.role);

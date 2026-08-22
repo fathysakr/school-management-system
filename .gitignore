@@ -5,7 +5,6 @@ node_modules/
 *.db
 *.db-shm
 *.db-wal
-!/data/school.db
 /data/*.xlsx
 .vercel
 
@@ -16,6 +15,7 @@ build.log
 dev-error.log
 dev-output.log
 *.pdf
+backups/
 _extract.mjs
 UsersfathyAppDataLocalTempgit-creds.txt
 

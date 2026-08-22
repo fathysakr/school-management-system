@@ -1,10 +1,15 @@
 import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
 import { hashPassword, badRequest, serverError, success } from '@/lib/auth';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
     await ensureTursoReady();
+    const ipLimit = rateLimit(`register:${getClientIp(request)}`, 3, 60 * 60 * 1000);
+    if (!ipLimit.allowed) {
+      return badRequest('عدد كبير من محاولات التسجيل. حاول لاحقاً');
+    }
     const body = await request.json();
     const { email, password, role: rawRole } = body;
 

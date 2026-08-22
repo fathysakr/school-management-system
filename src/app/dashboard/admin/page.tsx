@@ -8,7 +8,7 @@ import {
   Box, Typography, Paper, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, Alert, Chip, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TextField, FormControl, InputLabel, Select, MenuItem,
-  IconButton, Tabs, Tab, CircularProgress, TablePagination
+  IconButton, Tabs, Tab, CircularProgress, TablePagination, Badge
 } from '@mui/material';
 import {
   DeleteSweep, Warning, School, Grade, Assessment, People,
@@ -178,6 +178,7 @@ export default function AdminPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
   const [passwordDialog, setPasswordDialog] = useState<{ user: any } | null>(null);
   const [passwordForm, setPasswordForm] = useState({ password: '', show: false });
@@ -383,6 +384,9 @@ export default function AdminPage() {
 
   const filteredUsers = users.filter((u) => {
     if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+    if (statusFilter === 'pending' && u.status !== 'pending') return false;
+    if (statusFilter === 'active' && u.status !== 'active') return false;
+    if (statusFilter === 'inactive' && u.status !== 'inactive') return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const nameMatch = u.first_name ? `${u.first_name} ${u.last_name}`.toLowerCase().includes(q) : false;
@@ -390,6 +394,8 @@ export default function AdminPage() {
     }
     return true;
   });
+
+  const pendingCount = users.filter((u) => u.status === 'pending').length;
 
   const paginatedUsers = filteredUsers.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
 
@@ -450,7 +456,15 @@ export default function AdminPage() {
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
         <Tab icon={<DeleteSweep />} label="إجراءات جماعية" iconPosition="start" />
-        <Tab icon={<ManageAccounts />} label="إدارة الحسابات" iconPosition="start" />
+        <Tab
+          icon={<ManageAccounts />}
+          label={
+            <Badge badgeContent={pendingCount} color="warning">
+              إدارة الحسابات
+            </Badge>
+          }
+          iconPosition="start"
+        />
         <Tab icon={<Security />} label="الصلاحيات" iconPosition="start" />
         <Tab icon={<CloudDownload />} label="النسخ الاحتياطي" iconPosition="start" />
         <Tab icon={<AccessTime />} label="أوقات الحصص" iconPosition="start" />
@@ -537,6 +551,17 @@ export default function AdminPage() {
                   <MenuItem value="high_counselor">مرشد ثانوي</MenuItem>
                 </Select>
               </FormControl>
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>الحالة</InputLabel>
+                <Select value={statusFilter} label="الحالة" onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
+                  <MenuItem value="all">الكل</MenuItem>
+                  <MenuItem value="pending">
+                    قيد الانتظار {pendingCount > 0 ? `(${pendingCount})` : ''}
+                  </MenuItem>
+                  <MenuItem value="active">نشط</MenuItem>
+                  <MenuItem value="inactive">غير نشط</MenuItem>
+                </Select>
+              </FormControl>
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button variant="outlined" startIcon={<FileDownload />} onClick={handleExportUsers} disabled={filteredUsers.length === 0}>تصدير Excel</Button>
@@ -582,8 +607,8 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={u.status === 'active' ? 'نشط' : 'غير نشط'} size="small"
-                          color={u.status === 'active' ? 'success' : 'default'}
+                          label={u.status === 'active' ? 'نشط' : u.status === 'pending' ? 'قيد الانتظار' : 'غير نشط'} size="small"
+                          color={u.status === 'active' ? 'success' : u.status === 'pending' ? 'warning' : 'default'}
                           onClick={() => {
                             if (u.role === 'admin') return;
                             setEditingUser(u);

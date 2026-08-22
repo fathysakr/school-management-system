@@ -1,6 +1,7 @@
-import { NextRequest } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
 import { comparePassword, generateToken, badRequest, serverError, success, unauthorized } from '@/lib/auth';
+import { rateLimit, resetRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,15 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password) {
       return badRequest('البريد الإلكتروني وكلمة المرور مطلوبان');
+    }
+
+    const limitKey = `parent-login:${getClientIp(request)}:${String(email).toLowerCase()}`;
+    const limit = rateLimit(limitKey);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: `محاولات كثيرة خاطئة. حاول مرة أخرى بعد ${limit.retryAfterSeconds} ثانية` },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } }
+      );
     }
 
     const parent = await db.prepare(`
@@ -25,6 +35,8 @@ export async function POST(request: NextRequest) {
     if (!passwordValid) {
       return unauthorized('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
+
+    resetRateLimit(limitKey);
 
     const token = generateToken({
       id: parent.id,

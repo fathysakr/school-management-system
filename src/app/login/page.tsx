@@ -20,6 +20,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const expired = searchParams.get('expired') === '1';
 
   const isHigh = school === 'high';
   const schoolLabel = isHigh ? 'المدرسة الثانوية' : 'المدرسة المتوسطة';
@@ -69,6 +70,7 @@ function LoginForm() {
             </Box>
 
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            {expired && !error && <Alert severity="info" sx={{ mb: 2 }}>انتهت صلاحية الجلسة، برجاء تسجيل الدخول مرة أخرى</Alert>}
 
             <form onSubmit={handleSubmit}>
               <TextField
@@ -100,6 +102,12 @@ function LoginForm() {
                 {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
               </Button>
             </form>
+
+            <Box sx={{ textAlign: 'center', mt: 1, mb: 1 }}>
+              <Button onClick={() => router.push('/forgot-password')} sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
+                نسيت كلمة المرور؟
+              </Button>
+            </Box>
 
             <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Button onClick={() => router.push('/')} sx={{ color: 'text.secondary' }}>

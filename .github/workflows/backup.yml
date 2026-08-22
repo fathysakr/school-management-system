@@ -1,0 +1,35 @@
+name: Daily Database Backup
+
+on:
+  schedule:
+    - cron: '0 1 * * *' # يومياً 1 صباحاً UTC (4 صباحاً بتوقيت مصر)
+  workflow_dispatch: # إمكانية التشغيل اليدوي من تبويب Actions
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check secrets
+        id: check
+        run: |
+          if [ -z "${{ secrets.TURSO_DB_URL }}" ]; then
+            echo "::warning::TURSO_DB_URL secret is missing — add it in repo Settings > Secrets"
+            exit 1
+          fi
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund @libsql/client
+      - name: Run backup
+        env:
+          TURSO_DB_URL: ${{ secrets.TURSO_DB_URL }}
+          TURSO_DB_TOKEN: ${{ secrets.TURSO_DB_TOKEN }}
+        run: node scripts/backup-db.mjs
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: school-backup-${{ github.run_id }}
+          path: backups/*.sql
+          retention-days: 90
