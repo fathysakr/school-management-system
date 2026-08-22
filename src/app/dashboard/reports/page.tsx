@@ -7,7 +7,7 @@ import {
   Box, Typography, Button, Paper, TextField, Chip, Alert, CircularProgress,
   FormControl, InputLabel, Select, MenuItem, Grid, Card, CardContent,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Avatar,
-  Divider, Tooltip
+  Divider, Tooltip, Autocomplete
 } from '@mui/material';
 import {
   Add, Edit, Delete, Close, Assignment, Warning, Psychology, MenuBook,
@@ -66,6 +66,9 @@ const printContent = (html: string) => {
       .report-card .meta { color: #888; font-size: 12px; margin-bottom: 8px; }
       .report-card .content { line-height: 1.8; font-size: 14px; }
       .footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 12px; color: #999; }
+      .group-title { font-size: 17px; margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 2px solid currentColor; display: inline-block; }
+      .signatures { width: 100%; margin-top: 40px; text-align: center; font-size: 13px; page-break-inside: avoid; }
+      .signatures td { padding: 0 20px; }
       @media print { .no-print { display: none; } body { padding: 0; } }
     </style>
     </head><body>${html}
@@ -83,7 +86,7 @@ export default function ReportsPage() {
   const [students, setStudents] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
-  const [reports, setReports] = useState<any[]>([]);
+  const [allReports, setAllReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -177,21 +180,36 @@ export default function ReportsPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.set('report_type', currentType);
+      // Fetch all report types in one request, filter locally per tab —
+      // instant tab switching without extra network round-trips
       if (selectedClass) params.set('class_id', selectedClass);
       if (selectedStudent) params.set('student_id', selectedStudent);
       if (selectedTeacher) params.set('teacher_id', selectedTeacher);
-      params.set('limit', '100');
+      params.set('limit', '2000');
       const res = await api.get(`/teacher-reports?${params.toString()}${schoolParam}`, token);
-      setReports(res.reports || []);
+      setAllReports(res.reports || []);
     } catch {
       setError('فشل في جلب التقارير');
     } finally {
       setLoading(false);
     }
-  }, [token, currentType, selectedClass, selectedStudent, selectedTeacher, schoolParam]);
+  }, [token, selectedClass, selectedStudent, selectedTeacher, schoolParam]);
 
-  useEffect(() => { fetchReports(); }, [token, currentType, selectedClass, selectedStudent, selectedTeacher, fetchReports]);
+  useEffect(() => { fetchReports(); }, [fetchReports]);
+
+  const reports = useMemo(() => (
+    allReports
+      .filter((r) => r.report_type === currentType)
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+  ), [allReports, currentType]);
+
+  const typeCounts = useMemo(() => {
+    const c: Record<string, number> = { activity: 0, positive: 0, behavioral: 0, academic_deficiency: 0 };
+    for (const r of allReports) {
+      if (c[r.report_type] !== undefined) c[r.report_type]++;
+    }
+    return c;
+  }, [allReports]);
 
   const dialogStudents = useMemo(() => {
     if (!formData.class_id) return allStudents;
@@ -202,9 +220,9 @@ export default function ReportsPage() {
     if (report) {
       setEditing(report);
       setFormData({
-        teacher_id: report.teacher_id.toString(),
-        student_id: report.student_id.toString(),
-        class_id: report.class_id.toString(),
+        teacher_id: report.teacher_id != null ? String(report.teacher_id) : '',
+        student_id: report.student_id != null ? String(report.student_id) : '',
+        class_id: report.class_id != null ? String(report.class_id) : '',
         title: report.title || '',
         content: report.content,
         date: report.date,
@@ -267,7 +285,9 @@ export default function ReportsPage() {
     setFileLoading(true);
     try {
       const res = await api.get(`/teacher-reports?student_id=${student.id}&limit=200${schoolParam}`, token);
-      setFileReports(res.reports || []);
+      const list = (res.reports || []).slice()
+        .sort((a: any, b: any) => String(b.date || '').localeCompare(String(a.date || '')));
+      setFileReports(list);
     } catch {
       setFileReports([]);
     } finally {
@@ -276,34 +296,48 @@ export default function ReportsPage() {
   };
 
   const printStudentFile = () => {
-    if (!fileStudent || fileReports.length === 0) return;
-    const reportsHtml = fileReports.map(r => {
-      const cfg = reportConfig[r.report_type as keyof typeof reportConfig] || reportConfig.activity;
-      return `
-        <div class="report-card" style="border-right: 4px solid ${cfg.color};">
-          <span class="type-badge" style="background: ${cfg.color};">${cfg.label}</span>
-          <h3>${r.title || cfg.label}</h3>
+    if (!fileStudent) return;
+    const grouped = ['activity', 'positive', 'behavioral', 'academic_deficiency']
+      .map((type) => ({
+        cfg: reportConfig[type as keyof typeof reportConfig],
+        list: fileReports
+          .filter((r) => r.report_type === type)
+          .sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))),
+      }))
+      .filter((g) => g.list.length > 0);
+
+    const sectionsHtml = grouped.map((g) => `
+      <h2 class="group-title" style="color:${g.cfg.color};">${g.cfg.label} (${g.list.length})</h2>
+      ${g.list.map((r) => `
+        <div class="report-card" style="border-right: 4px solid ${g.cfg.color};">
+          <span class="type-badge" style="background: ${g.cfg.color};">${r.title || g.cfg.label}</span>
           <div class="meta">${r.teacher_first} ${r.teacher_last} · ${r.class_name} · ${formatDate(r.date)}</div>
           <div class="content">${r.content}</div>
         </div>
-      `;
-    }).join('');
+      `).join('')}
+    `).join('');
+
+    const issueDate = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const html = `
       <div class="header">
-        <h1>ملف الطالب</h1>
+        <h1>ملف الطالب الشامل</h1>
         <p>مدرسة صفوة الرواد الأهلية</p>
       </div>
-      <div class="student-info">
-        <table>
-          <tr><td><strong>الاسم:</strong> ${fileStudent.first_name} ${fileStudent.last_name}</td>
-              <td><strong>الرقم:</strong> ${fileStudent.student_id}</td></tr>
-          <tr><td><strong>الفصل:</strong> ${fileReports[0]?.class_name || '-'}</td>
-              <td><strong>عدد التقارير:</strong> ${fileReports.length}</td></tr>
-        </table>
-      </div>
-      <h2 style="font-size:18px;color:#1976d2;margin-bottom:15px;">جميع التقارير</h2>
-      ${reportsHtml}
+      <div class="student-info"><table>
+        <tr><td><strong>اسم الطالب:</strong> ${fileStudent.first_name} ${fileStudent.last_name}</td>
+            <td><strong>رقم الطالب:</strong> ${fileStudent.student_id}</td></tr>
+        <tr><td><strong>الفصل:</strong> ${fileReports[0]?.class_name || fileStudent.class_name || '-'}</td>
+            <td><strong>الصف:</strong> ${fileStudent.grade || '-'}</td></tr>
+        <tr><td><strong>إجمالي التقارير:</strong> ${fileReports.length}</td>
+            <td><strong>تاريخ الإصدار:</strong> ${issueDate}</td></tr>
+      </table></div>
+      ${sectionsHtml}
+      <table class="signatures"><tr>
+        <td><strong>معلم المادة</strong><br/><br/>...............</td>
+        <td><strong>مرشد الطلاب</strong><br/><br/>...............</td>
+        <td><strong>مدير المدرسة</strong><br/><br/>...............</td>
+      </tr></table>
     `;
     printContent(html);
   };
@@ -373,6 +407,9 @@ export default function ReportsPage() {
                   }}>
                   <Warning sx={{ fontSize: 40, color: isActive ? '#ed6c02' : 'text.disabled' }} />
                   <Typography fontWeight="bold" sx={{ mt: 0.5 }}>{t.label}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {(typeCounts.behavioral || 0) + (typeCounts.academic_deficiency || 0)} تقرير
+                  </Typography>
                 </Paper>
               </Grid>
             );
@@ -387,9 +424,12 @@ export default function ReportsPage() {
                   transition: 'all 0.2s',
                   '&:hover': { bgcolor: isActive ? cfg.lightBg : 'action.hover', transform: 'translateY(-3px)', boxShadow: 3 },
                 }}>
-                <Box sx={{ color: isActive ? cfg.color : 'text.disabled' }}>{t.icon}</Box>
-                <Typography fontWeight="bold" sx={{ mt: 0.5 }}>{t.label}</Typography>
-              </Paper>
+                  <Box sx={{ color: isActive ? cfg.color : 'text.disabled' }}>{t.icon}</Box>
+                  <Typography fontWeight="bold" sx={{ mt: 0.5 }}>{t.label}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {typeCounts[t.value] || 0} تقرير
+                  </Typography>
+                </Paper>
             </Grid>
           );
         })}
@@ -463,13 +503,16 @@ export default function ReportsPage() {
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={4}>
-              <FormControl fullWidth size="small">
-                <InputLabel>الطالب</InputLabel>
-                <Select value={selectedStudent} label="الطالب" onChange={(e) => setSelectedStudent(e.target.value)}>
-                  <MenuItem value="">جميع الطلاب</MenuItem>
-                  {students.map((s) => <MenuItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</MenuItem>)}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                fullWidth
+                size="small"
+                options={selectedClass ? students : allStudents}
+                getOptionLabel={(o: any) => `${o.first_name} ${o.last_name}`}
+                isOptionEqualToValue={(o: any, v: any) => String(o.id) === String(v.id)}
+                value={allStudents.find((s: any) => String(s.id) === String(selectedStudent)) || null}
+                onChange={(_, v) => setSelectedStudent(v ? String(v.id) : '')}
+                renderInput={(params) => <TextField {...params} label="الطالب" />}
+              />
             </Grid>
             {canEditReport && (
               <Grid item xs={12} sm={4}>
@@ -620,22 +663,17 @@ export default function ReportsPage() {
           </Box>
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
-          {/* Student selector */}
-          <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel>اختر الطالب</InputLabel>
-            <Select
-              value={fileStudent?.id || ''}
-              label="اختر الطالب"
-              onChange={(e) => {
-                const s = allStudents.find(st => st.id === e.target.value);
-                if (s) openStudentFile(s);
-              }}
-            >
-              {allStudents.map((s) => (
-                <MenuItem key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.student_id})</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {/* Student selector — searchable */}
+          <Autocomplete
+            fullWidth
+            options={allStudents}
+            getOptionLabel={(o: any) => `${o.first_name} ${o.last_name} (${o.student_id})`}
+            isOptionEqualToValue={(o: any, v: any) => String(o.id) === String(v?.id)}
+            value={fileStudent}
+            onChange={(_, v) => { if (v) openStudentFile(v); }}
+            renderInput={(params) => <TextField {...params} label="ابحث عن الطالب بالاسم أو الرقم" />}
+            sx={{ mb: 3 }}
+          />
 
           {fileLoading ? (
             <Box sx={{ textAlign: 'center', py: 6 }}><CircularProgress /></Box>
@@ -651,15 +689,34 @@ export default function ReportsPage() {
           ) : (
             <>
               {/* Student info */}
-              <Paper sx={{ p: 2, mb: 2, borderRadius: 2, bgcolor: '#f5f5f5', display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ width: 56, height: 56, bgcolor: 'primary.main', fontSize: 24 }}>
-                  {fileStudent.first_name?.[0]}
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight="bold">{fileStudent.first_name} {fileStudent.last_name}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {fileStudent.student_id} · {fileReports[0]?.class_name || '-'} · {fileReports.length} تقرير
-                  </Typography>
+              <Paper sx={{ p: 2, mb: 2, borderRadius: 2, bgcolor: '#f5f5f5' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Avatar sx={{ width: 56, height: 56, bgcolor: 'primary.main', fontSize: 24 }}>
+                    {fileStudent.first_name?.[0]}
+                  </Avatar>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="h6" fontWeight="bold">{fileStudent.first_name} {fileStudent.last_name}</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                      <Chip size="small" label={`رقم: ${fileStudent.student_id}`} variant="outlined" />
+                      {fileStudent.grade && <Chip size="small" label={`الصف: ${fileStudent.grade}`} variant="outlined" />}
+                      <Chip size="small" label={fileReports[0]?.class_name || fileStudent.class_name || 'بدون فصل'} color="primary" variant="outlined" />
+                    </Box>
+                  </Box>
+                </Box>
+                {/* Type distribution summary */}
+                <Divider sx={{ my: 1.5 }} />
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {['activity', 'positive', 'behavioral', 'academic_deficiency'].map((type) => {
+                    const cfg = reportConfig[type as keyof typeof reportConfig];
+                    const n = fileReports.filter((r) => r.report_type === type).length;
+                    if (n === 0) return null;
+                    return (
+                      <Chip key={type} size="small"
+                        icon={React.cloneElement(cfg.icon as React.ReactElement, { sx: { fontSize: 15, color: `${cfg.color} !important` } })}
+                        label={`${cfg.label}: ${n}`}
+                        sx={{ bgcolor: cfg.lightBg, color: cfg.color, fontWeight: 600 }} />
+                    );
+                  })}
                 </Box>
               </Paper>
 
