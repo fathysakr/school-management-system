@@ -45,12 +45,17 @@ export async function GET(request: NextRequest) {
       `SELECT s.id, s.student_id, s.first_name || ' ' || s.last_name AS student_name,
               s.grade, s.school,
               COALESCE(s.annual_fee, 0) as annual_fee,
-              COALESCE((SELECT SUM(amount) FROM payments p WHERE p.student_id = s.id), 0) as paid
+              COALESCE(p.paid, 0) as paid
        FROM students s
+       LEFT JOIN (
+         SELECT student_id, SUM(amount) AS paid
+         FROM payments
+         GROUP BY student_id
+       ) p ON p.student_id = s.id
        WHERE s.status = 'active'
          AND COALESCE(s.annual_fee, 0) > 0${schoolClause}
-         AND COALESCE((SELECT SUM(amount) FROM payments p WHERE p.student_id = s.id), 0) < COALESCE(s.annual_fee, 0)
-       ORDER BY (COALESCE(s.annual_fee, 0) - COALESCE((SELECT SUM(amount) FROM payments p WHERE p.student_id = s.id), 0)) DESC
+         AND COALESCE(p.paid, 0) < COALESCE(s.annual_fee, 0)
+       ORDER BY (COALESCE(s.annual_fee, 0) - COALESCE(p.paid, 0)) DESC
        LIMIT 300`
     ).all(...schoolParams).then((rows: any[]) =>
       rows.map((r) => ({ ...r, remaining: r.annual_fee - r.paid }))

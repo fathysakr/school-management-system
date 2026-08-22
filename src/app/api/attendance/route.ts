@@ -98,9 +98,10 @@ export async function POST(request: NextRequest) {
       'SELECT id FROM attendance WHERE student_id = ? AND class_id = ? AND attendance_date = ? AND period = ?'
     ).get(student_id, class_id, attendance_date, periodVal);
 
-    const notifyParentIfAbsent = () => {
+    const notifyParentIfAbsent = async () => {
       if (status === 'present' || status === 'excused') return;
-      notifyParentOfAbsence(student_id, class_id, attendance_date, periodVal, status);
+      // Await so serverless platforms don't kill the send after the response
+      await notifyParentOfAbsence(student_id, Number(class_id), attendance_date, periodVal, status);
     };
 
     if (existing) {
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
       if (status === 'escape') {
         notifyEscapeAlert(student_id, class_id, attendance_date);
       }
-      notifyParentIfAbsent();
+      await notifyParentIfAbsent();
 
       return success({ message: 'Attendance updated successfully' });
     } else {
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
       if (status === 'escape') {
         notifyEscapeAlert(student_id, class_id, attendance_date);
       }
-      notifyParentIfAbsent();
+      await notifyParentIfAbsent();
 
       return success({
         message: 'Attendance recorded successfully',
@@ -173,42 +174,66 @@ export async function PUT(request: NextRequest) {
     let errorCount = 0;
     const absentStudentIds: { student_id: number; status: 'absent' | 'late' | 'escape' }[] = [];
 
-    for (const record of records) {
-      const { student_id, status, remarks } = record;
+    // Validate ALL student ids in a single query instead of one query per record
+    const candidateIds = records
+      .map((r: any) => parseInt(r?.student_id))
+      .filter((n: any) => !isNaN(n));
+    const foundStudents = candidateIds.length
+      ? (await db.prepare(
+          `SELECT id FROM students WHERE id IN (${candidateIds.map(() => '?').join(',')})`
+        ).all(...candidateIds)) as any[]
+      : [];
+    const validStudentIds = new Set(foundStudents.map((f: any) => Number(f.id)));
 
-      if (!student_id || !status) continue;
-      if (!['present', 'absent', 'late', 'excused', 'escape'].includes(status)) continue;
+    const UPSERT_SQL = `
+      INSERT INTO attendance (student_id, class_id, attendance_date, period, status, remarks)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(student_id, class_id, attendance_date, period)
+      DO UPDATE SET status = excluded.status,
+                    remarks = excluded.remarks,
+                    updated_at = CURRENT_TIMESTAMP
+    `;
 
-      const student = await db.prepare('SELECT id FROM students WHERE id = ?').get(student_id);
-      if (!student) {
-        errorCount++;
-        continue;
+    const processRecords = async () => {
+      for (const record of records) {
+        const { student_id, status, remarks } = record;
+
+        if (!student_id || !status) continue;
+        if (!['present', 'absent', 'late', 'excused', 'escape'].includes(status)) continue;
+        if (!validStudentIds.has(Number(student_id))) {
+          errorCount++;
+          continue;
+        }
+
+        try {
+          // Single upsert replaces the previous SELECT-existence-check + UPDATE/INSERT pair
+          await db.prepare(UPSERT_SQL).run(
+            student_id, class_id, attendance_date, periodVal,
+            status, remarks ? sanitizeString(remarks) : null
+          );
+          if (status === 'escape') {
+            notifyEscapeAlert(student_id, class_id, attendance_date);
+          }
+          if (status === 'absent' || status === 'late' || status === 'escape') {
+            absentStudentIds.push({ student_id, status });
+          }
+          successCount++;
+        } catch (err) {
+          errorCount++;
+        }
       }
+    };
 
-      const existing = await db.prepare(
-        'SELECT id FROM attendance WHERE student_id = ? AND class_id = ? AND attendance_date = ? AND period = ?'
-      ).get(student_id, class_id, attendance_date, periodVal);
-
-      try {
-        if (existing) {
-          await db.prepare(
-            'UPDATE attendance SET status = ?, remarks = ? WHERE student_id = ? AND class_id = ? AND attendance_date = ? AND period = ?'
-          ).run(status, remarks ? sanitizeString(remarks) : null, student_id, class_id, attendance_date, periodVal);
-        } else {
-          await db.prepare(
-            'INSERT INTO attendance (student_id, class_id, attendance_date, period, status, remarks) VALUES (?, ?, ?, ?, ?, ?)'
-          ).run(student_id, class_id, attendance_date, periodVal, status, remarks ? sanitizeString(remarks) : null);
-        }
-        if (status === 'escape') {
-          notifyEscapeAlert(student_id, class_id, attendance_date);
-        }
-        if (status === 'absent' || status === 'late' || status === 'escape') {
-          absentStudentIds.push({ student_id, status });
-        }
-        successCount++;
-      } catch (err) {
-        errorCount++;
+    try {
+      const txFn = (db as any)?.transaction;
+      if (typeof txFn === 'function') {
+        await txFn(processRecords)();
+      } else {
+        await processRecords();
       }
+    } catch (err) {
+      console.error('Attendance transaction failed:', err);
+      await processRecords();
     }
 
     // Send parent WhatsApp alerts in parallel (non-blocking for the response payload)
@@ -278,16 +303,18 @@ async function notifyParentOfAbsence(
     if (uniquePhones.length === 0) return;
 
     const studentName = `${student.first_name} ${student.last_name}`.trim();
-    for (const phone of uniquePhones) {
-      await sendAbsenceAlert({
-        parentPhone: phone,
-        studentName,
-        className: cls?.class_name || '',
-        date: attendance_date,
-        period,
-        status,
-      });
-    }
+    await Promise.allSettled(
+      uniquePhones.map((phone) =>
+        sendAbsenceAlert({
+          parentPhone: phone,
+          studentName,
+          className: cls?.class_name || '',
+          date: attendance_date,
+          period,
+          status,
+        })
+      )
+    );
   } catch (err) {
     console.error('Parent absence notification error:', err);
   }

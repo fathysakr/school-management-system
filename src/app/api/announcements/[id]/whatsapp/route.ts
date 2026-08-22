@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, forbidden, unauthorized, badRequest, notFound, serverError, success } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
-import { sendAnnouncement, whatsappEnabled, normalizeEgyptianPhone } from '@/lib/whatsapp';
+import { sendAnnouncement, whatsappEnabled, normalizeArabicPhone } from '@/lib/whatsapp';
 
 // POST /api/announcements/[id]/whatsapp — send an announcement to targeted parents via WhatsApp
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     const normalized = Array.from(new Set(
-      phones.map((p: string) => normalizeEgyptianPhone(String(p || '').trim())).filter(Boolean)
+      phones.map((p: string) => normalizeArabicPhone(String(p || '').trim())).filter(Boolean)
     )) as string[];
 
     if (normalized.length === 0) {
@@ -57,25 +57,36 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     let sentCount = 0;
     let failedCount = 0;
 
-    // Send sequentially in batches of 20 with small delay to respect rate limits
-    const BATCH = 20;
-    for (let i = 0; i < normalized.length; i += BATCH) {
-      const batch = normalized.slice(i, i + BATCH);
-      const results = await Promise.allSettled(
-        batch.map((phone) =>
-          sendAnnouncement({
-            parentPhone: phone,
-            title: announcement.title,
-            content: announcement.content,
-          })
+    // Parallel waves: chunks of 25 sent concurrently, up to 4 chunks in flight.
+    // Keeps well under Meta rate limits while finishing ~10x faster than sequential
+    // sending so the request stays inside serverless timeout limits.
+    const CHUNK = 25;
+    const WAVES = 4;
+    const chunks: string[][] = [];
+    for (let i = 0; i < normalized.length; i += CHUNK) {
+      chunks.push(normalized.slice(i, i + CHUNK));
+    }
+
+    for (let w = 0; w < chunks.length; w += WAVES) {
+      const wave = chunks.slice(w, w + WAVES);
+      const results = await Promise.all(
+        wave.map((chunk) =>
+          Promise.allSettled(
+            chunk.map((phone) =>
+              sendAnnouncement({
+                parentPhone: phone,
+                title: announcement.title,
+                content: announcement.content,
+              })
+            )
+          )
         )
       );
-      for (const r of results) {
-        if (r.status === 'fulfilled' && r.value.sent) sentCount++;
-        else failedCount++;
-      }
-      if (i + BATCH < normalized.length) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      for (const chunkResults of results) {
+        for (const r of chunkResults) {
+          if (r.status === 'fulfilled' && r.value.sent) sentCount++;
+          else failedCount++;
+        }
       }
     }
 

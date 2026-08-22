@@ -121,10 +121,14 @@ export async function POST(request: NextRequest) {
       user.id
     );
 
-    const created: any = await db.prepare(
-      `SELECT p.*, s.first_name || ' ' || s.last_name AS student_name
-       FROM payments p JOIN students s ON p.student_id = s.id WHERE p.id = ?`
-    ).get(result.lastID ?? result.insertId);
+    const newId = Number(result?.lastInsertRowid ?? result?.lastID ?? result?.insertId ?? 0);
+    let created: any = null;
+    if (newId > 0) {
+      created = await db.prepare(
+        `SELECT p.*, s.first_name || ' ' || s.last_name AS student_name
+         FROM payments p JOIN students s ON p.student_id = s.id WHERE p.id = ?`
+      ).get(newId);
+    }
 
     return success({ payment: created }, 201);
   } catch (error) {

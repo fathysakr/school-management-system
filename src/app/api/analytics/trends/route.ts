@@ -18,9 +18,9 @@ export async function GET(request: NextRequest) {
 
     const days = Math.min(parseInt(searchParams.get('days') || '14', 10), 60);
 
-    // Build list of the last N dates in local Cairo time (UTC+2/+3 approximated as UTC+2 fixed is fine here)
+    // Build list of the last N dates in Saudi local time (AST = UTC+3)
     const now = new Date();
-    now.setUTCHours(now.getUTCHours() + 2);
+    now.setUTCHours(now.getUTCHours() + 3);
     const dates: string[] = [];
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 3600 * 1000);

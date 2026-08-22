@@ -86,6 +86,7 @@ async function sendText(to: string, message: string): Promise<SendResult> {
           type: 'text',
           text: { body: message },
         }),
+        signal: AbortSignal.timeout(15000),
       }
     );
 
