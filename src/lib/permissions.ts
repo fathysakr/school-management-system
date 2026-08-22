@@ -11,7 +11,8 @@ export type Permission =
   | 'announcements:view' | 'announcements:create' | 'announcements:edit' | 'announcements:delete'
   | 'dashboard:stats'
   | 'settings:edit'
-  | 'counseling:view' | 'counseling:create' | 'counseling:edit' | 'counseling:delete';
+  | 'counseling:view' | 'counseling:create' | 'counseling:edit' | 'counseling:delete'
+  | 'fees:view' | 'fees:create' | 'fees:edit' | 'fees:delete';
 
 export type UserRole = 'admin' | 'middle_supervisor' | 'high_supervisor' | 'middle_teacher' | 'high_teacher' | 'middle_counselor' | 'high_counselor' | 'middle_principal' | 'high_principal' | 'middle_monitor' | 'high_monitor' | 'middle_admin_staff' | 'high_admin_staff' | 'parent';
 
@@ -28,6 +29,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'dashboard:stats', 'settings:edit',
     'counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete',
+    'fees:view', 'fees:create', 'fees:edit', 'fees:delete',
   ],
   middle_supervisor: [
     'teachers:view', 'teachers:create', 'teachers:edit',
@@ -135,6 +137,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'announcements:view', 'announcements:create', 'announcements:edit',
     'dashboard:stats',
     'counseling:view', 'counseling:create', 'counseling:edit',
+    'fees:view', 'fees:create', 'fees:edit', 'fees:delete',
   ],
   high_admin_staff: [
     'teachers:view', 'teachers:create', 'teachers:edit',
@@ -148,6 +151,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'announcements:view', 'announcements:create', 'announcements:edit',
     'dashboard:stats',
     'counseling:view', 'counseling:create', 'counseling:edit',
+    'fees:view', 'fees:create', 'fees:edit', 'fees:delete',
   ],
   middle_principal: [
     'teachers:view', 'teachers:create', 'teachers:edit', 'teachers:delete',
@@ -161,6 +165,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'dashboard:stats',
     'counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete',
+    'fees:view',
   ],
   high_principal: [
     'teachers:view', 'teachers:create', 'teachers:edit', 'teachers:delete',
@@ -174,6 +179,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
     'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'dashboard:stats',
     'counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete',
+    'fees:view',
   ],
   parent: [
     'students:view',
@@ -196,6 +202,7 @@ const allPermissions: Permission[] = [
   'announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete',
   'dashboard:stats',
   'counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete',
+  'fees:view', 'fees:create', 'fees:edit', 'fees:delete',
 ];
 
 const permissionLabels: Record<Permission, string> = {
@@ -241,6 +248,10 @@ const permissionLabels: Record<Permission, string> = {
   'counseling:create': 'إضافة سجل إرشادي',
   'counseling:edit': 'تعديل سجل إرشادي',
   'counseling:delete': 'حذف سجل إرشادي',
+  'fees:view': 'عرض الرسوم والدفعات',
+  'fees:create': 'تسجيل دفعة',
+  'fees:edit': 'تعديل دفعة',
+  'fees:delete': 'حذف دفعة',
 };
 
 const permissionGroups: { label: string; keys: Permission[] }[] = [
@@ -254,6 +265,7 @@ const permissionGroups: { label: string; keys: Permission[] }[] = [
   { label: 'البدائل', keys: ['substitutions:view', 'substitutions:create', 'substitutions:edit', 'substitutions:delete'] },
   { label: 'الإعلانات', keys: ['announcements:view', 'announcements:create', 'announcements:edit', 'announcements:delete'] },
   { label: 'الإرشاد الطلابي', keys: ['counseling:view', 'counseling:create', 'counseling:edit', 'counseling:delete'] },
+  { label: 'الرسوم الدراسية', keys: ['fees:view', 'fees:create', 'fees:edit', 'fees:delete'] },
   { label: 'عام', keys: ['dashboard:stats', 'settings:edit'] },
 ];
 

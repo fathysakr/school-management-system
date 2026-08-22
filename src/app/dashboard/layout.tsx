@@ -13,7 +13,7 @@ import {
 import {
   People, School, Class as ClassIcon, EventNote, Grade,
   Person, Logout, Menu as MenuIcon, ChevronRight, Notifications, Campaign,
-  Schedule,   Assessment, AutoStories, Speed, Build, AdminPanelSettings, VerifiedUser, CalendarMonth, SwapHoriz, Psychology
+  Schedule,   Assessment, AutoStories, Speed, Build, AdminPanelSettings, VerifiedUser, CalendarMonth, SwapHoriz, Psychology, Payments
 } from '@mui/icons-material';
 import { ToggleButtonGroup, ToggleButton } from '@mui/material';
 
@@ -52,6 +52,7 @@ const menuGroups = [
       { text: 'الدرجات', icon: <Grade />, path: '/dashboard/grades', roles: allRoles },
       { text: 'التقارير', icon: <Assessment />, path: '/dashboard/reports', roles: allRoles },
       { text: 'كشف الدرجات', icon: <Grade />, path: '/dashboard/report-card', roles: allRoles },
+      { text: 'الرسوم الدراسية', icon: <Payments />, path: '/dashboard/payments', roles: ['admin', 'middle_admin_staff', 'high_admin_staff', 'middle_principal', 'high_principal'] },
     ],
   },
   {

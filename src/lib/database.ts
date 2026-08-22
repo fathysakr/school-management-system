@@ -859,6 +859,28 @@ function applyMigrations(bsql: any) {
           (7, '14:00', '14:45');
       `
     },
+    {
+      name: '025_payments',
+      sql: `
+        CREATE TABLE IF NOT EXISTS payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          student_id INTEGER NOT NULL,
+          amount REAL NOT NULL,
+          payment_date DATE NOT NULL,
+          term TEXT DEFAULT '',
+          method TEXT NOT NULL DEFAULT 'cash' CHECK (method IN ('cash','bank','wallet','other')),
+          receipt_no TEXT,
+          notes TEXT,
+          recorded_by INTEGER,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_payments_student ON payments(student_id);
+        CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date);
+        ALTER TABLE students ADD COLUMN annual_fee REAL DEFAULT 0;
+      `
+    },
   ];
 
   for (const migration of migrations) {
@@ -1180,6 +1202,24 @@ async function _ensureTursoReady() {
       counselor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`); } catch {}
+
+    // Payments (fees) — idempotent for Turso/remote
+    try { await db.exec(`CREATE TABLE IF NOT EXISTS payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      payment_date DATE NOT NULL,
+      term TEXT DEFAULT '',
+      method TEXT NOT NULL DEFAULT 'cash' CHECK (method IN ('cash','bank','wallet','other')),
+      receipt_no TEXT,
+      notes TEXT,
+      recorded_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE)`); } catch {}
+    try { await db.exec(`CREATE INDEX IF NOT EXISTS idx_payments_student ON payments(student_id)`); } catch {}
+    try { await db.exec(`CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date)`); } catch {}
+    try { await db.exec(`ALTER TABLE students ADD COLUMN annual_fee REAL DEFAULT 0`); } catch {}
 
     const done = await db.prepare("SELECT 1 FROM _init_done WHERE flag = 1").get().catch(() => null) as any;
     if (done) { return; }
