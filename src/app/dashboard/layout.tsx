@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 import { useRouter, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import {
@@ -187,7 +187,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: 0.5 }}>
               مدرسة صفوة الرواد الأهلية
             </Typography>
-            {user?.role === 'admin' && (
+            {FORCED_SCHOOL_STAGE ? (
+              <Chip
+                size="small"
+                label={FORCED_SCHOOL_STAGE === 'middle' ? 'المرحلة المتوسطة' : 'المرحلة الثانوية'}
+                sx={{
+                  mr: 1.5,
+                  bgcolor: FORCED_SCHOOL_STAGE === 'middle' ? '#1565c0' : '#e65100',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: 12,
+                }}
+              />
+            ) : user?.role === 'admin' && (
               <ToggleButtonGroup
                 value={selectedSchool}
                 exclusive

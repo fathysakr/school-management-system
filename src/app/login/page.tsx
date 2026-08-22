@@ -9,11 +9,13 @@ import {
   Alert, InputAdornment, IconButton, Paper
 } from '@mui/material';
 import { Visibility, VisibilityOff, School, AutoStories } from '@mui/icons-material';
+import { FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const school = searchParams.get('school') || 'middle';
+  // Stage-locked deployment forces its own stage regardless of URL param
+  const school = FORCED_SCHOOL_STAGE || searchParams.get('school') || 'middle';
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

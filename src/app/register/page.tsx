@@ -8,6 +8,7 @@ import {
   Alert, MenuItem, Paper
 } from '@mui/material';
 import { School } from '@mui/icons-material';
+import { FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -47,12 +48,16 @@ export default function RegisterPage() {
     }
   };
 
-  const roles = [
+  const allRoles = [
     { value: 'middle_teacher', label: 'معلم المرحلة المتوسطة' },
     { value: 'high_teacher', label: 'معلم المرحلة الثانوية' },
     { value: 'middle_counselor', label: 'مرشد طلابي - متوسط' },
     { value: 'high_counselor', label: 'مرشد طلابي - ثانوي' },
   ];
+  // Stage-locked deployment: only show that stage's roles
+  const roles = FORCED_SCHOOL_STAGE
+    ? allRoles.filter((r) => r.value.startsWith(FORCED_SCHOOL_STAGE as 'middle' | 'high'))
+    : allRoles;
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', py: 4 }}>

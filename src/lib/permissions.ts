@@ -300,15 +300,33 @@ export function canAccessRole(currentRole: UserRole | undefined, targetRole: Use
   return currentLevel >= targetLevel;
 }
 
+/**
+ * When SCHOOL_STAGE env var is set ('middle' | 'high'), the whole deployment is
+ * locked to that stage: every server-side query is filtered to it for ALL roles
+ * (including admin), and client-side school switching is disabled.
+ */
+export function getForcedStage(): 'middle' | 'high' | null {
+  const s = process.env.SCHOOL_STAGE;
+  return s === 'middle' || s === 'high' ? s : null;
+}
+
 export function getSchoolStage(role: UserRole): 'middle' | 'high' | 'both' {
+  const forced = getForcedStage();
+  if (forced) return forced;
   if (role === 'admin' || role === 'parent') return 'both';
   if (role.includes('middle_')) return 'middle';
   return 'high';
 }
 
 export function getSchoolFilter(role: UserRole, adminOverride?: string): { grade?: string; school?: string } {
+  const forced = getForcedStage();
   const stage = getSchoolStage(role);
   if (stage === 'both') {
+    // Forced deployments never allow overrides (defense in depth)
+    if (forced) {
+      const gradeLabel = forced === 'middle' ? 'متوسط' : 'ثانوي';
+      return { grade: gradeLabel, school: forced };
+    }
     if (adminOverride) {
       const gradeLabel = adminOverride === 'middle' ? 'متوسط' : 'ثانوي';
       return { grade: gradeLabel, school: adminOverride };

@@ -30,11 +30,17 @@ const AuthContext = createContext<AuthContextType>({
   setSelectedSchool: () => {},
 });
 
+/** Stage lock for split deployments (set NEXT_PUBLIC_SCHOOL_STAGE in Vercel) */
+export const FORCED_SCHOOL_STAGE: 'middle' | 'high' | null =
+  process.env.NEXT_PUBLIC_SCHOOL_STAGE === 'middle' || process.env.NEXT_PUBLIC_SCHOOL_STAGE === 'high'
+    ? (process.env.NEXT_PUBLIC_SCHOOL_STAGE as 'middle' | 'high')
+    : null;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedSchool, setSelectedSchool] = useState<'middle' | 'high' | 'all'>('all');
+  const [selectedSchool, setSelectedSchool] = useState<'middle' | 'high' | 'all'>(FORCED_SCHOOL_STAGE ?? 'all');
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -56,13 +62,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    const saved = localStorage.getItem('selectedSchool') as 'middle' | 'high' | 'all' | null;
+    const saved = !FORCED_SCHOOL_STAGE
+      ? (localStorage.getItem('selectedSchool') as 'middle' | 'high' | 'all' | null)
+      : null;
     if (saved) setSelectedSchool(saved);
 
     setIsLoading(false);
   }, []);
 
   const handleSetSelectedSchool = useCallback((s: 'middle' | 'high' | 'all') => {
+    if (FORCED_SCHOOL_STAGE) return; // stage-locked deployment: switching disabled
     setSelectedSchool(s);
     localStorage.setItem('selectedSchool', s);
   }, []);
@@ -70,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback((newToken: string, newUser: User) => {
     setToken(newToken);
     setUser(newUser);
-    setSelectedSchool('all');
+    setSelectedSchool(FORCED_SCHOOL_STAGE ?? 'all');
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));
     localStorage.setItem('lastLogin', new Date().toISOString());
