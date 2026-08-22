@@ -1,6 +1,10 @@
 // WhatsApp Cloud API (Meta) service.
 // Activates automatically when WHATSAPP_PHONE_ID + WHATSAPP_TOKEN env vars are set.
 // Otherwise all send functions silently skip (log-only) so the app keeps working.
+//
+// TEST MODE: set WHATSAPP_ALLOWED_NUMBERS (comma-separated, any format) to restrict
+// sending to specific numbers only — e.g. "01012345678, 01234567890".
+// Leave empty to allow sending to everyone.
 
 interface SendResult {
   sent: boolean;
@@ -9,6 +13,22 @@ interface SendResult {
 
 function isConfigured(): boolean {
   return Boolean(process.env.WHATSAPP_PHONE_ID && process.env.WHATSAPP_TOKEN);
+}
+
+function getAllowedNumbers(): string[] | null {
+  const raw = process.env.WHATSAPP_ALLOWED_NUMBERS;
+  if (!raw || !raw.trim()) return null; // no restriction
+  return raw
+    .split(',')
+    .map((n) => normalizeEgyptianPhone(n))
+    .filter(Boolean) as string[];
+}
+
+/** Returns true if the destination passes the optional allowlist */
+export function isNumberAllowed(normalizedPhone: string): boolean {
+  const allowed = getAllowedNumbers();
+  if (!allowed) return true; // unrestricted
+  return allowed.includes(normalizedPhone);
 }
 
 /** Normalize Egyptian phone numbers to E.164 (+20XXXXXXXXXX) */
@@ -27,6 +47,10 @@ export function normalizeEgyptianPhone(raw: string | null | undefined): string |
 }
 
 async function sendText(to: string, message: string): Promise<SendResult> {
+  if (!isNumberAllowed(to)) {
+    console.log(`[WHATSAPP] ${to} blocked by WHATSAPP_ALLOWED_NUMBERS allowlist — skipped`);
+    return { sent: false, reason: 'not-allowed' };
+  }
   if (!isConfigured()) {
     console.log(`[WHATSAPP] not configured — would send to ${to}: ${message.substring(0, 60)}...`);
     return { sent: false, reason: 'not-configured' };
