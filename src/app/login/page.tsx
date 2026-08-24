@@ -111,11 +111,13 @@ function LoginForm() {
               </Button>
             </Box>
 
-            <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Button onClick={() => router.push('/')} sx={{ color: 'text.secondary' }}>
-                ← العودة لاختيار القسم
-              </Button>
-            </Box>
+            {!FORCED_SCHOOL_STAGE && (
+              <Box sx={{ textAlign: 'center', mt: 2 }}>
+                <Button onClick={() => router.push('/')} sx={{ color: 'text.secondary' }}>
+                  ← العودة لاختيار القسم
+                </Button>
+              </Box>
+            )}
           </CardContent>
         </Card>
       </Container>
