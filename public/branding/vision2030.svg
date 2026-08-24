@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 90" width="140" height="90">
+  <defs>
+    <linearGradient id="v1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#12a884"/><stop offset="1" stop-color="#0d7a8c"/>
+    </linearGradient>
+    <linearGradient id="v2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c5cbf"/><stop offset="1" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="v3" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f59e0b"/><stop offset="1" stop-color="#ef4444"/>
+    </linearGradient>
+  </defs>
+  <!-- flowing vision swooshes -->
+  <path d="M14 34 C34 10, 62 8, 82 20 C98 29, 112 28, 126 18 C114 40, 92 44, 74 36 C56 28, 34 28, 14 34 Z" fill="url(#v1)"/>
+  <path d="M14 50 C36 30, 64 28, 84 39 C99 47, 113 46, 127 37 C116 57, 94 62, 76 55 C58 48, 34 47, 14 50 Z" fill="url(#v2)"/>
+  <path d="M14 66 C36 50, 64 48, 84 57 C99 64, 113 63, 127 55 C117 73, 95 79, 77 72 C59 65, 34 64, 14 66 Z" fill="url(#v3)"/>
+  <text x="70" y="86" text-anchor="middle" font-family="'Segoe UI', Tahoma, sans-serif" font-size="13" font-weight="700" fill="#334155">رؤية ٢٠٣٠</text>
+</svg>

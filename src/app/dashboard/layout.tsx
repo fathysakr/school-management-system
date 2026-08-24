@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 import { schoolFullName } from '@/lib/school-brand';
 import { useRouter, usePathname } from 'next/navigation';
@@ -14,8 +14,10 @@ import {
 import {
   People, School, Class as ClassIcon, EventNote, Grade,
   Person, Logout, Menu as MenuIcon, ChevronRight, Notifications, Campaign,
-  Schedule,   Assessment, AutoStories, Speed, Build, AdminPanelSettings, VerifiedUser, CalendarMonth, SwapHoriz, Psychology, Payments
+  Schedule,   Assessment, AutoStories, Speed, Build, AdminPanelSettings, VerifiedUser, CalendarMonth, SwapHoriz, Psychology, Payments,
+  AddPhotoAlternate as UploadIcon
 } from '@mui/icons-material';
+import { Snackbar, Alert as MuiAlert } from '@mui/material';
 import { ToggleButtonGroup, ToggleButton } from '@mui/material';
 
 const DRAWER_OPEN = 280;
@@ -133,8 +135,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifError, setNotifError] = useState('');
   const [now, setNow] = useState<Date>(() => new Date());
+  const [branding, setBranding] = useState<{ logo: string | null; moe: string | null; vision: string | null }>({ logo: null, moe: null, vision: null });
+  const [brandMenuEl, setBrandMenuEl] = useState<null | HTMLElement>(null);
+  const [uploadSlot, setUploadSlot] = useState<'logo' | 'moe' | 'vision'>('logo');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [toast, setToast] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
 
   const isHovered = open || hovering;
+
+  const fetchBranding = useCallback(async () => {
+    try {
+      const res = await api.get('/school-branding', '');
+      if (res && typeof res === 'object') setBranding({ logo: res.logo || null, moe: res.moe || null, vision: res.vision || null });
+    } catch { /* branding optional */ }
+  }, []);
+
+  useEffect(() => { fetchBranding(); }, [fetchBranding]);
+
+  const handleBrandFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const fd = new FormData();
+      fd.append('slot', uploadSlot);
+      fd.append('file', f);
+      await api.upload('/school-branding', fd, token);
+      await fetchBranding();
+      setToast({ msg: 'تم تحديث الشعار بنجاح', severity: 'success' });
+    } catch (err: any) {
+      setToast({ msg: err?.message || 'فشل رفع الشعار', severity: 'error' });
+    }
+  };
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000);
@@ -180,21 +212,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const drawerWidth = isHovered ? DRAWER_OPEN : DRAWER_CLOSED;
-  const stageAccent = FORCED_SCHOOL_STAGE === 'middle' ? '#38bdf8' : '#fb923c';
+  
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#eef1fb' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#fbf3f3' }}>
       {/* Top Bar */}
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          background: 'linear-gradient(90deg, rgba(13,16,45,.92) 0%, rgba(24,20,60,.86) 55%, rgba(30,18,66,.82) 100%)',
+          background: 'linear-gradient(90deg, rgba(38,8,14,.93) 0%, rgba(64,12,22,.87) 55%, rgba(52,10,18,.84) 100%)',
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
-          borderBottom: '1px solid rgba(255,255,255,0.09)',
-          boxShadow: '0 10px 30px -12px rgba(10,12,40,.55)',
+          borderBottom: '1px solid rgba(255,220,220,0.10)',
+          boxShadow: '0 10px 30px -12px rgba(40,6,12,.55)',
         }}
       >
         <Toolbar sx={{ gap: 1 }}>
@@ -203,27 +235,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </IconButton>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
-            <AutoStories sx={{ fontSize: 28, opacity: 0.9 }} />
+            {branding.logo ? (
+              <Box component="img" src={branding.logo} alt="شعار المدرسة" sx={{ height: 38, width: 38, objectFit: 'contain', borderRadius: 1.5, background: 'rgba(255,255,255,.94)', p: 0.4 }} />
+            ) : (
+              <AutoStories sx={{ fontSize: 28, opacity: 0.9 }} />
+            )}
             <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: 0.5 }}>
               {schoolFullName(FORCED_SCHOOL_STAGE)}
             </Typography>
-            {FORCED_SCHOOL_STAGE ? (
-              <Chip
-                size="small"
-                label={FORCED_SCHOOL_STAGE === 'middle' ? 'المرحلة المتوسطة' : 'المرحلة الثانوية'}
-                sx={{
-                  mr: 1.5,
-                  background: FORCED_SCHOOL_STAGE === 'middle'
-                    ? 'linear-gradient(135deg,#38bdf8,#6366f1)'
-                    : 'linear-gradient(135deg,#fb923c,#f43f5e)',
-                  color: '#fff',
-                  fontWeight: 700,
-                  fontSize: 12,
-                  border: 'none',
-                  boxShadow: `0 4px 14px -4px ${stageAccent}88`,
-                }}
-              />
-            ) : user?.role === 'admin' && (
+            {user?.role === 'admin' && (
+              <Tooltip title="رفع شعارات المدرسة">
+                <IconButton
+                  size="small"
+                  color="inherit"
+                  onClick={(e) => setBrandMenuEl(e.currentTarget)}
+                  sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' } }}
+                >
+                  <UploadIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {user?.role === 'admin' && (
               <ToggleButtonGroup
                 value={selectedSchool}
                 exclusive
@@ -319,7 +351,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
               }}
             >
-              <Avatar sx={{ width: 34, height: 34, fontSize: 14, fontWeight: 600, background: `linear-gradient(135deg, ${roleColors[user.role] || '#6366f1'}, #8b5cf6)`, boxShadow: '0 0 0 2px rgba(255,255,255,.25)' }}>
+              <Avatar sx={{ width: 34, height: 34, fontSize: 14, fontWeight: 600, background: `linear-gradient(135deg, ${roleColors[user.role] || '#b91c1c'}, #f59e0b)`, boxShadow: '0 0 0 2px rgba(255,255,255,.25)' }}>
                 {user.email?.charAt(0).toUpperCase()}
               </Avatar>
               <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
@@ -328,6 +360,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Box>
             </Box>
           </Box>
+
+          {/* Official logos */}
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }}>
+            <Tooltip title="وزارة التعليم">
+              <Box component="img" src={branding.moe || '/branding/moe.svg'} alt="وزارة التعليم" sx={{ height: 38, width: 38, objectFit: 'contain', borderRadius: '50%', background: 'rgba(255,255,255,.95)', p: 0.3 }} />
+            </Tooltip>
+            <Tooltip title="رؤية المملكة 2030">
+              <Box component="img" src={branding.vision || '/branding/vision2030.svg'} alt="رؤية 2030" sx={{ height: 32, objectFit: 'contain', background: 'rgba(255,255,255,.95)', borderRadius: 1.5, p: 0.35 }} />
+            </Tooltip>
+          </Box>
+
+          <Menu
+            anchorEl={brandMenuEl}
+            open={Boolean(brandMenuEl)}
+            onClose={() => setBrandMenuEl(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            PaperProps={{ sx: { mt: 1, borderRadius: 2.5, minWidth: 220, boxShadow: '0 24px 60px -12px rgba(40,6,12,.35)', border: '1px solid', borderColor: 'divider', overflow: 'hidden' } }}
+          >
+            <Typography variant="caption" sx={{ display: 'block', px: 2, pt: 1.5, pb: 0.5, color: 'text.secondary' }}>اختر الشعار المراد رفع/تغيير صورته</Typography>
+            {([
+              { slot: 'logo' as const, label: 'لوجو المدرسة' },
+              { slot: 'moe' as const, label: 'لوجو وزارة التعليم' },
+              { slot: 'vision' as const, label: 'شعار رؤية 2030' },
+            ]).map(opt => (
+              <MenuItem key={opt.slot} onClick={() => { setUploadSlot(opt.slot); setBrandMenuEl(null); setTimeout(() => fileInputRef.current?.click(), 50); }} sx={{ py: 1.25 }}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </Menu>
 
           <Menu
             anchorEl={anchorEl}
@@ -348,6 +410,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </Toolbar>
       </AppBar>
 
+      {/* Hidden brand image input */}
+      <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon" style={{ display: 'none' }} onChange={handleBrandFile} />
+
+      <Snackbar open={!!toast} autoHideDuration={3500} onClose={() => setToast(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}>
+        <MuiAlert severity={toast?.severity || 'success'} variant="filled" onClose={() => setToast(null)}>{toast?.msg}</MuiAlert>
+      </Snackbar>
+
       {/* Sidebar */}
       <Drawer
         variant={isMobile ? 'temporary' : 'permanent'}
@@ -364,30 +433,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             mt: '64px',
             height: 'calc(100vh - 64px)',
             border: 'none',
-            borderLeft: '1px solid rgba(255,255,255,0.07)',
+            borderLeft: '1px solid rgba(255,220,220,0.09)',
             transition: muiTheme.transitions.create('width', {
               easing: muiTheme.transitions.easing.easeOut,
               duration: muiTheme.transitions.duration.standard,
             }),
             overflowX: 'hidden',
-            background: 'linear-gradient(180deg, #10133a 0%, #161a48 45%, #1b1547 100%)',
-            boxShadow: open || hovering ? '6px 0 32px -10px rgba(10,12,40,.55)' : 'none',
+            background: 'linear-gradient(180deg, #260a10 0%, #34101a 45%, #3f1219 100%)',
+            boxShadow: open || hovering ? '6px 0 32px -10px rgba(40,6,12,.55)' : 'none',
           },
         }}
       >
         {/* subtle aurora glow inside sidebar */}
-        <Box className="aurora-glow" sx={{ position: 'absolute', top: -70, left: -60, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,.28), transparent 65%)', pointerEvents: 'none' }} />
+        <Box className="aurora-glow" sx={{ position: 'absolute', top: -70, left: -60, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(220,38,38,.30), transparent 65%)', pointerEvents: 'none' }} />
 
         {/* User Info Card */}
         {isHovered && (
           <Box sx={{
             mx: 1.5, my: 2, p: 2, borderRadius: 3.5,
             position: 'relative',
-            background: 'linear-gradient(140deg, rgba(99,102,241,.22), rgba(139,92,246,.12) 55%, rgba(34,211,238,.14))',
+            background: 'linear-gradient(140deg, rgba(185,28,28,.30), rgba(220,38,38,.16) 55%, rgba(245,158,11,.14))',
             border: '1px solid rgba(255,255,255,0.12)',
             textAlign: 'center',
           }}>
-            <Avatar sx={{ width: 54, height: 54, mx: 'auto', mb: 1, fontSize: 20, fontWeight: 700, background: `linear-gradient(135deg, ${roleColors[user.role] || '#6366f1'}, #22d3ee)`, boxShadow: '0 8px 20px -6px rgba(0,0,0,.5), 0 0 0 3px rgba(255,255,255,.12)' }}>
+            <Avatar sx={{ width: 54, height: 54, mx: 'auto', mb: 1, fontSize: 20, fontWeight: 700, background: `linear-gradient(135deg, ${roleColors[user.role] || '#b91c1c'}, #f59e0b)`, boxShadow: '0 8px 20px -6px rgba(0,0,0,.5), 0 0 0 3px rgba(255,255,255,.12)' }}>
               {user.email?.charAt(0).toUpperCase()}
             </Avatar>
             <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#eef0ff' }}>{user.email?.split('@')[0]}</Typography>
@@ -396,9 +465,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               size="small"
               sx={{
                 mt: 0.75, height: 22, fontSize: 11, fontWeight: 600,
-                bgcolor: (roleColors[user.role] || '#6366f1') + '33',
+                bgcolor: (roleColors[user.role] || '#b91c1c') + '33',
                 color: '#dfe3ff',
-                border: `1px solid ${(roleColors[user.role] || '#6366f1')}55`,
+                border: `1px solid ${(roleColors[user.role] || '#b91c1c')}55`,
                 borderRadius: 999,
                 px: 1.25,
               }}
@@ -507,7 +576,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 width: 3,
                                 height: 22,
                                 borderRadius: 3,
-                                background: '#22d3ee',
+                                background: '#ef4444',
                                 transition: '.2s',
                               } : {},
                               '&:hover': {
@@ -613,10 +682,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             duration: muiTheme.transitions.duration.standard,
           }),
           background:
-            'radial-gradient(1100px 520px at 88% -8%, rgba(99,102,241,.13), transparent 60%),' +
-            'radial-gradient(900px 480px at 4% 108%, rgba(236,72,153,.10), transparent 55%),' +
-            'radial-gradient(760px 420px at 12% -6%, rgba(34,211,238,.11), transparent 55%),' +
-            '#eef1fb',
+            'radial-gradient(1100px 520px at 88% -8%, rgba(185,28,28,.12), transparent 60%),' +
+            'radial-gradient(900px 480px at 4% 108%, rgba(245,158,11,.10), transparent 55%),' +
+            'radial-gradient(760px 420px at 12% -6%, rgba(220,38,38,.10), transparent 55%),' +
+            '#fbf3f3',
         }}
       >
         <Box sx={{ maxWidth: 1400, mx: 'auto' }}>

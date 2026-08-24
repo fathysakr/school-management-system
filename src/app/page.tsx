@@ -31,7 +31,7 @@ export default function Home() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1a237e 0%, #4a148c 50%, #311b92 100%)', py: 4 }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #450a0a 0%, #7f1d1d 50%, #450a0a 100%)', py: 4 }}>
       <Container maxWidth="md">
         {/* Header */}
         <Box sx={{ textAlign: 'center', mb: 5 }}>
@@ -50,7 +50,7 @@ export default function Home() {
           <Card
             sx={{
               width: { xs: '100%', sm: 320 }, borderRadius: 4,
-              background: 'linear-gradient(145deg, #ffffff, #f0f4ff)',
+              background: 'linear-gradient(145deg, #ffffff, #fdf2f2)',
               transition: 'all 0.3s ease',
               '&:hover': {
                 transform: 'translateY(-8px)',
@@ -65,22 +65,22 @@ export default function Home() {
               <Box
                 sx={{
                   width: 100, height: 100, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #42a5f5, #1565c0)',
+                  background: 'linear-gradient(135deg, #ef4444, #991b1b)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   mx: 'auto', mb: 2.5, boxShadow: '0 8px 24px rgba(21,101,192,0.3)',
                 }}
               >
                 <AutoStories sx={{ fontSize: 48, color: '#fff' }} />
               </Box>
-              <Typography variant="h6" fontWeight="bold" color="#1565c0" gutterBottom sx={{ fontSize: '1.35rem' }}>
+              <Typography variant="h6" fontWeight="bold" color="#991b1b" gutterBottom sx={{ fontSize: '1.35rem' }}>
                 {STAGE_FULL_NAMES.middle}
               </Typography>
               <Button
                 variant="contained"
                 size="large"
                 sx={{
-                  bgcolor: '#1565c0', borderRadius: 8, px: 4,
-                  '&:hover': { bgcolor: '#0d47a1' },
+                  bgcolor: '#b91c1c', borderRadius: 8, px: 4,
+                  '&:hover': { bgcolor: '#7f1d1d' },
                 }}
               >
                 دخول
@@ -92,7 +92,7 @@ export default function Home() {
           <Card
             sx={{
               width: { xs: '100%', sm: 320 }, borderRadius: 4,
-              background: 'linear-gradient(145deg, #ffffff, #fef3e2)',
+              background: 'linear-gradient(145deg, #ffffff, #fffbeb)',
               transition: 'all 0.3s ease',
               '&:hover': {
                 transform: 'translateY(-8px)',
@@ -107,22 +107,22 @@ export default function Home() {
               <Box
                 sx={{
                   width: 100, height: 100, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #ffa726, #e65100)',
+                  background: 'linear-gradient(135deg, #f59e0b, #b45309)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   mx: 'auto', mb: 2.5, boxShadow: '0 8px 24px rgba(230,81,0,0.3)',
                 }}
               >
                 <School sx={{ fontSize: 48, color: '#fff' }} />
               </Box>
-              <Typography variant="h6" fontWeight="bold" color="#e65100" gutterBottom sx={{ fontSize: '1.35rem' }}>
+              <Typography variant="h6" fontWeight="bold" color="#92400e" gutterBottom sx={{ fontSize: '1.35rem' }}>
                 {STAGE_FULL_NAMES.high}
               </Typography>
               <Button
                 variant="contained"
                 size="large"
                 sx={{
-                  bgcolor: '#e65100', borderRadius: 8, px: 4,
-                  '&:hover': { bgcolor: '#bf360c' },
+                  bgcolor: '#b45309', borderRadius: 8, px: 4,
+                  '&:hover': { bgcolor: '#92400e' },
                 }}
               >
                 دخول
