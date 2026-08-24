@@ -6,9 +6,10 @@ import { api } from '@/lib/api';
 import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, IconButton, Alert, CircularProgress,
-  FormControl, InputLabel, Select, MenuItem, Grid, Tabs, Tab
+  FormControl, InputLabel, Select, MenuItem, Grid, Tabs, Tab,
+  InputAdornment
 } from '@mui/material';
-import { Add, Close, CalendarToday, FilterList, FileDownload, AutoAwesome, CloudUpload } from '@mui/icons-material';
+import { Add, Close, CalendarToday, FilterList, FileDownload, AutoAwesome, CloudUpload, Search } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { hasPermission } from '@/lib/permissions';
 
@@ -17,6 +18,10 @@ const dayLabels: Record<string, string> = {
   wednesday: 'الأربعاء', thursday: 'الخميس',
 };
 const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
+
+// Loose time compare: "08:00" and "8:0" and "9" all normalize for substring match
+const looseTime = (t: string): string =>
+  (t || '').split(':').map(p => String(parseInt(p, 10) || 0)).join(':');
 
 const classColors = [
   '#E3F2FD', '#F3E5F5', '#E8F5E9', '#FFF3E0', '#FCE4EC',
@@ -38,6 +43,7 @@ export default function SchedulesPage() {
   const [success, setSuccess] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [viewTab, setViewTab] = useState(0);
+  const [timeQuery, setTimeQuery] = useState('');
   const [formData, setFormData] = useState({
     class_id: '', teacher_id: '', subject: '', day_of_week: 'sunday',
     start_time: '08:00', end_time: '09:00', room_number: '',
@@ -286,85 +292,162 @@ api.get(`/schedules${selectedClass ? `?class_id=${selectedClass}${schoolParam}` 
     });
 
     const allTimeSlots = [...new Set(schedules.map(s => s.start_time))].sort();
+    const periodOf: Record<string, number> = {};
+    allTimeSlots.forEach((st, i) => { periodOf[st] = i + 1; });
+    const endOf: Record<string, string> = {};
+    schedules.forEach(s => { if (s.end_time && !endOf[s.start_time]) endOf[s.start_time] = s.end_time; });
+
+    // Time search: show every lesson at the typed time across days/classes
+    const nq = timeQuery.replace(/[^\d:.]/g, '').replace('.', ':');
+    const searching = nq.trim().length > 0;
+    const results = searching
+      ? schedules
+          .filter(s => looseTime(s.start_time).includes(looseTime(nq)) || looseTime(s.end_time).includes(looseTime(nq)))
+          .sort((a, b) =>
+            days.indexOf(a.day_of_week) - days.indexOf(b.day_of_week) ||
+            String(a.start_time).localeCompare(String(b.start_time)) ||
+            String(a.class_name).localeCompare(String(b.class_name), 'ar'))
+      : [];
 
     return (
-      <Box sx={{ overflowX: 'auto', border: 1, borderColor: 'divider', borderRadius: 2 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }} dir="rtl">
-          <thead>
-            <tr style={{ background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)' }}>
-              <th style={{ padding: '12px 16px', color: 'white', fontWeight: 600, minWidth: 100, textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
-                الوقت
-              </th>
-              {days.map(d => (
-                <th key={d} style={{ padding: '12px 8px', color: 'white', fontWeight: 600, minWidth: 140, textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
-                  {dayLabels[d]}
+      <Box>
+        <TextField
+          size="small"
+          placeholder="ابحث بالوقت مثل: 08:00 أو 9"
+          value={timeQuery}
+          onChange={(e) => setTimeQuery(e.target.value)}
+          sx={{ mb: 2, width: { xs: '100%', sm: 340 } }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search fontSize="small" />
+              </InputAdornment>
+            ),
+            endAdornment: timeQuery ? (
+              <InputAdornment position="end">
+                <IconButton size="small" onClick={() => setTimeQuery('')}>
+                  <Close fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ) : undefined,
+          }}
+        />
+
+        {searching ? (
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
+            <Alert severity={results.length ? 'info' : 'warning'} sx={{ borderRadius: 0 }}>
+              {results.length
+                ? `تم العثور على ${results.length} حصة عند الوقت «${timeQuery}»`
+                : `لا توجد حصص في هذا الوقت`}
+            </Alert>
+            <Box sx={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }} dir="rtl">
+                <thead>
+                  <tr style={{ background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)' }}>
+                    {['اليوم', 'الحصة', 'الوقت', 'الفصل', 'المادة', 'المعلم'].map(h => (
+                      <th key={h} style={{ padding: '10px 12px', color: 'white', fontWeight: 600, textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((s, i) => (
+                    <tr key={s.id} style={{ background: i % 2 === 0 ? '#fafbfc' : '#f5f6f8' }}>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontWeight: 600, fontSize: 13 }}>{dayLabels[s.day_of_week] || s.day_of_week}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontWeight: 700, color: '#1565c0', whiteSpace: 'nowrap' }}>الحصة {periodOf[s.start_time] || '-'}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontSize: 13, color: '#555', whiteSpace: 'nowrap' }}>{s.start_time} - {s.end_time}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>{s.class_name}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontWeight: 700, fontSize: 13 }}>{s.subject}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>{s.teacher_first} {s.teacher_last}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Box>
+          </Box>
+        ) : (
+        <Box sx={{ overflowX: 'auto', border: 1, borderColor: 'divider', borderRadius: 2 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }} dir="rtl">
+            <thead>
+              <tr style={{ background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)' }}>
+                <th style={{ padding: '12px 16px', color: 'white', fontWeight: 600, minWidth: 110, textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
+                  الوقت
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {allTimeSlots.map((startTime, idx) => {
-              const endMatch = schedules.find(s => s.start_time === startTime);
-              const endTime = endMatch?.end_time || '';
-              const hasAny = days.some(d =>
-                schedules.some(s => s.day_of_week === d && s.start_time === startTime)
-              );
-              if (!hasAny) return null;
+                {days.map(d => (
+                  <th key={d} style={{ padding: '12px 8px', color: 'white', fontWeight: 600, minWidth: 140, textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
+                    {dayLabels[d]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {allTimeSlots.map((startTime, idx) => {
+                const endTime = endOf[startTime] || '';
+                const hasAny = days.some(d =>
+                  schedules.some(s => s.day_of_week === d && s.start_time === startTime)
+                );
+                if (!hasAny) return null;
 
-              return (
-                <tr key={startTime} style={{ background: idx % 2 === 0 ? '#fafbfc' : '#f5f6f8' }}>
-                  <td style={{
-                    padding: '8px 16px', fontWeight: 600, textAlign: 'center',
-                    borderLeft: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0',
-                    fontSize: 13, color: '#555', whiteSpace: 'nowrap'
-                  }}>
-                    {startTime} - {endTime}
-                  </td>
-                  {days.map(d => {
-                    const daySlots = schedules.filter(s => s.day_of_week === d && s.start_time === startTime);
+                return (
+                  <tr key={startTime} style={{ background: idx % 2 === 0 ? '#fafbfc' : '#f5f6f8' }}>
+                    <td style={{
+                      padding: '8px 16px', textAlign: 'center',
+                      borderLeft: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <Typography sx={{ fontWeight: 700, fontSize: 13, color: '#1565c0' }}>
+                        الحصة {idx + 1}
+                      </Typography>
+                      <Typography sx={{ fontSize: 11, color: '#777' }}>
+                        {startTime} - {endTime}
+                      </Typography>
+                    </td>
+                    {days.map(d => {
+                      const daySlots = schedules.filter(s => s.day_of_week === d && s.start_time === startTime);
 
-                    return (
-                      <td key={d} style={{
-                        padding: '4px', borderLeft: '1px solid #e0e0e0',
-                        borderBottom: '1px solid #e0e0e0', verticalAlign: 'top',
-                        minHeight: 60
-                      }}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {daySlots.map((s) => (
-                            <Box
-                              key={s.id}
-                              sx={{
-                                borderRadius: 1,
-                                p: 0.75,
-                                bgcolor: getClassColor(s.class_id.toString()),
-                                borderLeft: '3px solid #1976d2',
-                                cursor: canEditSchedule ? 'pointer' : 'default',
-                                '&:hover': canEditSchedule ? { boxShadow: '0 2px 8px rgba(0,0,0,0.15)' } : {},
-                              }}
-                              onClick={() => canEditSchedule && handleOpenDialog(s)}
-                            >
-                              <Typography sx={{ fontWeight: 700, fontSize: 11, color: '#1a1a2e' }}>
-                                {s.subject}
-                              </Typography>
-                              <Typography sx={{ fontSize: 10, color: '#555' }}>
-                                {s.class_name} | {s.teacher_first} {s.teacher_last}
-                              </Typography>
-                              {s.room_number && (
-                                <Typography sx={{ fontSize: 9, color: '#888' }}>
-                                  {s.room_number}
+                      return (
+                        <td key={d} style={{
+                          padding: '4px', borderLeft: '1px solid #e0e0e0',
+                          borderBottom: '1px solid #e0e0e0', verticalAlign: 'top',
+                          minHeight: 60
+                        }}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            {daySlots.map((s) => (
+                              <Box
+                                key={s.id}
+                                sx={{
+                                  borderRadius: 1,
+                                  p: 0.75,
+                                  bgcolor: getClassColor(s.class_id.toString()),
+                                  borderLeft: '3px solid #1976d2',
+                                  cursor: canEditSchedule ? 'pointer' : 'default',
+                                  '&:hover': canEditSchedule ? { boxShadow: '0 2px 8px rgba(0,0,0,0.15)' } : {},
+                                }}
+                                onClick={() => canEditSchedule && handleOpenDialog(s)}
+                              >
+                                <Typography sx={{ fontWeight: 700, fontSize: 11, color: '#1a1a2e' }}>
+                                  {s.subject}
                                 </Typography>
-                              )}
-                            </Box>
-                          ))}
-                        </Box>
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                                <Typography sx={{ fontSize: 10, color: '#555' }}>
+                                  {s.class_name} | {s.teacher_first} {s.teacher_last}
+                                </Typography>
+                                {s.room_number && (
+                                  <Typography sx={{ fontSize: 9, color: '#888' }}>
+                                    {s.room_number}
+                                  </Typography>
+                                )}
+                              </Box>
+                            ))}
+                          </Box>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Box>
+        )}
       </Box>
     );
   };
