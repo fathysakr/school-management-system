@@ -39,6 +39,30 @@ export async function POST(request: NextRequest) {
     const pageMappingEff = teacherMode ? {} : pageMapping;
     const hasMapping = !teacherMode && Object.keys(pageMapping).length > 0;
 
+    // Stage-locked deployments import only their own stage: class codes such
+    // as "3-4" start with the grade digit, and 3 = high while 1/2 = middle.
+    if (teacherMode) {
+      const forcedStage = (process.env.NEXT_PUBLIC_SCHOOL_STAGE || '').trim();
+      if (forcedStage === 'middle' || forcedStage === 'high') {
+        const stageOfCode = (code: string): 'middle' | 'high' => {
+          const m = String(code || '').trim().match(/^(\d+)/);
+          return m && m[1] === '3' ? 'high' : 'middle';
+        };
+        parsed.entries = parsed.entries.filter((e) => stageOfCode(e.classId) === forcedStage);
+        const stageTeachers = new Set<string>();
+        const stageClassIds = new Set<string>();
+        const stageSubjects = new Set<string>();
+        for (const e of parsed.entries) {
+          if (e.teacher) stageTeachers.add(e.teacher);
+          stageClassIds.add(e.classId);
+          if (e.subject) stageSubjects.add(e.subject);
+        }
+        parsed.teachers = Array.from(stageTeachers);
+        parsed.subjects = Array.from(stageSubjects);
+        parsed.classes = parsed.classes.filter((c) => stageClassIds.has(c.classId));
+      }
+    }
+
     // Override classId based on pageMapping if provided
     if (hasMapping) {
       for (const entry of parsed.entries) {
