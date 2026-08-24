@@ -55,7 +55,7 @@ export default function SubjectsManagement() {
 
   const openEdit = (sub: any) => {
     setEditing(sub);
-    setForm({ name: sub.name, school: sub.school, grade: sub.grade || '', sessions_per_week: sub.sessions_per_week, teacher_id: sub.teacher_id ? String(sub.teacher_id) : '', class_ids: (sub.class_ids || []).map((id: any) => Number(id)) });
+    setForm({ name: sub.name, school: sub.school, grade: sub.grade || '', sessions_per_week: sub.sessions_per_week, teacher_id: assignedTeacherId(sub), class_ids: (sub.class_ids || []).map((id: any) => Number(id)) });
     setDialogOpen(true);
   };
 
@@ -117,6 +117,29 @@ export default function SubjectsManagement() {
     return cSchool === form.school;
   });
 
+  // Resolve assigned teacher: direct subjects.teacher_id join first,
+  // then fall back to legacy assignment stored in teacher's specialization JSON
+  const findLegacyTeacher = (subjectName: string) => {
+    return teachers.find((t: any) => {
+      try {
+        const spec = typeof t.specialization === 'string' ? JSON.parse(t.specialization) : (Array.isArray(t.specialization) ? t.specialization : []);
+        return Array.isArray(spec) && spec.some((item: any) => item?.n === subjectName);
+      } catch { return false; }
+    });
+  };
+
+  const assignedTeacherName = (s: any): string => {
+    if (s.teacher_first) return `${s.teacher_first} ${s.teacher_last || ''}`.trim();
+    const legacy = findLegacyTeacher(s.name);
+    return legacy ? `${legacy.first_name} ${legacy.last_name}` : '—';
+  };
+
+  const assignedTeacherId = (s: any): string => {
+    if (s.teacher_id) return String(s.teacher_id);
+    const legacy = findLegacyTeacher(s.name);
+    return legacy ? String(legacy.id) : '';
+  };
+
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
 
   return (
@@ -146,7 +169,6 @@ export default function SubjectsManagement() {
           </TableHead>
           <TableBody>
             {subjects.map((s: any) => {
-              const teacher = teachers.find((t: any) => t.id === s.teacher_id);
               const classNames = (s.class_ids || []).map((cid: number) => {
                 const c = classes.find((cl: any) => cl.id === cid);
                 return c ? `${c.class_name} (${c.grade})` : '';
@@ -156,7 +178,7 @@ export default function SubjectsManagement() {
                   <TableCell>{s.name}</TableCell>
                   <TableCell>{s.grade || (s.school === 'high' ? 'ثانوي' : 'متوسط')}</TableCell>
                   <TableCell>{s.sessions_per_week}</TableCell>
-                  <TableCell>{teacher ? `${teacher.first_name} ${teacher.last_name}` : '—'}</TableCell>
+                  <TableCell>{assignedTeacherName(s)}</TableCell>
                   <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{classNames || '—'}</TableCell>
                   <TableCell>
                     <IconButton size="small" onClick={() => openEdit(s)}><Edit fontSize="small" /></IconButton>
