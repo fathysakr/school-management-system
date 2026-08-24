@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import {
@@ -543,12 +543,13 @@ export default function AdminPage() {
                 <InputLabel>المرحلة</InputLabel>
                 <Select value={roleFilter} label="المرحلة" onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }}>
                   <MenuItem value="all">الكل</MenuItem>
-                  <MenuItem value="middle_supervisor">مشرف متوسط</MenuItem>
-                  <MenuItem value="high_supervisor">مشرف ثانوي</MenuItem>
-                  <MenuItem value="middle_teacher">معلم متوسط</MenuItem>
-                  <MenuItem value="high_teacher">معلم ثانوي</MenuItem>
-                  <MenuItem value="middle_counselor">مرشد متوسط</MenuItem>
-                  <MenuItem value="high_counselor">مرشد ثانوي</MenuItem>
+                  {['middle', 'high']
+                    .filter((s) => !FORCED_SCHOOL_STAGE || s === FORCED_SCHOOL_STAGE)
+                    .flatMap((s) => [
+                      <MenuItem key={`${s}_supervisor`} value={`${s}_supervisor`}>{s === 'middle' ? 'مشرف متوسط' : 'مشرف ثانوي'}</MenuItem>,
+                      <MenuItem key={`${s}_teacher`} value={`${s}_teacher`}>{s === 'middle' ? 'معلم متوسط' : 'معلم ثانوي'}</MenuItem>,
+                      <MenuItem key={`${s}_counselor`} value={`${s}_counselor`}>{s === 'middle' ? 'مرشد متوسط' : 'مرشد ثانوي'}</MenuItem>,
+                    ])}
                 </Select>
               </FormControl>
               <FormControl size="small" sx={{ minWidth: 150 }}>

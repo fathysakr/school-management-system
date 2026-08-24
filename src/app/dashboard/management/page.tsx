@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth, stageOptions, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
@@ -65,12 +65,12 @@ export default function ManagementPage() {
   const [formData, setFormData] = useState({ email: '', password: '', role: 'middle_supervisor', teacher_id: '' });
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [roleFilter, setRoleFilter] = useState('all');
-  const [schoolFilter, setSchoolFilter] = useState('all');
+  const [schoolFilter, setSchoolFilter] = useState<string>(FORCED_SCHOOL_STAGE ?? 'all');
   const isAdmin = user?.role === 'admin';
 
   const [positionsDialog, setPositionsDialog] = useState(false);
   const [positions, setPositions] = useState<any[]>([]);
-  const [newPosition, setNewPosition] = useState({ title: '', school: 'middle' });
+  const [newPosition, setNewPosition] = useState({ title: '', school: (FORCED_SCHOOL_STAGE ?? 'middle') as string });
   const [assignDialog, setAssignDialog] = useState<{ position: any } | null>(null);
   const [allUsers, setAllUsers] = useState<any[]>([]);
 
@@ -233,7 +233,7 @@ export default function ManagementPage() {
     setError('');
     try {
       await api.post('/management-positions', newPosition, token);
-      setNewPosition({ title: '', school: 'middle' });
+      setNewPosition({ title: '', school: (FORCED_SCHOOL_STAGE ?? 'middle') as string });
       setSuccess('تمت إضافة المسمى');
       fetchPositions();
     } catch (err: unknown) { setError(err instanceof Error ? err.message : 'حدث خطأ'); }
@@ -339,9 +339,8 @@ export default function ManagementPage() {
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>المرحلة</InputLabel>
             <Select value={schoolFilter} label="المرحلة" onChange={(e) => setSchoolFilter(e.target.value)}>
-              <MenuItem value="all">الكل</MenuItem>
-              <MenuItem value="middle">متوسطة</MenuItem>
-              <MenuItem value="high">ثانوية</MenuItem>
+              {!FORCED_SCHOOL_STAGE && <MenuItem value="all">الكل</MenuItem>}
+              {stageOptions().map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
             </Select>
           </FormControl>
         )}
@@ -433,7 +432,7 @@ export default function ManagementPage() {
               <FormControl fullWidth>
                 <InputLabel>الدور</InputLabel>
                 <Select value={formData.role} label="الدور" onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
-                  {ROLES.map(r => (
+                  {ROLES.filter(r => !FORCED_SCHOOL_STAGE || r.school === 'none' || r.school === FORCED_SCHOOL_STAGE).map(r => (
                     <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>
                   ))}
                 </Select>
@@ -530,8 +529,7 @@ export default function ManagementPage() {
                 <InputLabel>المرحلة</InputLabel>
                 <Select value={newPosition.school} label="المرحلة"
                   onChange={(e) => setNewPosition({ ...newPosition, school: e.target.value })}>
-                  <MenuItem value="middle">متوسطة</MenuItem>
-                  <MenuItem value="high">ثانوية</MenuItem>
+                  {stageOptions().map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                 </Select>
               </FormControl>
               <Button variant="contained" onClick={handleAddPosition}

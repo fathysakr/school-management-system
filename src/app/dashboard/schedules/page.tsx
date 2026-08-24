@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth, stageOptions, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
   Box, Typography, Button, Dialog, DialogTitle, DialogContent,
@@ -44,14 +44,14 @@ export default function SchedulesPage() {
   });
 
   const [genDialogOpen, setGenDialogOpen] = useState(false);
-  const [genSchool, setGenSchool] = useState('all');
+  const [genSchool, setGenSchool] = useState<string>(FORCED_SCHOOL_STAGE ?? 'all');
   const [genClear, setGenClear] = useState(true);
   const [genLoading, setGenLoading] = useState(false);
   const [genResult, setGenResult] = useState<any>(null);
 
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfSchool, setPdfSchool] = useState('middle');
+  const [pdfSchool, setPdfSchool] = useState<string>(FORCED_SCHOOL_STAGE ?? 'middle');
   const [pdfClear, setPdfClear] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfResult, setPdfResult] = useState<any>(null);
@@ -508,9 +508,8 @@ api.get(`/schedules${selectedClass ? `?class_id=${selectedClass}${schoolParam}` 
               <FormControl fullWidth>
                 <InputLabel>المرحلة</InputLabel>
                 <Select value={genSchool} label="المرحلة" onChange={(e) => setGenSchool(e.target.value)}>
-                  <MenuItem value="all">جميع المراحل</MenuItem>
-                  <MenuItem value="middle">المتوسطة</MenuItem>
-                  <MenuItem value="high">الثانوية</MenuItem>
+                  {!FORCED_SCHOOL_STAGE && <MenuItem value="all">جميع المراحل</MenuItem>}
+                  {stageOptions().map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>
@@ -592,8 +591,7 @@ api.get(`/schedules${selectedClass ? `?class_id=${selectedClass}${schoolParam}` 
               <FormControl fullWidth>
                 <InputLabel>المرحلة</InputLabel>
                 <Select value={pdfSchool} label="المرحلة" onChange={(e) => setPdfSchool(e.target.value)}>
-                  <MenuItem value="middle">المتوسطة</MenuItem>
-                  <MenuItem value="high">الثانوية</MenuItem>
+                  {stageOptions().map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>

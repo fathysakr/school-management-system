@@ -8,7 +8,7 @@ import {
 import { Add, CalendarToday, FileDownload, AutoAwesome, Person, School, MeetingRoom, CloudUpload, Close as CloseIcon } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { api } from '@/lib/api';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth, stageOptions, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 
 const dayLabels: Record<string, string> = { sunday: 'الأحد', monday: 'الاثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس' };
 const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
@@ -49,14 +49,14 @@ export default function SchedulePanel() {
   const [conflictWarn, setConflictWarn] = useState('');
   const [formData, setFormData] = useState<any>({ class_id: '', teacher_id: '', subject: '', day_of_week: 'sunday', start_time: '08:00', end_time: '09:00', room_number: '' });
   const [genDialogOpen, setGenDialogOpen] = useState(false);
-  const [genSchool, setGenSchool] = useState('all');
+  const [genSchool, setGenSchool] = useState<string>(FORCED_SCHOOL_STAGE ?? 'all');
   const [genClear, setGenClear] = useState(true);
   const [genLoading, setGenLoading] = useState(false);
   const [genResult, setGenResult] = useState<any>(null);
 
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfSchool, setPdfSchool] = useState('middle');
+  const [pdfSchool, setPdfSchool] = useState<string>(FORCED_SCHOOL_STAGE ?? 'middle');
   const [pdfClear, setPdfClear] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfResult, setPdfResult] = useState<any>(null);
@@ -344,7 +344,7 @@ export default function SchedulePanel() {
             يقوم النظام بتوزيع الحصص على أيام الأسبوع بناءً على المواد المسجلة وتخصصات المعلمين، مع مراعاة عدم تعارض المعلمين وتوزيع متوازن للحصص.
           </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12}><FormControl fullWidth><InputLabel>المرحلة</InputLabel><Select value={genSchool} label="المرحلة" onChange={e => setGenSchool(e.target.value)}><MenuItem value="all">جميع المراحل</MenuItem><MenuItem value="high">ثانوي</MenuItem><MenuItem value="middle">متوسط</MenuItem></Select></FormControl></Grid>
+            <Grid item xs={12}><FormControl fullWidth><InputLabel>المرحلة</InputLabel><Select value={genSchool} label="المرحلة" onChange={e => setGenSchool(e.target.value)}>{!FORCED_SCHOOL_STAGE && <MenuItem value="all">جميع المراحل</MenuItem>}{stageOptions().map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}</Select></FormControl></Grid>
             <Grid item xs={12}><FormControl fullWidth><InputLabel>طريقة التوليد</InputLabel><Select value={genClear ? 'clear' : 'keep'} label="طريقة التوليد" onChange={e => setGenClear(e.target.value === 'clear')}><MenuItem value="clear">مسح الجدول الحالي وتوليد جديد</MenuItem><MenuItem value="keep">إضافة للفصول الفارغة فقط</MenuItem></Select></FormControl></Grid>
           </Grid>
           {genResult && <Alert severity="success" sx={{ mt: 2 }} icon={<AutoAwesome />}>تم توليد {genResult.generated} حصة دراسية لـ {genResult.classes_count} فصول</Alert>}
@@ -394,7 +394,7 @@ export default function SchedulePanel() {
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth size="small"><InputLabel>المرحلة</InputLabel>
                     <Select value={pdfSchool} label="المرحلة" onChange={(e) => setPdfSchool(e.target.value)}>
-                      <MenuItem value="middle">متوسط</MenuItem><MenuItem value="high">ثانوي</MenuItem>
+                      {stageOptions().map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                     </Select>
                   </FormControl>
                 </Grid>

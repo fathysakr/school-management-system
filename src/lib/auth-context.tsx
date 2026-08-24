@@ -36,6 +36,27 @@ export const FORCED_SCHOOL_STAGE: 'middle' | 'high' | null =
     ? (process.env.NEXT_PUBLIC_SCHOOL_STAGE as 'middle' | 'high')
     : null;
 
+export type SchoolStage = 'middle' | 'high';
+
+export const STAGE_LABELS: Record<SchoolStage, string> = {
+  middle: 'المتوسطة',
+  high: 'الثانوية',
+};
+
+/** Options for stage selectors — only the forced stage in split deployments */
+export function stageOptions(): { value: SchoolStage; label: string }[] {
+  if (FORCED_SCHOOL_STAGE) return [{ value: FORCED_SCHOOL_STAGE, label: STAGE_LABELS[FORCED_SCHOOL_STAGE] }];
+  return [
+    { value: 'middle', label: STAGE_LABELS.middle },
+    { value: 'high', label: STAGE_LABELS.high },
+  ];
+}
+
+/** Default stage value for selectors in split deployments */
+export function defaultStage(fallback: SchoolStage = 'middle'): SchoolStage {
+  return FORCED_SCHOOL_STAGE ?? fallback;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);

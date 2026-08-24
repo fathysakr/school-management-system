@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth, stageOptions, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
@@ -46,7 +46,7 @@ export default function TeachersPage() {
   const [formData, setFormData] = useState({
     teacher_id: '', first_name: '', last_name: '', email: '',
     phone: '', specialization: '', date_of_birth: '', address: '',
-    school: 'middle',
+    school: (FORCED_SCHOOL_STAGE ?? 'middle') as string,
   });
   const isAdmin = user?.role === 'admin';
   const [isEdit, setIsEdit] = useState(false);
@@ -91,7 +91,7 @@ export default function TeachersPage() {
       setFormData({
         teacher_id: '', first_name: '', last_name: '', email: '',
         phone: '', specialization: '', date_of_birth: '', address: '',
-        school: 'middle',
+        school: (FORCED_SCHOOL_STAGE ?? 'middle') as string,
       });
     }
     setOpenDialog(true);
@@ -375,8 +375,7 @@ export default function TeachersPage() {
                 <FormControl fullWidth>
                   <InputLabel>المرحلة</InputLabel>
                   <Select value={formData.school} label="المرحلة" onChange={(e) => setFormData({ ...formData, school: e.target.value })}>
-                    <MenuItem value="middle">متوسطة</MenuItem>
-                    <MenuItem value="high">ثانوية</MenuItem>
+                    {stageOptions().map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                   </Select>
                 </FormControl>
               </Grid>

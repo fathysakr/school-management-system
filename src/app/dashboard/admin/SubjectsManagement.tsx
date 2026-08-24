@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { Add, Delete, Edit, Book } from '@mui/icons-material';
 import { api } from '@/lib/api';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth, stageOptions, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 
 export default function SubjectsManagement() {
   const { token } = useAuth();
@@ -19,7 +19,7 @@ export default function SubjectsManagement() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', school: 'high', grade: '', sessions_per_week: 3, teacher_id: '', class_ids: [] as number[] });
+  const [form, setForm] = useState({ name: '', school: (FORCED_SCHOOL_STAGE ?? 'high') as string, grade: '', sessions_per_week: 3, teacher_id: '', class_ids: [] as number[] });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [schoolFilter, setSchoolFilter] = useState('high');
@@ -176,8 +176,7 @@ export default function SubjectsManagement() {
             <FormControl fullWidth>
               <InputLabel>المرحلة</InputLabel>
               <Select value={form.school} label="المرحلة" onChange={(e) => setForm({ ...form, school: e.target.value, grade: '', class_ids: [] })}>
-                <MenuItem value="high">ثانوي</MenuItem>
-                <MenuItem value="middle">متوسط</MenuItem>
+                {stageOptions().map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
               </Select>
             </FormControl>
             <FormControl fullWidth>
