@@ -318,8 +318,8 @@ export async function POST(request: NextRequest) {
     let removedSubjects = 0;
     let syncedSubjectTeachers = 0;
     const schoolSubjects = await db.prepare(
-      "SELECT id, name, teacher_id FROM subjects WHERE school = ? OR school IS NULL OR school = '' ORDER BY id ASC"
-    ).all(schoolParam) as any[];
+      'SELECT id, name, teacher_id FROM subjects ORDER BY id ASC'
+    ).all() as any[];
 
     // group subject rows by normalized name so variants/duplicates
     // (e.g. رياضيات vs الرياضيات, per-grade copies) collapse onto one row
