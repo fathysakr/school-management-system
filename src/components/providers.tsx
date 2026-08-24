@@ -6,14 +6,26 @@ import CssBaseline from '@mui/material/CssBaseline';
 let theme = createTheme({
   direction: 'rtl',
   palette: {
-    primary: { main: '#1976d2', light: '#42a5f5', dark: '#1565c0' },
-    secondary: { main: '#9c27b0' },
-    background: { default: '#f5f5f5', paper: '#ffffff' },
+    primary: { main: '#4f46e5', light: '#818cf8', dark: '#3730a3' },
+    secondary: { main: '#9333ea' },
+    background: { default: '#eef1fb', paper: '#ffffff' },
   },
-  typography: { fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif' },
+  shape: { borderRadius: 12 },
+  typography: { fontFamily: '"Segoe UI", "Tajawal", "Cairo", "Roboto", "Arial", sans-serif' },
   components: {
-    MuiButton: { styleOverrides: { root: { borderRadius: 8, textTransform: 'none' } } },
-    MuiCard: { styleOverrides: { root: { borderRadius: 12 } } },
+    MuiButton: {
+      styleOverrides: {
+        root: { borderRadius: 10, textTransform: 'none', fontWeight: 600, boxShadow: 'none' },
+        contained: { boxShadow: '0 8px 18px -8px rgba(79,70,229,.45)', '&:hover': { boxShadow: '0 10px 22px -8px rgba(79,70,229,.55)' } },
+      },
+    },
+    MuiCard: {
+      styleOverrides: { root: { borderRadius: 16, border: '1px solid', borderColor: 'rgba(30,34,90,.08)' } },
+    },
+    MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
+    MuiChip: { styleOverrides: { root: { fontWeight: 600 } } },
+    MuiTextField: { defaultProps: { size: 'small' } },
+    MuiTableCell: { styleOverrides: { root: { borderColor: 'rgba(30,34,90,.07)' } } },
   },
 });
 

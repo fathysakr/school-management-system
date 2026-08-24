@@ -113,6 +113,12 @@ const roleColors: Record<string, string> = {
   parent: '#00bcd4',
 };
 
+function greetingFor(h: number): string {
+  if (h < 12) return 'صباح الخير';
+  if (h < 17) return 'طاب يومك';
+  return 'مساء الخير';
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, token, logout, selectedSchool, setSelectedSchool } = useAuth();
   const router = useRouter();
@@ -126,8 +132,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifError, setNotifError] = useState('');
+  const [now, setNow] = useState<Date>(() => new Date());
 
   const isHovered = open || hovering;
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  const dateLabel = new Intl.DateTimeFormat('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+  const timeLabel = new Intl.DateTimeFormat('ar-EG', { hour: '2-digit', minute: '2-digit' }).format(now);
 
   const fetchNotifications = useCallback(async () => {
     if (!token) return;
@@ -165,17 +180,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const drawerWidth = isHovered ? DRAWER_OPEN : DRAWER_CLOSED;
+  const stageAccent = FORCED_SCHOOL_STAGE === 'middle' ? '#38bdf8' : '#fb923c';
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f4f6f8' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#eef1fb' }}>
       {/* Top Bar */}
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%)',
-          borderBottom: '1px solid rgba(255,255,255,0.12)',
+          background: 'linear-gradient(90deg, rgba(13,16,45,.92) 0%, rgba(24,20,60,.86) 55%, rgba(30,18,66,.82) 100%)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          borderBottom: '1px solid rgba(255,255,255,0.09)',
+          boxShadow: '0 10px 30px -12px rgba(10,12,40,.55)',
         }}
       >
         <Toolbar sx={{ gap: 1 }}>
@@ -194,10 +213,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 label={FORCED_SCHOOL_STAGE === 'middle' ? 'المرحلة المتوسطة' : 'المرحلة الثانوية'}
                 sx={{
                   mr: 1.5,
-                  bgcolor: FORCED_SCHOOL_STAGE === 'middle' ? '#1565c0' : '#e65100',
+                  background: FORCED_SCHOOL_STAGE === 'middle'
+                    ? 'linear-gradient(135deg,#38bdf8,#6366f1)'
+                    : 'linear-gradient(135deg,#fb923c,#f43f5e)',
                   color: '#fff',
                   fontWeight: 700,
                   fontSize: 12,
+                  border: 'none',
+                  boxShadow: `0 4px 14px -4px ${stageAccent}88`,
                 }}
               />
             ) : user?.role === 'admin' && (
@@ -230,17 +253,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
           </Box>
 
+          {/* Live clock & greeting */}
+          <Box sx={{ display: { xs: 'none', lg: 'flex' }, flexDirection: 'column', alignItems: 'flex-end', mx: 2, lineHeight: 1.3 }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,.92)' }}>
+              {greetingFor(now.getHours())}{user.email ? `، ${user.email.split('@')[0]}` : ''} 👋
+            </Typography>
+            <Typography sx={{ fontSize: 11.5, color: 'rgba(255,255,255,.55)' }}>
+              {dateLabel} • {timeLabel}
+            </Typography>
+          </Box>
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <ClickAwayListener onClickAway={() => setNotifOpen(false)}>
               <Box sx={{ position: 'relative' }}>
                 <Tooltip title="الإشعارات">
                   <IconButton color="inherit" onClick={() => setNotifOpen(!notifOpen)} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
-                    <Badge badgeContent={unreadCount} color="error"><Notifications /></Badge>
+                    <Badge
+                      badgeContent={unreadCount}
+                      color="error"
+                      sx={{ '& .MuiBadge-badge': unreadCount > 0 ? { boxShadow: '0 0 0 2px rgba(13,16,45,.9)' } : {} }}
+                    ><Notifications /></Badge>
                   </IconButton>
                 </Tooltip>
+                {unreadCount > 0 && !notifOpen && (
+                  <Box className="pulse-dot" sx={{ position: 'absolute', top: 9, left: 9, width: 9, height: 9, borderRadius: '50%', bgcolor: '#f43f5e', pointerEvents: 'none' }} />
+                )}
                 {notifOpen && (
-                  <Paper sx={{ position: 'absolute', left: 0, top: '100%', mt: 1, width: 360, maxHeight: 480, overflow: 'auto', zIndex: 9999, borderRadius: 2, boxShadow: 8 }}>
-                    <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Paper sx={{ position: 'absolute', left: 0, top: '100%', mt: 1, width: 360, maxHeight: 480, overflow: 'auto', zIndex: 9999, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 24px 60px -12px rgba(10,12,40,.35)' }}>
+                    <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(90deg,#f6f7ff,#fdf7ff)' }}>
                       <Typography variant="subtitle2" fontWeight={700}>الإشعارات</Typography>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         {notifError && <Typography variant="caption" color="error">{notifError}</Typography>}
@@ -252,7 +292,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     ) : (
                       <List disablePadding>
                         {notifications.map((n: any) => (
-                          <ListItemButton key={n.id} sx={{ gap: 1.5, py: 1.5, px: 2, bgcolor: n.is_read ? 'transparent' : 'action.hover', borderBottom: '1px solid', borderColor: 'divider' }}
+                          <ListItemButton key={n.id} sx={{ gap: 1.5, py: 1.5, px: 2, bgcolor: n.is_read ? 'transparent' : 'action.hover', borderBottom: '1px solid', borderColor: 'divider', transition: '.15s', '&:hover': { transform: 'translateX(-3px)' } }}
                             onClick={() => { if (n.link) router.push(n.link); setNotifOpen(false); }}>
                             <Box sx={{ flexShrink: 0 }}>
                               {n.type === 'urgent' ? <Box component="span" sx={{ fontSize: 20 }}>🚨</Box> : n.type === 'warning' ? <Box component="span" sx={{ fontSize: 20 }}>⚠️</Box> : <Box component="span" sx={{ fontSize: 20 }}>ℹ️</Box>}
@@ -274,11 +314,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               onClick={(e) => setAnchorEl(e.currentTarget)}
               sx={{
                 display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer',
-                px: 1.5, py: 0.5, borderRadius: 2,
+                px: 1.5, py: 0.5, borderRadius: 2.5,
+                transition: '.15s',
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
               }}
             >
-              <Avatar sx={{ width: 34, height: 34, bgcolor: roleColors[user.role] || 'primary.dark', fontSize: 14, fontWeight: 600 }}>
+              <Avatar sx={{ width: 34, height: 34, fontSize: 14, fontWeight: 600, background: `linear-gradient(135deg, ${roleColors[user.role] || '#6366f1'}, #8b5cf6)`, boxShadow: '0 0 0 2px rgba(255,255,255,.25)' }}>
                 {user.email?.charAt(0).toUpperCase()}
               </Avatar>
               <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
@@ -294,7 +335,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClose={() => setAnchorEl(null)}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
             transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-            PaperProps={{ sx: { mt: 1, borderRadius: 2, minWidth: 180, boxShadow: 4 } }}
+            PaperProps={{ sx: { mt: 1, borderRadius: 2.5, minWidth: 190, boxShadow: '0 24px 60px -12px rgba(10,12,40,.35)', border: '1px solid', borderColor: 'divider', overflow: 'hidden' } }}
           >
             <MenuItem onClick={() => { setAnchorEl(null); router.push('/dashboard/profile'); }} sx={{ gap: 1.5, py: 1.5 }}>
               <Person fontSize="small" /> الملف الشخصي
@@ -323,35 +364,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             mt: '64px',
             height: 'calc(100vh - 64px)',
             border: 'none',
-            borderLeft: '1px solid #e0e0e0',
+            borderLeft: '1px solid rgba(255,255,255,0.07)',
             transition: muiTheme.transitions.create('width', {
               easing: muiTheme.transitions.easing.easeOut,
               duration: muiTheme.transitions.duration.standard,
             }),
             overflowX: 'hidden',
-            backgroundColor: '#ffffff',
-            boxShadow: open || hovering ? '4px 0 20px rgba(0,0,0,0.06)' : 'none',
+            background: 'linear-gradient(180deg, #10133a 0%, #161a48 45%, #1b1547 100%)',
+            boxShadow: open || hovering ? '6px 0 32px -10px rgba(10,12,40,.55)' : 'none',
           },
         }}
       >
+        {/* subtle aurora glow inside sidebar */}
+        <Box className="aurora-glow" sx={{ position: 'absolute', top: -70, left: -60, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,.28), transparent 65%)', pointerEvents: 'none' }} />
+
         {/* User Info Card */}
         {isHovered && (
           <Box sx={{
-            mx: 1.5, my: 2, p: 2, borderRadius: 3,
-            background: 'linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%)',
+            mx: 1.5, my: 2, p: 2, borderRadius: 3.5,
+            position: 'relative',
+            background: 'linear-gradient(140deg, rgba(99,102,241,.22), rgba(139,92,246,.12) 55%, rgba(34,211,238,.14))',
+            border: '1px solid rgba(255,255,255,0.12)',
             textAlign: 'center',
           }}>
-            <Avatar sx={{ width: 52, height: 52, mx: 'auto', mb: 1, bgcolor: roleColors[user.role] || 'primary.main', fontSize: 20, fontWeight: 600 }}>
+            <Avatar sx={{ width: 54, height: 54, mx: 'auto', mb: 1, fontSize: 20, fontWeight: 700, background: `linear-gradient(135deg, ${roleColors[user.role] || '#6366f1'}, #22d3ee)`, boxShadow: '0 8px 20px -6px rgba(0,0,0,.5), 0 0 0 3px rgba(255,255,255,.12)' }}>
               {user.email?.charAt(0).toUpperCase()}
             </Avatar>
-            <Typography variant="subtitle2" fontWeight={600}>{user.email?.split('@')[0]}</Typography>
+            <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#eef0ff' }}>{user.email?.split('@')[0]}</Typography>
             <RoleChip
               label={roleLabels[user.role] || user.role}
               size="small"
               sx={{
-                mt: 0.5, height: 22, fontSize: 11, fontWeight: 600,
-                bgcolor: roleColors[user.role] + '20',
-                color: roleColors[user.role],
+                mt: 0.75, height: 22, fontSize: 11, fontWeight: 600,
+                bgcolor: (roleColors[user.role] || '#6366f1') + '33',
+                color: '#dfe3ff',
+                border: `1px solid ${(roleColors[user.role] || '#6366f1')}55`,
+                borderRadius: 999,
+                px: 1.25,
               }}
             />
           </Box>
@@ -362,7 +411,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Box sx={{ flex: 1, overflow: 'auto', py: 1 }}>
             <Box sx={{ mb: 0.5 }}>
               {isHovered && (
-                <Typography variant="caption" sx={{ display: 'block', px: 3, py: 1, fontSize: 11, fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: 1 }}>
+                <Typography variant="caption" sx={{ display: 'block', px: 3, py: 1, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.38)', letterSpacing: 1 }}>
                   الرئيسية
                 </Typography>
               )}
@@ -376,12 +425,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       <ListItem disablePadding sx={{ display: 'block', px: 1, py: 0.3 }}>
                         <ListItemButton
                           onClick={() => { router.push(item.path); if (isMobile) setOpen(false); }}
-                          selected={isActive}
-                          sx={{ minHeight: 44, justifyContent: isHovered ? 'flex-start' : 'center', px: 1.5, py: 1, borderRadius: 2.5, mx: 0.5 }}>
-                          <ListItemIcon sx={{ minWidth: 0, justifyContent: 'center', mr: isHovered ? 1.5 : 0 }}>
+                          sx={{
+                            minHeight: 44, justifyContent: isHovered ? 'flex-start' : 'center', px: 1.5, py: 1, borderRadius: 2.5,
+                            color: isActive ? '#fff' : '#c7cbe8',
+                            background: isActive ? 'linear-gradient(135deg, rgba(99,102,241,.95), rgba(139,92,246,.85))' : 'transparent',
+                            boxShadow: isActive ? '0 10px 24px -10px rgba(99,102,241,.65)' : 'none',
+                            '&:hover': { background: isActive ? undefined : 'rgba(255,255,255,.06)' },
+                            transition: '.18s',
+                          }}>
+                          <ListItemIcon sx={{ minWidth: 0, justifyContent: 'center', mr: isHovered ? 1.5 : 0, color: 'inherit' }}>
                             {item.icon}
                           </ListItemIcon>
-                          {isHovered && <ListItemText primary={item.text} primaryTypographyProps={{ fontSize: 14, fontWeight: isActive ? 700 : 500 }} />}
+                          {isHovered && <ListItemText primary={item.text} primaryTypographyProps={{ fontSize: 14, fontWeight: isActive ? 700 : 500, color: 'inherit' }} />}
                         </ListItemButton>
                       </ListItem>
                     </Tooltip>
@@ -404,17 +459,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Typography
                     variant="caption"
                     sx={{
-                      display: 'block',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
                       px: 3,
                       py: 1,
-                      fontSize: 11,
+                      fontSize: 10.5,
                       fontWeight: 700,
-                      color: 'text.disabled',
-                      textTransform: 'uppercase',
-                      letterSpacing: 1,
+                      color: 'rgba(255,255,255,.38)',
+                      letterSpacing: 1.2,
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {group.label}
+                    <Box sx={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, rgba(255,255,255,.14), transparent)' }} />
                   </Typography>
                 )}
                 <List disablePadding>
@@ -422,13 +480,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     const isActive = pathname === item.path;
                     return (
                       <Tooltip key={item.path} title={!isHovered ? item.text : ''} placement="left" arrow>
-                        <ListItem disablePadding sx={{ display: 'block', px: 1, py: 0.3 }}>
+                        <ListItem disablePadding sx={{ display: 'block', px: 1, py: 0.25 }}>
                           <ListItemButton
                             onClick={() => {
                               router.push(item.path);
                               if (isMobile) setOpen(false);
                             }}
-                            selected={isActive}
                             sx={{
                               minHeight: 44,
                               justifyContent: isHovered ? 'flex-start' : 'center',
@@ -436,44 +493,47 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                               py: 1,
                               borderRadius: 2.5,
                               position: 'relative',
-                              backgroundColor: isActive ? 'primary.50' : 'transparent',
-                              '&::before': isActive ? {
+                              color: isActive ? '#fff' : '#c7cbe8',
+                              background: isActive
+                                ? 'linear-gradient(120deg, rgba(99,102,241,.95), rgba(139,92,246,.82))'
+                                : 'transparent',
+                              boxShadow: isActive ? '0 12px 26px -10px rgba(99,102,241,.7)' : 'none',
+                              '&::before': !isActive ? {
                                 content: '""',
                                 position: 'absolute',
                                 right: 0,
                                 top: '50%',
-                                transform: 'translateY(-50%)',
+                                transform: 'translateY(-50%) scale(0)',
                                 width: 3,
-                                height: 20,
+                                height: 22,
                                 borderRadius: 3,
-                                bgcolor: 'primary.main',
+                                background: '#22d3ee',
+                                transition: '.2s',
                               } : {},
                               '&:hover': {
-                                backgroundColor: isActive ? 'primary.100' : 'grey.100',
+                                background: isActive ? undefined : 'rgba(255,255,255,.06)',
+                                color: isActive ? undefined : '#fff',
+                                '&::before': { transform: 'translateY(-50%) scale(1)' },
                               },
-                              '&.Mui-selected': {
-                                backgroundColor: 'primary.50',
-                                '&:hover': { backgroundColor: 'primary.100' },
-                              },
+                              transition: '.18s',
                             }}
                           >
                             <ListItemIcon
                               sx={{
                                 minWidth: 0,
-                                mr: isHovered ? 2 : 0,
+                                mr: isHovered ? 1.5 : 0,
                                 justifyContent: 'center',
-                                color: isActive ? 'primary.main' : 'text.secondary',
-                                '& .MuiSvgIcon-root': {
-                                  fontSize: isActive ? 24 : 22,
-                                  transition: '0.2s',
-                                },
+                                color: 'inherit',
                               }}
                             >
-                              {isActive ? (
-                                <Box sx={{ p: 0.5, borderRadius: 1.5, bgcolor: 'primary.50' }}>
-                                  {item.icon}
-                                </Box>
-                              ) : item.icon}
+                              <Box sx={{
+                                display: 'grid', placeItems: 'center',
+                                width: 32, height: 32, borderRadius: 2,
+                                background: isActive ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.05)',
+                                transition: '.18s',
+                              }}>
+                                {item.icon}
+                              </Box>
                             </ListItemIcon>
                             <ListItemText
                               primary={item.text}
@@ -482,18 +542,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 transition: 'opacity 0.2s',
                                 '& .MuiTypography-root': {
                                   fontWeight: isActive ? 700 : 500,
-                                  color: isActive ? 'primary.main' : 'text.primary',
-                                  fontSize: 14,
+                                  color: 'inherit',
+                                  fontSize: 13.5,
+                                  whiteSpace: 'nowrap',
                                 },
                               }}
                             />
                             {isActive && isHovered && (
-                              <Box
-                                sx={{
-                                  width: 6, height: 6, borderRadius: '50%',
-                                  bgcolor: 'primary.main', flexShrink: 0,
-                                }}
-                              />
+                              <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: '#a5f3fc', boxShadow: '0 0 10px 2px rgba(165,243,252,.6)', flexShrink: 0 }} />
                             )}
                           </ListItemButton>
                         </ListItem>
@@ -501,9 +557,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     );
                   })}
                 </List>
-                {gi < menuGroups.length - 1 && isHovered && (
-                  <Divider sx={{ mx: 2, my: 1 }} />
-                )}
               </Box>
             );
           })}
@@ -511,7 +564,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
 
         {/* Logout */}
-        <Box sx={{ borderTop: '1px solid #e0e0e0', py: 1 }}>
+        <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.08)', py: 1 }}>
           <List disablePadding>
             <Tooltip title={!isHovered ? 'تسجيل الخروج' : ''} placement="left" arrow>
               <ListItem disablePadding sx={{ display: 'block', px: 1 }}>
@@ -523,18 +576,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     px: 1.5,
                     py: 1,
                     borderRadius: 2.5,
-                    color: 'error.main',
-                    '&:hover': { backgroundColor: 'error.50' },
+                    color: '#fda4af',
+                    '&:hover': { backgroundColor: 'rgba(244,63,94,.14)', color: '#fecdd3' },
+                    transition: '.18s',
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: 0, mr: isHovered ? 2 : 0, justifyContent: 'center', color: 'error.main' }}>
+                  <ListItemIcon sx={{ minWidth: 0, mr: isHovered ? 1.5 : 0, justifyContent: 'center', color: 'inherit' }}>
                     <Logout />
                   </ListItemIcon>
                   <ListItemText
                     primary="تسجيل الخروج"
                     sx={{
                       opacity: isHovered ? 1 : 0,
-                      '& .MuiTypography-root': { fontWeight: 500, fontSize: 14 },
+                      '& .MuiTypography-root': { fontWeight: 500, fontSize: 13.5 },
                     }}
                   />
                 </ListItemButton>
@@ -551,7 +605,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           flexGrow: 1,
           minWidth: 0,
           p: { xs: 2, sm: 3 },
-          bgcolor: '#f4f6f8',
           minHeight: '100vh',
           mt: '64px',
           ml: isMobile ? 0 : `${drawerWidth}px`,
@@ -559,10 +612,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             easing: muiTheme.transitions.easing.easeOut,
             duration: muiTheme.transitions.duration.standard,
           }),
+          background:
+            'radial-gradient(1100px 520px at 88% -8%, rgba(99,102,241,.13), transparent 60%),' +
+            'radial-gradient(900px 480px at 4% 108%, rgba(236,72,153,.10), transparent 55%),' +
+            'radial-gradient(760px 420px at 12% -6%, rgba(34,211,238,.11), transparent 55%),' +
+            '#eef1fb',
         }}
       >
         <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-          {children}
+          <Box key={pathname} className="page-enter">
+            {children}
+          </Box>
         </Box>
       </Box>
     </Box>
