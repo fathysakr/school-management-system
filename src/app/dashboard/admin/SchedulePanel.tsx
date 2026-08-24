@@ -67,6 +67,7 @@ export default function SchedulePanel() {
   const [pdfAllClasses, setPdfAllClasses] = useState<any[]>([]);
   const [pdfPageMapping, setPdfPageMapping] = useState<Record<string, string>>({});
   const [pdfError, setPdfError] = useState('');
+  const isTeacherPdf = pdfPreview?.preview?.mode === 'teacher';
 
   const loadData = useCallback(() => {
     if (!token) return;
@@ -410,9 +411,11 @@ export default function SchedulePanel() {
             </>
           ) : (
             <>
-              {/* Step 2: Map pages to classes */}
+              {/* Step 2: Map pages to classes (class-card PDFs) or review teacher cards */}
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                تم استخراج {pdfPreview.preview.numPages} صفحة. اختر الفصل المناسب لكل صفحة:
+                {isTeacherPdf
+                  ? `تم استخراج ${pdfPreview.preview.numPages} صفحة — جداول معلمين مفردة. الفصول مأخوذة تلقائياً من داخل كل جدول:`
+                  : `تم استخراج ${pdfPreview.preview.numPages} صفحة. اختر الفصل المناسب لكل صفحة:`}
               </Typography>
               <Box sx={{ maxHeight: 360, overflow: 'auto', mb: 2 }}>
                 {pdfPreview.preview.pages.map((pg: any) => (
@@ -421,22 +424,26 @@ export default function SchedulePanel() {
                       الصفحة {pg.pageIndex}
                       <Chip size="small" label={`${pg.entryCount} حصة`} sx={{ mr: 1, fontSize: 11 }} />
                     </Typography>
-                    <FormControl size="small" sx={{ minWidth: 180 }}>
-                      <InputLabel>الفصل</InputLabel>
-                      <Select
-                        value={pdfPageMapping[pg.pageIndex] || ''}
-                        label="الفصل"
-                        onChange={(e) => setPdfPageMapping(prev => ({ ...prev, [String(pg.pageIndex)]: e.target.value }))}
-                      >
-                        <MenuItem value="">-- اختر الفصل --</MenuItem>
-                        {pdfAllClasses.map((c: any) => (
-                          <MenuItem key={c.id} value={String(c.id)}>{c.class_name} {c.grade ? `(${c.grade})` : ''}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                    {isTeacherPdf ? (
+                      <Chip size="small" color="primary" variant="outlined" label={pg.title || `معلم ${pg.pageIndex}`} sx={{ fontSize: 12 }} />
+                    ) : (
+                      <FormControl size="small" sx={{ minWidth: 180 }}>
+                        <InputLabel>الفصل</InputLabel>
+                        <Select
+                          value={pdfPageMapping[pg.pageIndex] || ''}
+                          label="الفصل"
+                          onChange={(e) => setPdfPageMapping(prev => ({ ...prev, [String(pg.pageIndex)]: e.target.value }))}
+                        >
+                          <MenuItem value="">-- اختر الفصل --</MenuItem>
+                          {pdfAllClasses.map((c: any) => (
+                            <MenuItem key={c.id} value={String(c.id)}>{c.class_name} {c.grade ? `(${c.grade})` : ''}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )}
                     <Box sx={{ fontSize: 11, color: 'text.secondary', flex: 1 }}>
                       <Typography variant="caption" display="block">المواد: {pg.subjects.slice(0, 5).join('، ')}{pg.subjects.length > 5 ? '...' : ''}</Typography>
-                      <Typography variant="caption" display="block">المعلمون: {pg.teachers.slice(0, 5).join('، ')}{pg.teachers.length > 5 ? '...' : ''}</Typography>
+                      {!isTeacherPdf && <Typography variant="caption" display="block">المعلمون: {pg.teachers.slice(0, 5).join('، ')}{pg.teachers.length > 5 ? '...' : ''}</Typography>}
                     </Box>
                   </Paper>
                 ))}
@@ -489,6 +496,21 @@ export default function SchedulePanel() {
             <Button variant="contained" color="success"
               onClick={async () => {
                 if (!token || !pdfFile) return;
+                if (isTeacherPdf) {
+                  // Teacher cards: classes come from the cells themselves — no mapping needed
+                  setPdfLoading(true); setPdfResult(null); setPdfError('');
+                  try {
+                    const fd = new FormData();
+                    fd.append('file', pdfFile);
+                    fd.append('school', pdfSchool);
+                    fd.append('clear_existing', String(pdfClear));
+                    const res = await api.upload('/schedules/upload-pdf', fd, token);
+                    setPdfResult(res);
+                    loadData();
+                  } catch (err: any) { setPdfError(err?.message || 'فشل استيراد PDF'); }
+                  finally { setPdfLoading(false); }
+                  return;
+                }
                 // Build pageMapping: map each page's original classId to the selected class
                 const mapping: Record<string, string> = {};
                 for (const pg of pdfPreview.preview.pages) {

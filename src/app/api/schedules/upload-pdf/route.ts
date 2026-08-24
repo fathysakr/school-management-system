@@ -31,13 +31,18 @@ export async function POST(request: NextRequest) {
     const buffer = new Uint8Array(await file.arrayBuffer());
     const ptRows = await db.prepare('SELECT period_number, start_time, end_time FROM period_times ORDER BY period_number').all() as any[];
     const periodTimes = ptRows.map((r: any) => ({ start: r.start_time, end: r.end_time }));
-    const hasMapping = Object.keys(pageMapping).length > 0;
-    const parsed = await parseSchedulePdf(buffer, periodTimes, hasMapping);
+    const parsed = await parseSchedulePdf(buffer, periodTimes, false);
+
+    // Teacher-card PDFs carry the real class codes inside every cell,
+    // so page mapping is meaningless there and must be ignored.
+    const teacherMode = parsed.mode === 'teacher';
+    const pageMappingEff = teacherMode ? {} : pageMapping;
+    const hasMapping = !teacherMode && Object.keys(pageMapping).length > 0;
 
     // Override classId based on pageMapping if provided
     if (hasMapping) {
       for (const entry of parsed.entries) {
-        const mapped = pageMapping[entry.classId];
+        const mapped = pageMappingEff[entry.classId];
         if (mapped !== undefined) entry.classId = String(mapped);
       }
     }
@@ -54,11 +59,21 @@ export async function POST(request: NextRequest) {
       teacherByName.set(key, t.id);
     }
 
+    // Primary lookup: numeric class_name ("1-5") as printed on teacher cards.
+    const classByName = new Map<string, number>();
+    for (const c of existingClasses) {
+      if (c.class_name) classByName.set(String(c.class_name).trim(), c.id);
+    }
+
+    // Legacy fallback: "grade-section" composite key
     const classByKey = new Map<string, number>();
     for (const c of existingClasses) {
       const key = `${c.grade}-${c.section || c.class_name}`;
       classByKey.set(key, c.id);
     }
+
+    const resolveClass = (classId: string): number | undefined =>
+      classByName.get(classId.trim()) ?? classByKey.get(classId);
 
     // Normalize Arabic for matching: strip diacritics/tatweel, unify alef, drop the
     // definite article from every token so "اللغة العربية" matches "لغة عربية"
@@ -99,7 +114,7 @@ export async function POST(request: NextRequest) {
         }
       } else {
         for (const cls of parsed.classes) {
-          const existingId = classByKey.get(cls.classId);
+          const existingId = resolveClass(cls.classId);
           if (existingId) classIds.add(existingId);
         }
       }
@@ -129,16 +144,17 @@ export async function POST(request: NextRequest) {
       return id;
     };
 
-    const getOrCreateClass = async (classId: string, grade: string, section: string): Promise<number> => {
-      const existing = classByKey.get(classId);
+    const getOrCreateClass = async (classId: string, grade: string): Promise<number> => {
+      const existing = resolveClass(classId);
       if (existing) return existing;
 
+      // Store the numeric code as class_name so future imports resolve directly
       const result = await db.prepare(
         'INSERT INTO classes (class_name, grade, section, status) VALUES (?, ?, ?, ?)'
-      ).run(section, grade, null, 'active');
+      ).run(classId.trim(), grade || '', null, 'active');
 
       const id = Number(result.lastInsertRowid);
-      classByKey.set(classId, id);
+      classByName.set(classId.trim(), id);
       createdClasses.push(id);
       return id;
     };
@@ -243,7 +259,7 @@ export async function POST(request: NextRequest) {
       for (const cls of parsed.classes) {
         const grade = cls.grade;
         const school = SCHOOL_MAP[grade] || schoolParam;
-        const dbClassId = await getOrCreateClass(cls.classId, grade, cls.section);
+          const dbClassId = await getOrCreateClass(cls.classId, grade);
 
         for (const entry of parsed.entries.filter(e => e.classId === cls.classId)) {
           const teacherId = await getOrCreateTeacher(entry.teacher);
@@ -286,6 +302,7 @@ export async function POST(request: NextRequest) {
 
     return success({
       message: 'تم استيراد الجدول بنجاح',
+      mode: parsed.mode,
       summary: {
         classes: hasMapping ? new Set(Object.values(pageMapping)).size : parsed.classes.length,
         created_classes: createdClasses.length,
