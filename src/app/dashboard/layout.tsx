@@ -214,18 +214,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2faf5' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f4f7fd' }}>
       {/* Top Bar */}
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          background: 'linear-gradient(90deg, rgba(3,32,24,.93) 0%, rgba(6,55,40,.88) 55%, rgba(4,44,33,.85) 100%)',
+          background: 'linear-gradient(90deg, rgba(8,17,45,.93) 0%, rgba(15,30,72,.88) 55%, rgba(12,25,62,.85) 100%)',
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
-          borderBottom: '1px solid rgba(200,255,235,0.12)',
-          boxShadow: '0 10px 30px -12px rgba(4,36,27,.6)',
+          borderBottom: '1px solid rgba(190,215,255,0.14)',
+          boxShadow: '0 10px 30px -12px rgba(5,10,35,.6)',
         }}
       >
         <Toolbar sx={{ gap: 1 }}>
@@ -248,7 +248,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   borderRadius: 2,
                   px: 1,
                   py: 0.5,
-                  boxShadow: '0 4px 14px -4px rgba(0,0,0,.35), 0 0 0 1px rgba(200,255,235,.20)',
+                  boxShadow: '0 4px 14px -4px rgba(0,0,0,.35), 0 0 0 1px rgba(190,215,255,.22)',
                 }}
               />
             ) : (
@@ -337,7 +337,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
               }}
             >
-              <Avatar sx={{ width: 34, height: 34, fontSize: 14, fontWeight: 600, background: `linear-gradient(135deg, ${roleColors[user.role] || '#10b981'}, #f59e0b)`, boxShadow: '0 0 0 2px rgba(255,255,255,.25)' }}>
+              <Avatar sx={{ width: 34, height: 34, fontSize: 14, fontWeight: 600, background: `linear-gradient(135deg, ${roleColors[user.role] || '#3b82f6'}, '#ef4444')`, boxShadow: '0 0 0 2px rgba(255,255,255,.25)' }}>
                 {user.email?.charAt(0).toUpperCase()}
               </Avatar>
               <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
@@ -363,7 +363,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   borderRadius: 1.5,
                   px: 0.75,
                   py: 0.4,
-                  boxShadow: '0 3px 10px -4px rgba(0,0,0,.30), 0 0 0 1px rgba(200,255,235,.16)',
+                  boxShadow: '0 3px 10px -4px rgba(0,0,0,.30), 0 0 0 1px rgba(190,215,255,.18)',
                 }}
               />
             </Tooltip>
@@ -381,7 +381,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   borderRadius: 1.5,
                   px: 0.75,
                   py: 0.35,
-                  boxShadow: '0 3px 10px -4px rgba(0,0,0,.30), 0 0 0 1px rgba(200,255,235,.16)',
+                  boxShadow: '0 3px 10px -4px rgba(0,0,0,.30), 0 0 0 1px rgba(190,215,255,.18)',
                 }}
               />
             </Tooltip>
@@ -393,7 +393,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClose={() => setBrandMenuEl(null)}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            PaperProps={{ sx: { mt: 1, borderRadius: 2.5, minWidth: 220, boxShadow: '0 24px 60px -12px rgba(4,36,27,.35)', border: '1px solid', borderColor: 'divider', overflow: 'hidden' } }}
+            PaperProps={{ sx: { mt: 1, borderRadius: 2.5, minWidth: 220, boxShadow: '0 24px 60px -12px rgba(5,10,35,.35)', border: '1px solid', borderColor: 'divider', overflow: 'hidden' } }}
           >
             <Typography variant="caption" sx={{ display: 'block', px: 2, pt: 1.5, pb: 0.5, color: 'text.secondary' }}>اختر الشعار المراد رفع/تغيير صورته</Typography>
             {([
@@ -449,30 +449,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             mt: '64px',
             height: 'calc(100vh - 64px)',
             border: 'none',
-            borderLeft: '1px solid rgba(200,255,235,0.10)',
+            borderLeft: '1px solid rgba(190,215,255,0.10)',
             transition: muiTheme.transitions.create('width', {
               easing: muiTheme.transitions.easing.easeOut,
               duration: muiTheme.transitions.duration.standard,
             }),
             overflowX: 'hidden',
-            background: 'linear-gradient(180deg, #03271d 0%, #05392b 45%, #064534 100%)',
-            boxShadow: open || hovering ? '6px 0 32px -10px rgba(4,36,27,.55)' : 'none',
+            background: 'linear-gradient(180deg, #060f2e 0%, #0a1a44 45%, #0c2052 100%)',
+            boxShadow: open || hovering ? '6px 0 32px -10px rgba(5,10,35,.55)' : 'none',
           },
         }}
       >
         {/* subtle aurora glow inside sidebar */}
-        <Box className="aurora-glow" sx={{ position: 'absolute', top: -70, left: -60, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,.35), transparent 65%)', pointerEvents: 'none' }} />
+        <Box className="aurora-glow" sx={{ position: 'absolute', top: -70, left: -60, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,.38), transparent 65%)', pointerEvents: 'none' }} />
 
         {/* User Info Card */}
         {isHovered && (
           <Box sx={{
             mx: 1.5, my: 2, p: 2, borderRadius: 3.5,
             position: 'relative',
-            background: 'linear-gradient(140deg, rgba(16,185,129,.32), rgba(20,184,166,.16) 55%, rgba(245,158,11,.20))',
+            background: 'linear-gradient(140deg, rgba(59,130,246,.34), rgba(37,99,235,.18) 55%, rgba(220,38,38,.22))',
             border: '1px solid rgba(255,255,255,0.12)',
             textAlign: 'center',
           }}>
-            <Avatar sx={{ width: 54, height: 54, mx: 'auto', mb: 1, fontSize: 20, fontWeight: 700, background: `linear-gradient(135deg, ${roleColors[user.role] || '#10b981'}, #f59e0b)`, boxShadow: '0 8px 20px -6px rgba(0,0,0,.5), 0 0 0 3px rgba(255,255,255,.12)' }}>
+            <Avatar sx={{ width: 54, height: 54, mx: 'auto', mb: 1, fontSize: 20, fontWeight: 700, background: `linear-gradient(135deg, ${roleColors[user.role] || '#3b82f6'}, '#ef4444')`, boxShadow: '0 8px 20px -6px rgba(0,0,0,.5), 0 0 0 3px rgba(255,255,255,.12)' }}>
               {user.email?.charAt(0).toUpperCase()}
             </Avatar>
             <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#eef0ff' }}>{user.email?.split('@')[0]}</Typography>
@@ -481,9 +481,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               size="small"
               sx={{
                 mt: 0.75, height: 22, fontSize: 11, fontWeight: 600,
-                bgcolor: (roleColors[user.role] || '#059669') + '33',
+                bgcolor: (roleColors[user.role] || '#2563eb') + '33',
                 color: '#dfe3ff',
-                border: `1px solid ${(roleColors[user.role] || '#059669')}55`,
+                border: `1px solid ${(roleColors[user.role] || '#2563eb')}55`,
                 borderRadius: 999,
                 px: 1.25,
               }}
@@ -698,10 +698,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             duration: muiTheme.transitions.duration.standard,
           }),
           background:
-            'radial-gradient(1100px 520px at 88% -8%, rgba(5,150,105,.13), transparent 60%),' +
-            'radial-gradient(900px 480px at 4% 108%, rgba(245,158,11,.10), transparent 55%),' +
-            'radial-gradient(760px 420px at 12% -6%, rgba(13,148,136,.11), transparent 55%),' +
-            '#f2faf5',
+            'radial-gradient(1100px 520px at 88% -8%, rgba(29,78,216,.11), transparent 60%),' +
+            'radial-gradient(900px 480px at 4% 108%, rgba(220,38,38,.08), transparent 55%),' +
+            'radial-gradient(760px 420px at 12% -6%, rgba(59,130,246,.10), transparent 55%),' +
+            '#f4f7fd',
         }}
       >
         <Box sx={{ maxWidth: 1400, mx: 'auto' }}>

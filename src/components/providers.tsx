@@ -6,9 +6,9 @@ import CssBaseline from '@mui/material/CssBaseline';
 let theme = createTheme({
   direction: 'rtl',
   palette: {
-    primary: { main: '#059669', light: '#10b981', dark: '#065f46' },
-    secondary: { main: '#f59e0b' },
-    background: { default: '#f2faf5', paper: '#ffffff' },
+    primary: { main: '#1d4ed8', light: '#3b82f6', dark: '#1e3a8a' },
+    secondary: { main: '#dc2626' },
+    background: { default: '#f4f7fd', paper: '#ffffff' },
   },
   shape: { borderRadius: 12 },
   typography: { fontFamily: '"Segoe UI", "Tajawal", "Cairo", "Roboto", "Arial", sans-serif' },
@@ -16,16 +16,16 @@ let theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: { borderRadius: 10, textTransform: 'none', fontWeight: 600, boxShadow: 'none' },
-        contained: { boxShadow: '0 8px 18px -8px rgba(5,150,105,.45)', '&:hover': { boxShadow: '0 10px 22px -8px rgba(5,150,105,.55)' } },
+        contained: { boxShadow: '0 8px 18px -8px rgba(29,78,216,.40)', '&:hover': { boxShadow: '0 10px 22px -8px rgba(29,78,216,.50)' } },
       },
     },
     MuiCard: {
-      styleOverrides: { root: { borderRadius: 16, border: '1px solid', borderColor: 'rgba(6,80,58,.08)' } },
+      styleOverrides: { root: { borderRadius: 16, border: '1px solid', borderColor: 'rgba(20,40,100,.08)' } },
     },
     MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
     MuiChip: { styleOverrides: { root: { fontWeight: 600 } } },
     MuiTextField: { defaultProps: { size: 'small' } },
-    MuiTableCell: { styleOverrides: { root: { borderColor: 'rgba(6,80,58,.07)' } } },
+    MuiTableCell: { styleOverrides: { root: { borderColor: 'rgba(20,40,100,.07)' } } },
   },
 });
 
