@@ -129,23 +129,30 @@ export async function POST(request: NextRequest) {
     let skippedExisting = 0;
 
     if (clearExisting) {
-      const classIds = new Set<number>();
-      if (hasMapping) {
-        // Use the mapped class IDs
-        for (const val of Object.values(pageMapping)) {
-          const id = Number(val);
-          if (!isNaN(id)) classIds.add(id);
-        }
+      const forcedStageClear = (process.env.NEXT_PUBLIC_SCHOOL_STAGE || '').trim();
+      if (teacherMode && (forcedStageClear === 'middle' || forcedStageClear === 'high')) {
+        // Stage-locked deployment: this import defines the whole timetable,
+        // so stale rows from earlier cross-stage imports must go too.
+        await db.prepare('DELETE FROM schedules').run();
       } else {
-        for (const cls of parsed.classes) {
-          const existingId = resolveClass(cls.classId);
-          if (existingId) classIds.add(existingId);
+        const classIds = new Set<number>();
+        if (hasMapping) {
+          // Use the mapped class IDs
+          for (const val of Object.values(pageMapping)) {
+            const id = Number(val);
+            if (!isNaN(id)) classIds.add(id);
+          }
+        } else {
+          for (const cls of parsed.classes) {
+            const existingId = resolveClass(cls.classId);
+            if (existingId) classIds.add(existingId);
+          }
         }
-      }
-      if (classIds.size > 0) {
-        const ids = Array.from(classIds);
-        const placeholders = ids.map(() => '?').join(',');
-        await db.prepare(`DELETE FROM schedules WHERE class_id IN (${placeholders})`).run(...ids);
+        if (classIds.size > 0) {
+          const ids = Array.from(classIds);
+          const placeholders = ids.map(() => '?').join(',');
+          await db.prepare(`DELETE FROM schedules WHERE class_id IN (${placeholders})`).run(...ids);
+        }
       }
     }
 
