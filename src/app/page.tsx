@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/lib/auth-context';
+import { useAuth, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import {
@@ -18,7 +18,14 @@ export default function Home() {
     }
   }, [user, isLoading, router]);
 
-  if (isLoading) {
+  // Stage-locked deployment: skip the section chooser entirely
+  useEffect(() => {
+    if (!isLoading && !user && FORCED_SCHOOL_STAGE) {
+      router.replace(`/login?school=${FORCED_SCHOOL_STAGE}`);
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading || (!user && FORCED_SCHOOL_STAGE)) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>جاري التحميل...</Box>;
   }
 
