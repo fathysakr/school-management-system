@@ -31,7 +31,7 @@ export default function Home() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #450a0a 0%, #7f1d1d 50%, #450a0a 100%)', py: 4 }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #022c22 0%, #065f46 50%, #022c22 100%)', py: 4 }}>
       <Container maxWidth="md">
         {/* Header */}
         <Box sx={{ textAlign: 'center', mb: 5 }}>
@@ -50,7 +50,7 @@ export default function Home() {
           <Card
             sx={{
               width: { xs: '100%', sm: 320 }, borderRadius: 4,
-              background: 'linear-gradient(145deg, #ffffff, #fdf2f2)',
+              background: 'linear-gradient(145deg, #ffffff, #ecfdf5)',
               transition: 'all 0.3s ease',
               '&:hover': {
                 transform: 'translateY(-8px)',
@@ -65,22 +65,22 @@ export default function Home() {
               <Box
                 sx={{
                   width: 100, height: 100, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #ef4444, #991b1b)',
+                  background: 'linear-gradient(135deg, #34d399, #047857)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   mx: 'auto', mb: 2.5, boxShadow: '0 8px 24px rgba(21,101,192,0.3)',
                 }}
               >
                 <AutoStories sx={{ fontSize: 48, color: '#fff' }} />
               </Box>
-              <Typography variant="h6" fontWeight="bold" color="#991b1b" gutterBottom sx={{ fontSize: '1.35rem' }}>
+              <Typography variant="h6" fontWeight="bold" color="#047857" gutterBottom sx={{ fontSize: '1.35rem' }}>
                 {STAGE_FULL_NAMES.middle}
               </Typography>
               <Button
                 variant="contained"
                 size="large"
                 sx={{
-                  bgcolor: '#b91c1c', borderRadius: 8, px: 4,
-                  '&:hover': { bgcolor: '#7f1d1d' },
+                  bgcolor: '#047857', borderRadius: 8, px: 4,
+                  '&:hover': { bgcolor: '#065f46' },
                 }}
               >
                 دخول

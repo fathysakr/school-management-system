@@ -18,7 +18,6 @@ import {
   AddPhotoAlternate as UploadIcon
 } from '@mui/icons-material';
 import { Snackbar, Alert as MuiAlert } from '@mui/material';
-import { ToggleButtonGroup, ToggleButton } from '@mui/material';
 
 const DRAWER_OPEN = 280;
 const DRAWER_CLOSED = 80;
@@ -122,7 +121,7 @@ function greetingFor(h: number): string {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, token, logout, selectedSchool, setSelectedSchool } = useAuth();
+  const { user, token, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const muiTheme = useMuiTheme();
@@ -215,18 +214,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#fbf3f3' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2faf5' }}>
       {/* Top Bar */}
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          background: 'linear-gradient(90deg, rgba(38,8,14,.93) 0%, rgba(64,12,22,.87) 55%, rgba(52,10,18,.84) 100%)',
+          background: 'linear-gradient(90deg, rgba(3,32,24,.93) 0%, rgba(6,55,40,.88) 55%, rgba(4,44,33,.85) 100%)',
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
-          borderBottom: '1px solid rgba(255,220,220,0.10)',
-          boxShadow: '0 10px 30px -12px rgba(40,6,12,.55)',
+          borderBottom: '1px solid rgba(200,255,235,0.12)',
+          boxShadow: '0 10px 30px -12px rgba(4,36,27,.6)',
         }}
       >
         <Toolbar sx={{ gap: 1 }}>
@@ -236,7 +235,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
             {branding.logo ? (
-              <Box component="img" src={branding.logo} alt="شعار المدرسة" sx={{ height: 38, width: 38, objectFit: 'contain', borderRadius: 1.5, background: 'rgba(255,255,255,.94)', p: 0.4 }} />
+              <Box
+                component="img"
+                src={branding.logo}
+                alt="شعار المدرسة"
+                sx={{
+                  height: { xs: 40, md: 46 },
+                  width: 'auto',
+                  maxWidth: 140,
+                  objectFit: 'contain',
+                  bgcolor: '#fff',
+                  borderRadius: 2,
+                  px: 1,
+                  py: 0.5,
+                  boxShadow: '0 4px 14px -4px rgba(0,0,0,.35), 0 0 0 1px rgba(200,255,235,.20)',
+                }}
+              />
             ) : (
               <AutoStories sx={{ fontSize: 28, opacity: 0.9 }} />
             )}
@@ -254,34 +268,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <UploadIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-            )}
-            {user?.role === 'admin' && (
-              <ToggleButtonGroup
-                value={selectedSchool}
-                exclusive
-                onChange={(_, v) => v && setSelectedSchool(v)}
-                size="small"
-                sx={{
-                  mr: 2, ml: 2,
-                  bgcolor: 'rgba(255,255,255,0.08)',
-                  '& .MuiToggleButton-root': {
-                    color: 'rgba(255,255,255,0.6)',
-                    borderColor: 'rgba(255,255,255,0.15)',
-                    px: 2,
-                    py: 0.3,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    '&.Mui-selected': {
-                      color: '#fff',
-                      bgcolor: 'rgba(255,255,255,0.15)',
-                    },
-                  },
-                }}
-              >
-                <ToggleButton value="all">الكل</ToggleButton>
-                <ToggleButton value="middle">متوسطة</ToggleButton>
-                <ToggleButton value="high">ثانوية</ToggleButton>
-              </ToggleButtonGroup>
             )}
           </Box>
 
@@ -351,7 +337,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
               }}
             >
-              <Avatar sx={{ width: 34, height: 34, fontSize: 14, fontWeight: 600, background: `linear-gradient(135deg, ${roleColors[user.role] || '#b91c1c'}, #f59e0b)`, boxShadow: '0 0 0 2px rgba(255,255,255,.25)' }}>
+              <Avatar sx={{ width: 34, height: 34, fontSize: 14, fontWeight: 600, background: `linear-gradient(135deg, ${roleColors[user.role] || '#10b981'}, #f59e0b)`, boxShadow: '0 0 0 2px rgba(255,255,255,.25)' }}>
                 {user.email?.charAt(0).toUpperCase()}
               </Avatar>
               <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
@@ -364,10 +350,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Official logos */}
           <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }}>
             <Tooltip title="وزارة التعليم">
-              <Box component="img" src={branding.moe || '/branding/moe.svg'} alt="وزارة التعليم" sx={{ height: 38, width: 38, objectFit: 'contain', borderRadius: '50%', background: 'rgba(255,255,255,.95)', p: 0.3 }} />
+              <Box
+                component="img"
+                src={branding.moe || '/branding/moe.svg'}
+                alt="وزارة التعليم"
+                sx={{
+                  height: { xs: 34, md: 40 },
+                  width: 'auto',
+                  maxWidth: 110,
+                  objectFit: 'contain',
+                  bgcolor: '#fff',
+                  borderRadius: 1.5,
+                  px: 0.75,
+                  py: 0.4,
+                  boxShadow: '0 3px 10px -4px rgba(0,0,0,.30), 0 0 0 1px rgba(200,255,235,.16)',
+                }}
+              />
             </Tooltip>
             <Tooltip title="رؤية المملكة 2030">
-              <Box component="img" src={branding.vision || '/branding/vision2030.svg'} alt="رؤية 2030" sx={{ height: 32, objectFit: 'contain', background: 'rgba(255,255,255,.95)', borderRadius: 1.5, p: 0.35 }} />
+              <Box
+                component="img"
+                src={branding.vision || '/branding/vision2030.svg'}
+                alt="رؤية 2030"
+                sx={{
+                  height: { xs: 28, md: 32 },
+                  width: 'auto',
+                  maxWidth: 100,
+                  objectFit: 'contain',
+                  bgcolor: '#fff',
+                  borderRadius: 1.5,
+                  px: 0.75,
+                  py: 0.35,
+                  boxShadow: '0 3px 10px -4px rgba(0,0,0,.30), 0 0 0 1px rgba(200,255,235,.16)',
+                }}
+              />
             </Tooltip>
           </Box>
 
@@ -377,7 +393,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClose={() => setBrandMenuEl(null)}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            PaperProps={{ sx: { mt: 1, borderRadius: 2.5, minWidth: 220, boxShadow: '0 24px 60px -12px rgba(40,6,12,.35)', border: '1px solid', borderColor: 'divider', overflow: 'hidden' } }}
+            PaperProps={{ sx: { mt: 1, borderRadius: 2.5, minWidth: 220, boxShadow: '0 24px 60px -12px rgba(4,36,27,.35)', border: '1px solid', borderColor: 'divider', overflow: 'hidden' } }}
           >
             <Typography variant="caption" sx={{ display: 'block', px: 2, pt: 1.5, pb: 0.5, color: 'text.secondary' }}>اختر الشعار المراد رفع/تغيير صورته</Typography>
             {([
@@ -433,30 +449,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             mt: '64px',
             height: 'calc(100vh - 64px)',
             border: 'none',
-            borderLeft: '1px solid rgba(255,220,220,0.09)',
+            borderLeft: '1px solid rgba(200,255,235,0.10)',
             transition: muiTheme.transitions.create('width', {
               easing: muiTheme.transitions.easing.easeOut,
               duration: muiTheme.transitions.duration.standard,
             }),
             overflowX: 'hidden',
-            background: 'linear-gradient(180deg, #260a10 0%, #34101a 45%, #3f1219 100%)',
-            boxShadow: open || hovering ? '6px 0 32px -10px rgba(40,6,12,.55)' : 'none',
+            background: 'linear-gradient(180deg, #03271d 0%, #05392b 45%, #064534 100%)',
+            boxShadow: open || hovering ? '6px 0 32px -10px rgba(4,36,27,.55)' : 'none',
           },
         }}
       >
         {/* subtle aurora glow inside sidebar */}
-        <Box className="aurora-glow" sx={{ position: 'absolute', top: -70, left: -60, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(220,38,38,.30), transparent 65%)', pointerEvents: 'none' }} />
+        <Box className="aurora-glow" sx={{ position: 'absolute', top: -70, left: -60, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,.35), transparent 65%)', pointerEvents: 'none' }} />
 
         {/* User Info Card */}
         {isHovered && (
           <Box sx={{
             mx: 1.5, my: 2, p: 2, borderRadius: 3.5,
             position: 'relative',
-            background: 'linear-gradient(140deg, rgba(185,28,28,.30), rgba(220,38,38,.16) 55%, rgba(245,158,11,.14))',
+            background: 'linear-gradient(140deg, rgba(16,185,129,.32), rgba(20,184,166,.16) 55%, rgba(245,158,11,.20))',
             border: '1px solid rgba(255,255,255,0.12)',
             textAlign: 'center',
           }}>
-            <Avatar sx={{ width: 54, height: 54, mx: 'auto', mb: 1, fontSize: 20, fontWeight: 700, background: `linear-gradient(135deg, ${roleColors[user.role] || '#b91c1c'}, #f59e0b)`, boxShadow: '0 8px 20px -6px rgba(0,0,0,.5), 0 0 0 3px rgba(255,255,255,.12)' }}>
+            <Avatar sx={{ width: 54, height: 54, mx: 'auto', mb: 1, fontSize: 20, fontWeight: 700, background: `linear-gradient(135deg, ${roleColors[user.role] || '#10b981'}, #f59e0b)`, boxShadow: '0 8px 20px -6px rgba(0,0,0,.5), 0 0 0 3px rgba(255,255,255,.12)' }}>
               {user.email?.charAt(0).toUpperCase()}
             </Avatar>
             <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#eef0ff' }}>{user.email?.split('@')[0]}</Typography>
@@ -465,9 +481,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               size="small"
               sx={{
                 mt: 0.75, height: 22, fontSize: 11, fontWeight: 600,
-                bgcolor: (roleColors[user.role] || '#b91c1c') + '33',
+                bgcolor: (roleColors[user.role] || '#059669') + '33',
                 color: '#dfe3ff',
-                border: `1px solid ${(roleColors[user.role] || '#b91c1c')}55`,
+                border: `1px solid ${(roleColors[user.role] || '#059669')}55`,
                 borderRadius: 999,
                 px: 1.25,
               }}
@@ -682,10 +698,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             duration: muiTheme.transitions.duration.standard,
           }),
           background:
-            'radial-gradient(1100px 520px at 88% -8%, rgba(185,28,28,.12), transparent 60%),' +
+            'radial-gradient(1100px 520px at 88% -8%, rgba(5,150,105,.13), transparent 60%),' +
             'radial-gradient(900px 480px at 4% 108%, rgba(245,158,11,.10), transparent 55%),' +
-            'radial-gradient(760px 420px at 12% -6%, rgba(220,38,38,.10), transparent 55%),' +
-            '#fbf3f3',
+            'radial-gradient(760px 420px at 12% -6%, rgba(13,148,136,.11), transparent 55%),' +
+            '#f2faf5',
         }}
       >
         <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
