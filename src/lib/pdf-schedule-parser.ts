@@ -162,6 +162,24 @@ async function extractTeacherEntriesFromPage(
 
   const DATE_RE = /^\d{1,2}\/\d{1,2}\/\d{2,4}$/;
   const GROUP_TAG_RE = /^[A-Z]\d{0,2}$/;
+  // Division-group codes printed instead of a subject name (e.g. English groups E1/E2/E3)
+  const GROUP_SUBJECT_MAP: Record<string, string> = {
+    E: '\u0627\u0644\u0644\u063A\u0629 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629',
+    F: '\u0627\u0644\u0644\u063A\u0629 \u0627\u0644\u0641\u0631\u0646\u0633\u064A\u0629',
+  };
+
+  // Resolve cell text bands into a subject: prefer real words; when the only
+  // content is a division-group code (E1/E2/...), map its letter to the subject.
+  const clean = (t: string) => t.replace(/\s+/g, ' ').trim();
+  const resolveSubjectText = (bandsList: string[]): string => {
+    const real = bandsList.filter((t) => !GROUP_TAG_RE.test(toLatinDigits(t.replace(/\s/g, ''))));
+    if (real.length) return clean(real.join(' '));
+    for (const t of bandsList) {
+      const m = /^([A-Z])\d{0,2}$/.exec(toLatinDigits(t.replace(/\s/g, '')).toUpperCase());
+      if (m && GROUP_SUBJECT_MAP[m[1]]) return GROUP_SUBJECT_MAP[m[1]];
+    }
+    return '';
+  };
 
   const pool = items.filter((i) => {
     const s = i.str.trim();
@@ -266,12 +284,9 @@ async function extractTeacherEntriesFromPage(
       }
 
       // Subject(s): bands above the code (primary), bands below (alternating week)
-      const clean = (t: string) => t.replace(/\s+/g, ' ').trim();
-      const above = texts.slice(0, codeIdx >= 0 ? codeIdx : texts.length)
-        .filter((t) => !GROUP_TAG_RE.test(toLatinDigits(t.replace(/\s/g, ''))));
-      const below = texts.slice(codeIdx + 1)
-        .filter((t) => !GROUP_TAG_RE.test(toLatinDigits(t.replace(/\s/g, ''))));
-      const subject = clean(above.join(' ')) || clean(below.join(' '));
+      const rawAbove = texts.slice(0, codeIdx >= 0 ? codeIdx : texts.length);
+      const rawBelow = texts.slice(codeIdx + 1);
+      const subject = resolveSubjectText(rawAbove) || resolveSubjectText(rawBelow);
 
       if (!subject) continue;
       if (isNoiseText(subject)) continue;
