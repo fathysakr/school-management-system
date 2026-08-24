@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { Assignment, Save, Home } from '@mui/icons-material';
 import { api } from '@/lib/api';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth, stageOptions, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 
 export default function TeacherAssignments() {
   const { token } = useAuth();
@@ -25,7 +25,7 @@ export default function TeacherAssignments() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  const [schoolFilter, setSchoolFilter] = useState('high');
+  const [schoolFilter, setSchoolFilter] = useState<string>(FORCED_SCHOOL_STAGE ?? 'high');
 
   useEffect(() => {
     if (!token) return;
@@ -181,8 +181,9 @@ export default function TeacherAssignments() {
         <Assignment /> تعيين المواد والفصول للمعلمين
       </Typography>
       <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
-        <Chip label="ثانوي" color={schoolFilter === 'high' ? 'primary' : 'default'} onClick={() => setSchoolFilter('high')} />
-        <Chip label="متوسط" color={schoolFilter === 'middle' ? 'primary' : 'default'} onClick={() => setSchoolFilter('middle')} />
+        {stageOptions().map((o) => (
+          <Chip key={o.value} label={o.label} color={schoolFilter === o.value ? 'primary' : 'default'} onClick={() => setSchoolFilter(o.value)} />
+        ))}
       </Box>
       {message && <Alert severity={message.includes('نجاح') ? 'success' : 'error'} sx={{ mb: 2 }}>{message}</Alert>}
       <TableContainer component={Paper}>

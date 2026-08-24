@@ -22,7 +22,7 @@ export default function SubjectsManagement() {
   const [form, setForm] = useState({ name: '', school: (FORCED_SCHOOL_STAGE ?? 'high') as string, grade: '', sessions_per_week: 3, teacher_id: '', class_ids: [] as number[] });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
-  const [schoolFilter, setSchoolFilter] = useState('high');
+  const [schoolFilter, setSchoolFilter] = useState<string>(FORCED_SCHOOL_STAGE ?? 'high');
 
   const loadData = useCallback(() => {
     if (!token) return;
@@ -125,8 +125,9 @@ export default function SubjectsManagement() {
         <Book /> إدارة المواد الدراسية
       </Typography>
       <Box sx={{ mb: 2, display: 'flex', gap: 1, alignItems: 'center' }}>
-        <Chip label="ثانوي" color={schoolFilter === 'high' ? 'primary' : 'default'} onClick={() => setSchoolFilter('high')} />
-        <Chip label="متوسط" color={schoolFilter === 'middle' ? 'primary' : 'default'} onClick={() => setSchoolFilter('middle')} />
+        {stageOptions().map((o) => (
+          <Chip key={o.value} label={o.label} color={schoolFilter === o.value ? 'primary' : 'default'} onClick={() => setSchoolFilter(o.value)} />
+        ))}
         <Box sx={{ flexGrow: 1 }} />
         <Button variant="contained" startIcon={<Add />} onClick={openAdd}>أضيف مادة</Button>
       </Box>
