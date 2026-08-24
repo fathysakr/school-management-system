@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
     return success(result);
   } catch (error) {
     console.error('Bulk delete error:', error);
-    return serverError('فشلت العملية');
+    const msg = error instanceof Error ? error.message : String(error);
+    return serverError(`فشلت العملية: ${msg}`);
   }
 }

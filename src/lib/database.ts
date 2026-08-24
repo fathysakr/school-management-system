@@ -127,11 +127,15 @@ function createLibsqlAdapter(client: any): DbAdapter {
     exec: async (sql: string) => { await client.execute(sql); },
     transaction(fn: (...args: any[]) => any) {
       return async (...args: any[]) => {
+        // Remote (HTTP) libsql clients run each statement on its own stream,
+        // so raw BEGIN/COMMIT cannot guarantee atomicity and COMMIT may fail
+        // even when every statement succeeded. Never let that turn a successful
+        // operation into an error.
         let began = false;
         try { await client.execute('BEGIN'); began = true; } catch {}
         try {
           const result = await fn(...args);
-          if (began) await client.execute('COMMIT');
+          if (began) { try { await client.execute('COMMIT'); } catch {} }
           return result;
         } catch (e) {
           if (began) { try { await client.execute('ROLLBACK'); } catch {} }
