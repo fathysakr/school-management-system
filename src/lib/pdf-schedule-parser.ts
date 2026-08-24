@@ -46,6 +46,13 @@ const PERIOD_TIMES: { start: string; end: string }[] = [
   { start: '14:00', end: '14:45' },
 ];
 
+// Branding text injected by timetable generators (e.g. "aSc Timetables") must never leak into data
+const NOISE_RE = /timetable|\basc\b/i;
+
+export function isNoiseText(text: string): boolean {
+  return NOISE_RE.test(text);
+}
+
 function normalizeArabic(text: string): string {
   return text.normalize('NFKC').replace(/\u06CC/g, '\u064A').replace(/\u0649/g, '\u064A');
 }
@@ -145,7 +152,7 @@ async function extractEntriesFromPage(items: { str: string; x: number; y: number
       }
       if (currentBand.length > 0) bands.push(currentBand.map((x) => x.str.trim()));
 
-      const textBands = bands.map((b) => b.filter((s) => !/^\d+$/.test(s) && !/^[\u0660-\u0669]+$/.test(s) && !DAY_MAP[s] && !s.includes(':') && s !== '-' && s !== '–').join(' ').trim()).filter(Boolean);
+      const textBands = bands.map((b) => b.filter((s) => !/^\d+$/.test(s) && !/^[\u0660-\u0669]+$/.test(s) && !DAY_MAP[s] && !s.includes(':') && s !== '-' && s !== '–' && !isNoiseText(s)).join(' ').trim()).filter(Boolean);
 
       if (textBands.length < 2) continue;
 
@@ -153,6 +160,7 @@ async function extractEntriesFromPage(items: { str: string; x: number; y: number
       const teacher = textBands[textBands.length - 1];
 
       if (!subject || !teacher) continue;
+      if (isNoiseText(subject) || isNoiseText(teacher)) continue;
 
       pageEntries.push({
         classId: classIdLine,

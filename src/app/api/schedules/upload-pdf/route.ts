@@ -60,9 +60,27 @@ export async function POST(request: NextRequest) {
       classByKey.set(key, c.id);
     }
 
-    const subjectByNameSchool = new Map<string, number>();
+    // Normalize Arabic for matching: strip diacritics/tatweel, unify alef, drop the
+    // definite article from every token so "اللغة العربية" matches "لغة عربية"
+    const normalizeForMatch = (s: string): string =>
+      s.normalize('NFKC')
+        .replace(/[\u0640\u064B-\u065F]/g, '')
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(' ')
+        .map((t) => t.replace(/^ال/, ''))
+        .filter(Boolean)
+        .join(' ');
+
+    interface SubjectCandidate { id: number; name: string; tokens: Set<string> }
+    const subjectsBySchool = new Map<string, SubjectCandidate[]>();
     for (const s of existingSubjects) {
-      subjectByNameSchool.set(`${s.name}|${s.school}|${s.grade || ''}`, s.id);
+      const norm = normalizeForMatch(s.name || '');
+      if (!norm) continue;
+      const arr = subjectsBySchool.get(s.school) || [];
+      arr.push({ id: s.id, name: s.name, tokens: new Set(norm.split(' ')) });
+      subjectsBySchool.set(s.school, arr);
     }
 
     const createdTeachers: number[] = [];
@@ -125,19 +143,45 @@ export async function POST(request: NextRequest) {
       return id;
     };
 
-    const getOrCreateSubject = async (name: string, school: string, grade: string): Promise<number> => {
-      const key = `${name}|${school}|${grade}`;
-      const existing = subjectByNameSchool.get(key);
-      if (existing) return existing;
+    const resolveSubject = (name: string, school: string): SubjectCandidate | null => {
+      const norm = normalizeForMatch(name);
+      if (!norm) return null;
+      const cands = subjectsBySchool.get(school) || [];
+
+      // 1) exact normalized match
+      const exact = cands.find((c) => [...c.tokens].join(' ') === norm);
+      if (exact) return exact;
+
+      // 2) token-subset match: every PDF token appears in the site subject,
+      //    prefer the smallest candidate (closest name)
+      const pdfTokens = new Set(norm.split(' '));
+      let best: SubjectCandidate | null = null;
+      for (const c of cands) {
+        const contains = [...pdfTokens].every((t) => c.tokens.has(t));
+        if (!contains) continue;
+        if (!best || c.tokens.size < best.tokens.size) best = c;
+      }
+      return best;
+    };
+
+    const getOrCreateSubject = async (name: string, school: string): Promise<SubjectCandidate> => {
+      const resolved = resolveSubject(name, school);
+      if (resolved) return resolved;
 
       const result = await db.prepare(
         'INSERT INTO subjects (name, school, grade, sessions_per_week) VALUES (?, ?, ?, ?)'
-      ).run(sanitizeString(name), school, grade, 3);
+      ).run(sanitizeString(name), school, '', 3);
 
-      const id = Number(result.lastInsertRowid);
-      subjectByNameSchool.set(key, id);
-      createdSubjects.push(id);
-      return id;
+      const cand: SubjectCandidate = {
+        id: Number(result.lastInsertRowid),
+        name: sanitizeString(name),
+        tokens: new Set(normalizeForMatch(name).split(' ')),
+      };
+      const arr = subjectsBySchool.get(school) || [];
+      arr.push(cand);
+      subjectsBySchool.set(school, arr);
+      createdSubjects.push(cand.id);
+      return cand;
     };
 
     const insertSchedule = db.prepare(
@@ -169,11 +213,11 @@ export async function POST(request: NextRequest) {
         for (const entry of classEntries) {
           const teacherId = await getOrCreateTeacher(entry.teacher);
           const school = SCHOOL_MAP[entry.classId] || schoolParam;
-          const subjectId = await getOrCreateSubject(entry.subject, school, '');
+          const subj = await getOrCreateSubject(entry.subject, school);
 
-          const pairKey = `${subjectId}:${dbClassId}`;
+          const pairKey = `${subj.id}:${dbClassId}`;
           if (!processedPairs.has(pairKey)) {
-            await linkSubjectClass.run(subjectId, dbClassId, 3);
+            await linkSubjectClass.run(subj.id, dbClassId, 3);
             processedPairs.add(pairKey);
           }
 
@@ -184,12 +228,12 @@ export async function POST(request: NextRequest) {
             if (existing) { skippedExisting++; continue; }
           }
 
-          await insertSchedule.run(dbClassId, teacherId, sanitizeString(entry.subject), entry.day, entry.startTime, entry.endTime);
+          await insertSchedule.run(dbClassId, teacherId, sanitizeString(subj.name), entry.day, entry.startTime, entry.endTime);
           insertedSchedules++;
 
           let subMap = teacherSubjects.get(teacherId);
           if (!subMap) { subMap = new Map(); teacherSubjects.set(teacherId, subMap); }
-          let subData = subMap.get(entry.subject);
+          let subData = subMap.get(subj.name);
           if (!subData) { subData = { sessions: new Set(), classes: new Set() }; subMap.set(entry.subject, subData); }
           subData.sessions.add(`${entry.day}-${entry.startTime}`);
           subData.classes.add(dbClassId);
@@ -203,11 +247,11 @@ export async function POST(request: NextRequest) {
 
         for (const entry of parsed.entries.filter(e => e.classId === cls.classId)) {
           const teacherId = await getOrCreateTeacher(entry.teacher);
-          const subjectId = await getOrCreateSubject(entry.subject, school, grade);
+          const subj = await getOrCreateSubject(entry.subject, school);
 
-          const pairKey = `${subjectId}:${dbClassId}`;
+          const pairKey = `${subj.id}:${dbClassId}`;
           if (!processedPairs.has(pairKey)) {
-            await linkSubjectClass.run(subjectId, dbClassId, 3);
+            await linkSubjectClass.run(subj.id, dbClassId, 3);
             processedPairs.add(pairKey);
           }
 
@@ -218,13 +262,13 @@ export async function POST(request: NextRequest) {
             if (existing) { skippedExisting++; continue; }
           }
 
-          await insertSchedule.run(dbClassId, teacherId, sanitizeString(entry.subject), entry.day, entry.startTime, entry.endTime);
+          await insertSchedule.run(dbClassId, teacherId, sanitizeString(subj.name), entry.day, entry.startTime, entry.endTime);
           insertedSchedules++;
 
           let subMap = teacherSubjects.get(teacherId);
           if (!subMap) { subMap = new Map(); teacherSubjects.set(teacherId, subMap); }
-          let subData = subMap.get(entry.subject);
-          if (!subData) { subData = { sessions: new Set(), classes: new Set() }; subMap.set(entry.subject, subData); }
+          let subData = subMap.get(subj.name);
+          if (!subData) { subData = { sessions: new Set(), classes: new Set() }; subMap.set(subj.name, subData); }
           subData.sessions.add(`${entry.day}-${entry.startTime}`);
           subData.classes.add(dbClassId);
         }
