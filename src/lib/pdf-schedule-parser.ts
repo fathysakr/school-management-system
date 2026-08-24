@@ -209,11 +209,11 @@ async function extractTeacherEntriesFromPage(
   if (curRow.length) rows.push(curRow);
 
   // Attach each row to its day using OFFSET WINDOWS, not nearest distance.
-  // Within a day (label at y=L): class-code row sits at ~L+4, subject rows at ~L+45.
-  // Nearest-anchor fails because a subject row is ~45px from BOTH its own label
-  // and the neighbouring one (day pitch ~91px). Windows are mutually exclusive.
+  // Within a day (label at y=L): class-code row sits at ~L+4 (some days as low
+  // as L+1), subject rows at ~L+43. Nearest-anchor fails because a subject row
+  // is ~45px from BOTH its own label and the neighbouring one (day pitch ~91px).
   const byDay = new Map<string, TextItem[]>();
-  const CODE_WIN: [number, number] = [2, 16];
+  const CODE_WIN: [number, number] = [-10, 18];
   const SUBJ_WIN: [number, number] = [26, 88];
   for (const row of rows) {
     const ry = row.reduce((sum, i) => sum + i.y, 0) / row.length;
