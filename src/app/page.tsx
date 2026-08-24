@@ -31,7 +31,7 @@ export default function Home() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0a1128 0%, #14275e 50%, #0a1128 100%)', py: 4 }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #1e3a8a 100%)', py: 4 }}>
       <Container maxWidth="md">
         {/* Header */}
         <Box sx={{ textAlign: 'center', mb: 5 }}>
@@ -65,22 +65,22 @@ export default function Home() {
               <Box
                 sx={{
                   width: 100, height: 100, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #3b82f6, #1e3a8a)',
+                  background: 'linear-gradient(135deg, #60a5fa, #2563eb)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   mx: 'auto', mb: 2.5, boxShadow: '0 8px 24px rgba(21,101,192,0.3)',
                 }}
               >
                 <AutoStories sx={{ fontSize: 48, color: '#fff' }} />
               </Box>
-              <Typography variant="h6" fontWeight="bold" color="#1e3a8a" gutterBottom sx={{ fontSize: '1.35rem' }}>
+              <Typography variant="h6" fontWeight="bold" color="#1e40af" gutterBottom sx={{ fontSize: '1.35rem' }}>
                 {STAGE_FULL_NAMES.middle}
               </Typography>
               <Button
                 variant="contained"
                 size="large"
                 sx={{
-                  bgcolor: '#1d4ed8', borderRadius: 8, px: 4,
-                  '&:hover': { bgcolor: '#1e3a8a' },
+                  bgcolor: '#2563eb', borderRadius: 8, px: 4,
+                  '&:hover': { bgcolor: '#1e46b8' },
                 }}
               >
                 دخول
@@ -107,22 +107,22 @@ export default function Home() {
               <Box
                 sx={{
                   width: 100, height: 100, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #ef4444, #991b1b)',
+                  background: 'linear-gradient(135deg, #f87171, #dc2626)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   mx: 'auto', mb: 2.5, boxShadow: '0 8px 24px rgba(230,81,0,0.3)',
                 }}
               >
                 <School sx={{ fontSize: 48, color: '#fff' }} />
               </Box>
-              <Typography variant="h6" fontWeight="bold" color="#991b1b" gutterBottom sx={{ fontSize: '1.35rem' }}>
+              <Typography variant="h6" fontWeight="bold" color="#b91c1c" gutterBottom sx={{ fontSize: '1.35rem' }}>
                 {STAGE_FULL_NAMES.high}
               </Typography>
               <Button
                 variant="contained"
                 size="large"
                 sx={{
-                  bgcolor: '#b91c1c', borderRadius: 8, px: 4,
-                  '&:hover': { bgcolor: '#7f1d1d' },
+                  bgcolor: '#dc2626', borderRadius: 8, px: 4,
+                  '&:hover': { bgcolor: '#b91c1c' },
                 }}
               >
                 دخول

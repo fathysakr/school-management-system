@@ -6,9 +6,9 @@ import CssBaseline from '@mui/material/CssBaseline';
 let theme = createTheme({
   direction: 'rtl',
   palette: {
-    primary: { main: '#1d4ed8', light: '#3b82f6', dark: '#1e3a8a' },
-    secondary: { main: '#dc2626' },
-    background: { default: '#f4f7fd', paper: '#ffffff' },
+    primary: { main: '#2563eb', light: '#60a5fa', dark: '#1e40af' },
+    secondary: { main: '#ef4444' },
+    background: { default: '#f7fafe', paper: '#ffffff' },
   },
   shape: { borderRadius: 12 },
   typography: { fontFamily: '"Segoe UI", "Tajawal", "Cairo", "Roboto", "Arial", sans-serif' },
@@ -16,7 +16,7 @@ let theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: { borderRadius: 10, textTransform: 'none', fontWeight: 600, boxShadow: 'none' },
-        contained: { boxShadow: '0 8px 18px -8px rgba(29,78,216,.40)', '&:hover': { boxShadow: '0 10px 22px -8px rgba(29,78,216,.50)' } },
+        contained: { boxShadow: '0 8px 18px -8px rgba(37,99,235,.35)', '&:hover': { boxShadow: '0 10px 22px -8px rgba(37,99,235,.45)' } },
       },
     },
     MuiCard: {

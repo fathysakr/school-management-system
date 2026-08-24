@@ -27,10 +27,10 @@ function LoginForm() {
 
   const isHigh = school === 'high';
   const schoolLabel = schoolFullName(school);
-  const primaryColor = '#1d4ed8';
+  const primaryColor = '#2563eb';
   const gradient = isHigh
-    ? 'linear-gradient(135deg, #ef4444 0%, #991b1b 100%)'
-    : 'linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%)';
+    ? 'linear-gradient(135deg, #f87171 0%, #dc2626 100%)'
+    : 'linear-gradient(135deg, #60a5fa 0%, #2563eb 100%)';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +50,7 @@ function LoginForm() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0a1128 0%, #14275e 50%, #0a1128 100%)', py: 4 }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #1e3a8a 100%)', py: 4 }}>
       <Container maxWidth="sm">
         <Card sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: 4 }}>
@@ -102,7 +102,7 @@ function LoginForm() {
               <Button
                 fullWidth size="large" type="submit" variant="contained"
                 disabled={loading}
-                sx={{ mt: 3, mb: 2, py: 1.5, bgcolor: primaryColor, '&:hover': { bgcolor: '#1e3a8a' } }}
+                sx={{ mt: 3, mb: 2, py: 1.5, bgcolor: primaryColor, '&:hover': { bgcolor: '#1e46b8' } }}
               >
                 {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
               </Button>
