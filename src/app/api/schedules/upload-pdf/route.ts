@@ -317,23 +317,54 @@ export async function POST(request: NextRequest) {
 
     let removedSubjects = 0;
     let syncedSubjectTeachers = 0;
-    const schoolSubjects = await db.prepare('SELECT id, name, teacher_id FROM subjects WHERE school = ?').all(schoolParam) as any[];
+    const schoolSubjects = await db.prepare(
+      "SELECT id, name, teacher_id FROM subjects WHERE school = ? OR school IS NULL OR school = '' ORDER BY id ASC"
+    ).all(schoolParam) as any[];
+
+    // group subject rows by normalized name so variants/duplicates
+    // (e.g. رياضيات vs الرياضيات, per-grade copies) collapse onto one row
+    const groups = new Map<string, any[]>();
     for (const s of schoolSubjects) {
-      const tmap = usage.get(String(s.name || '').trim());
-      if (!tmap || tmap.size === 0) {
-        await db.prepare('DELETE FROM subject_classes WHERE subject_id = ?').run(s.id);
-        await db.prepare('DELETE FROM subjects WHERE id = ?').run(s.id);
-        removedSubjects++;
+      const key = normalizeForMatch(String(s.name || ''));
+      let g = groups.get(key);
+      if (!g) { g = []; groups.set(key, g); }
+      g.push(s);
+    }
+
+    const delSubject = async (id: number) => {
+      await db.prepare('DELETE FROM subject_classes WHERE subject_id = ?').run(id);
+      await db.prepare('DELETE FROM subjects WHERE id = ?').run(id);
+    };
+
+    for (const [, rows] of groups) {
+      const normKey = normalizeForMatch(String(rows[0].name || ''));
+      const exactRow = rows.find(r => usage.has(String(r.name || '').trim()));
+      const tmap = (exactRow ? usage.get(String(exactRow.name).trim()) : undefined) || undefined;
+      const nUsage = new Map<string, Map<number, number>>();
+      for (const [k, v] of usage) {
+        const nk = normalizeForMatch(k);
+        const cur = nUsage.get(nk);
+        if (cur) { for (const [tid, n] of v) cur.set(tid, (cur.get(tid) || 0) + n); }
+        else nUsage.set(nk, new Map(v));
+      }
+      const resolved = tmap || nUsage.get(normKey);
+      if (!resolved || resolved.size === 0) {
+        for (const r of rows) await delSubject(r.id);
+        removedSubjects += rows.length;
         continue;
       }
+      const keeper = exactRow || rows[0];
       let bestTid = -1;
       let bestN = -1;
-      for (const [tid, n] of tmap) {
+      for (const [tid, n] of resolved) {
         if (n > bestN) { bestN = n; bestTid = tid; }
       }
-      if (bestTid !== -1 && Number(s.teacher_id) !== bestTid) {
-        await db.prepare('UPDATE subjects SET teacher_id = ? WHERE id = ?').run(bestTid, s.id);
+      if (bestTid !== -1 && Number(keeper.teacher_id) !== bestTid) {
+        await db.prepare('UPDATE subjects SET teacher_id = ? WHERE id = ?').run(bestTid, keeper.id);
         syncedSubjectTeachers++;
+      }
+      for (const r of rows) {
+        if (r.id !== keeper.id) { await delSubject(r.id); removedSubjects++; }
       }
     }
 
