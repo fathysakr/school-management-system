@@ -300,6 +300,43 @@ export async function POST(request: NextRequest) {
       if (arr.length > 0) updateSpec.run(JSON.stringify(arr), tid);
     }
 
+    // ---- Sync المواد الدراسية with the imported schedule ----
+    // Every lesson row carries the canonical subject name + the teacher who
+    // teaches it. Subjects that no lesson references have no teacher and are
+    // removed; scheduled subjects get their primary (most lessons) teacher.
+    const schedRows = await db.prepare('SELECT subject, teacher_id FROM schedules').all() as any[];
+    const usage = new Map<string, Map<number, number>>();
+    for (const r of schedRows) {
+      const name = String(r.subject || '').trim();
+      if (!name) continue;
+      let tmap = usage.get(name);
+      if (!tmap) { tmap = new Map(); usage.set(name, tmap); }
+      const tid = Number(r.teacher_id);
+      if (!isNaN(tid)) tmap.set(tid, (tmap.get(tid) || 0) + 1);
+    }
+
+    let removedSubjects = 0;
+    let syncedSubjectTeachers = 0;
+    const schoolSubjects = await db.prepare('SELECT id, name, teacher_id FROM subjects WHERE school = ?').all(schoolParam) as any[];
+    for (const s of schoolSubjects) {
+      const tmap = usage.get(String(s.name || '').trim());
+      if (!tmap || tmap.size === 0) {
+        await db.prepare('DELETE FROM subject_classes WHERE subject_id = ?').run(s.id);
+        await db.prepare('DELETE FROM subjects WHERE id = ?').run(s.id);
+        removedSubjects++;
+        continue;
+      }
+      let bestTid = -1;
+      let bestN = -1;
+      for (const [tid, n] of tmap) {
+        if (n > bestN) { bestN = n; bestTid = tid; }
+      }
+      if (bestTid !== -1 && Number(s.teacher_id) !== bestTid) {
+        await db.prepare('UPDATE subjects SET teacher_id = ? WHERE id = ?').run(bestTid, s.id);
+        syncedSubjectTeachers++;
+      }
+    }
+
     return success({
       message: 'تم استيراد الجدول بنجاح',
       mode: parsed.mode,
@@ -312,6 +349,8 @@ export async function POST(request: NextRequest) {
         created_subjects: createdSubjects.length,
         schedules: insertedSchedules,
         skipped_existing: skippedExisting,
+        synced_subject_teachers: syncedSubjectTeachers,
+        removed_subjects: removedSubjects,
       },
     });
   } catch (error: any) {
