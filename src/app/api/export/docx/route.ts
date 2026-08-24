@@ -2,9 +2,10 @@ import { NextRequest } from 'next/server';
 import db, { ensureTursoReady } from '@/lib/database';
 import { authenticate, unauthorized, badRequest, serverError } from '@/lib/auth';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, Header, Footer, ShadingType } from 'docx';
+import { serverSchoolFullName } from '@/lib/school-brand';
 type Align = (typeof AlignmentType)[keyof typeof AlignmentType];
 
-const SCHOOL_NAME = 'مدرسة صفوة الرواد الأهلية';
+const SCHOOL_NAME = serverSchoolFullName();
 const ARABIC_FONT = 'Traditional Arabic';
 
 function formatDate(d: string | null | undefined): string {

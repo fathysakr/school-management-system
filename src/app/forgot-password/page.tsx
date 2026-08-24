@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { currentSchoolName } from '@/lib/school-brand';
 import {
   Box, Container, Card, CardContent, TextField, Button, Typography,
   Alert, Paper
@@ -71,7 +72,7 @@ export default function ForgotPasswordPage() {
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5, mt: 1 }}>
               <School fontSize="small" color="primary" />
               <Typography variant="body2" color="text.secondary">
-                مدرسة صفوة الرواد الأهلية
+                {currentSchoolName()}
               </Typography>
             </Box>
             <Typography textAlign="center" sx={{ mt: 1 }}>

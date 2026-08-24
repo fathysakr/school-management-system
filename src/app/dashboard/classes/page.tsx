@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
+import { STAGE_FULL_NAMES } from '@/lib/school-brand';
 import { api } from '@/lib/api';
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
@@ -450,7 +451,7 @@ export default function ClassesPage() {
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12} sm={6}><TextField fullWidth label="اسم الفصل" value={formData.class_name} onChange={(e) => setFormData({ ...formData, class_name: e.target.value })} /></Grid>
-            <Grid item xs={12} sm={6}><FormControl fullWidth><InputLabel>المرحلة</InputLabel><Select value={formData.grade} label="المرحلة" onChange={(e) => setFormData({ ...formData, grade: e.target.value })}>{(FORCED_SCHOOL_STAGE ? [FORCED_SCHOOL_STAGE] : ['middle', 'high'] as const).map((s) => <MenuItem key={s} value={s === 'middle' ? 'المتوسطة' : 'الثانوية'}>{s === 'middle' ? 'المدرسة المتوسطة' : 'المدرسة الثانوية'}</MenuItem>)}</Select></FormControl></Grid>
+            <Grid item xs={12} sm={6}><FormControl fullWidth><InputLabel>المرحلة</InputLabel><Select value={formData.grade} label="المرحلة" onChange={(e) => setFormData({ ...formData, grade: e.target.value })}>{(FORCED_SCHOOL_STAGE ? [FORCED_SCHOOL_STAGE] : ['middle', 'high'] as const).map((s) => <MenuItem key={s} value={s === 'middle' ? 'المتوسطة' : 'الثانوية'}>{s === 'middle' ? STAGE_FULL_NAMES.middle : STAGE_FULL_NAMES.high}</MenuItem>)}</Select></FormControl></Grid>
             <Grid item xs={12} sm={6}><TextField fullWidth label="القسم" value={formData.section} onChange={(e) => setFormData({ ...formData, section: e.target.value })} /></Grid>
             <Grid item xs={12} sm={6}><TextField fullWidth label="رقم القاعة" value={formData.room_number} onChange={(e) => setFormData({ ...formData, room_number: e.target.value })} /></Grid>
             <Grid item xs={12}><FormControl fullWidth><InputLabel>المعلم (اختياري)</InputLabel><Select value={formData.teacher_id} label="المعلم (اختياري)" onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}><MenuItem value="">بدون معلم</MenuItem>{teachingTeachers.length === 0 ? <MenuItem disabled>لا يوجد معلمون غير إداريين</MenuItem> : teachingTeachers.map((t) => (<MenuItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</MenuItem>))}</Select></FormControl></Grid>

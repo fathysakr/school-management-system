@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { STAGE_FULL_NAMES } from '@/lib/school-brand';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { hasPermission, rolePermissions } from '@/lib/permissions';
@@ -382,7 +383,7 @@ export default function DashboardPage() {
                 <Grid item xs={6} key={m.stage}>
                   <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, textAlign: 'center', bgcolor: m.stage === 'المتوسطة' ? '#e3f2fd' : '#fff3e0' }}>
                     <Typography fontWeight="bold" sx={{ color: m.stage === 'المتوسطة' ? '#1565c0' : '#e65100' }}>
-                      {m.stage === 'المتوسطة' ? 'المدرسة المتوسطة' : 'المدرسة الثانوية'}
+                      {m.stage === 'المتوسطة' ? STAGE_FULL_NAMES.middle : STAGE_FULL_NAMES.high}
                     </Typography>
                     <Typography variant="h4" fontWeight="bold" sx={{ color: m.stage === 'المتوسطة' ? '#1565c0' : '#e65100' }}>
                       {m.c}

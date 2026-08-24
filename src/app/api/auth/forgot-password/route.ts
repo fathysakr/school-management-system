@@ -3,6 +3,7 @@ import db, { ensureTursoReady } from '@/lib/database';
 import { badRequest, serverError, success } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import jwt from 'jsonwebtoken';
+import { serverSchoolFullName } from '@/lib/school-brand';
 
 const RESET_EXPIRY = '15m';
 
@@ -48,14 +49,14 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL || 'مدرسة صفوة الرواد <onboarding@resend.dev>',
+        from: process.env.RESEND_FROM_EMAIL || `${serverSchoolFullName()} <onboarding@resend.dev>`,
         to: [user.email],
-        subject: 'إعادة تعيين كلمة المرور - مدرسة صفوة الرواد الأهلية',
+        subject: `إعادة تعيين كلمة المرور - ${serverSchoolFullName()}`,
         html: `
           <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
             <h2 style="color: #1976d2;">إعادة تعيين كلمة المرور</h2>
             <p>مرحباً،</p>
-            <p>توصلنا بطلب لإعادة تعيين كلمة المرور الخاصة بحسابك في نظام إدارة مدرسة صفوة الرواد الأهلية.</p>
+            <p>توصلنا بطلب لإعادة تعيين كلمة المرور الخاصة بحسابك في نظام إدارة ${serverSchoolFullName()}.</p>
             <p style="text-align: center; margin: 24px 0;">
               <a href="${resetLink}" style="background-color: #1976d2; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; display: inline-block;">إعادة تعيين كلمة المرور</a>
             </p>

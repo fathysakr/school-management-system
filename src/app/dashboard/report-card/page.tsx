@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
+import { currentSchoolName } from '@/lib/school-brand';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
@@ -103,7 +104,7 @@ export default function ReportCardPage() {
 
       <Paper className="report-card" sx={{ borderRadius: 3, overflow: 'hidden' }}>
         <Box className="report-card-header print-keep-color" sx={{ bgcolor: '#1a237e', color: 'white', p: 3, textAlign: 'center', position: 'relative' }}>
-          <Typography variant="h4" fontWeight="bold">مدرسة صفوة الرواد الأهلية</Typography>
+          <Typography variant="h4" fontWeight="bold">{currentSchoolName()}</Typography>
           <Typography variant="subtitle1" sx={{ mt: 0.5, opacity: 0.9 }}>كشف درجات الطالب — {data.class_info?.grade?.includes('ثانوي') ? 'المرحلة الثانوية' : 'المرحلة المتوسطة'}</Typography>
           {data.class_info?.grade && (
             <Typography variant="body2" sx={{ opacity: 0.75, mt: 0.5 }}>{data.class_info.grade}</Typography>
@@ -218,7 +219,7 @@ export default function ReportCardPage() {
               ))}
             </Grid>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 3 }}>
-              هذا الكشف صادر إلكترونياً من نظام إدارة مدرسة صفوة الرواد الأهلية
+              هذا الكشف صادر إلكترونياً من {currentSchoolName()}
             </Typography>
           </Box>
         </Box>

@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, School, AutoStories } from '@mui/icons-material';
 import { FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
+import { schoolFullName } from '@/lib/school-brand';
 
 function LoginForm() {
   const router = useRouter();
@@ -25,7 +26,7 @@ function LoginForm() {
   const expired = searchParams.get('expired') === '1';
 
   const isHigh = school === 'high';
-  const schoolLabel = isHigh ? 'المدرسة الثانوية' : 'المدرسة المتوسطة';
+  const schoolLabel = schoolFullName(school);
   const primaryColor = isHigh ? '#e65100' : '#1565c0';
   const gradient = isHigh
     ? 'linear-gradient(135deg, #ffa726 0%, #e65100 100%)'
@@ -66,9 +67,11 @@ function LoginForm() {
               <Typography variant="h5" fontWeight="bold" sx={{ color: primaryColor }}>
                 {schoolLabel}
               </Typography>
-              <Typography variant="body1" color="text.secondary">
-                مدرسة صفوة الرواد الأهلية
-              </Typography>
+              {!FORCED_SCHOOL_STAGE && (
+                <Typography variant="body1" color="text.secondary">
+                  مدرسة صفوة الرواد الأهلية
+                </Typography>
+              )}
             </Box>
 
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

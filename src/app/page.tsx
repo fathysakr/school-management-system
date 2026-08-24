@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
+import { STAGE_FULL_NAMES } from '@/lib/school-brand';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import {
@@ -71,8 +72,8 @@ export default function Home() {
               >
                 <AutoStories sx={{ fontSize: 48, color: '#fff' }} />
               </Box>
-              <Typography variant="h4" fontWeight="bold" color="#1565c0" gutterBottom>
-                المدرسة المتوسطة
+              <Typography variant="h6" fontWeight="bold" color="#1565c0" gutterBottom sx={{ fontSize: '1.35rem' }}>
+                {STAGE_FULL_NAMES.middle}
               </Typography>
               <Button
                 variant="contained"
@@ -113,8 +114,8 @@ export default function Home() {
               >
                 <School sx={{ fontSize: 48, color: '#fff' }} />
               </Box>
-              <Typography variant="h4" fontWeight="bold" color="#e65100" gutterBottom>
-                المدرسة الثانوية
+              <Typography variant="h6" fontWeight="bold" color="#e65100" gutterBottom sx={{ fontSize: '1.35rem' }}>
+                {STAGE_FULL_NAMES.high}
               </Typography>
               <Button
                 variant="contained"

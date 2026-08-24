@@ -1,3 +1,5 @@
+import { serverSchoolFullName } from '@/lib/school-brand';
+
 // WhatsApp Cloud API (Meta) service.
 // Activates automatically when WHATSAPP_PHONE_ID + WHATSAPP_TOKEN env vars are set.
 // Otherwise all send functions silently skip (log-only) so the app keeps working.
@@ -119,7 +121,7 @@ export async function sendAbsenceAlert(opts: {
   const emoji = opts.status === 'escape' ? '🚨' : opts.status === 'late' ? '⏰' : '❌';
 
   const message =
-    `${emoji} تنبيه من مدرسة صفوة الرواد الأهلية\n\n` +
+    `${emoji} تنبيه من ${serverSchoolFullName()}\n\n` +
     `سيد ولي الأمر،\n` +
     `نفيدكم بأن الطالب: *${opts.studentName}*\n` +
     `الفصل: ${opts.className}\n` +
@@ -137,7 +139,7 @@ export async function sendAnnouncement(opts: {
   const phone = normalizeArabicPhone(opts.parentPhone);
   if (!phone) return { sent: false, reason: 'invalid-phone' };
 
-  const message = `📢 *${opts.title}*\nمدرسة صفوة الرواد الأهلية\n\n${opts.content}`;
+  const message = `📢 *${opts.title}*\n${serverSchoolFullName()}\n\n${opts.content}`;
   return sendText(phone, message);
 }
 

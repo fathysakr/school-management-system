@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { api } from '@/lib/api';
+import { currentSchoolName } from '@/lib/school-brand';
 import {
   Box, Container, Card, CardContent, TextField, Button, Typography,
   Alert, Paper, CircularProgress
@@ -105,7 +106,7 @@ export default function ResetPasswordPage() {
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5, mt: 1 }}>
               <School fontSize="small" color="primary" />
               <Typography variant="body2" color="text.secondary">
-                مدرسة صفوة الرواد الأهلية
+                {currentSchoolName()}
               </Typography>
             </Box>
           </CardContent>

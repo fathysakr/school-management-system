@@ -1,10 +1,11 @@
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
+import { serverSchoolFullName } from '@/lib/school-brand';
 import Providers from '@/components/providers';
 import PwaRegister from '@/components/pwa-register';
 
 export const metadata = {
-  title: 'مدرسة صفوة الرواد الأهلية',
+  title: serverSchoolFullName(),
   description: 'نظام إدارة مدرسة صفوة الرواد الأهلية',
   manifest: '/manifest.json',
   appleWebApp: {

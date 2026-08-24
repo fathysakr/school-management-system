@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
+import { schoolFullName } from '@/lib/school-brand';
 import { useRouter, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import {
@@ -185,7 +186,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
             <AutoStories sx={{ fontSize: 28, opacity: 0.9 }} />
             <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: 0.5 }}>
-              مدرسة صفوة الرواد الأهلية
+              {schoolFullName(FORCED_SCHOOL_STAGE)}
             </Typography>
             {FORCED_SCHOOL_STAGE ? (
               <Chip

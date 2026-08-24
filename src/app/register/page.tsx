@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { currentSchoolName } from '@/lib/school-brand';
 import {
   Box, Container, Card, CardContent, TextField, Button, Typography,
   Alert, MenuItem, Paper
@@ -71,7 +72,7 @@ export default function RegisterPage() {
             </Box>
 
             <Typography variant="h4" textAlign="center" gutterBottom>
-              مدرسة صفوة الرواد الأهلية
+              {currentSchoolName()}
             </Typography>
             <Typography variant="body1" textAlign="center" color="text.secondary" sx={{ mb: 4 }}>
               إنشاء حساب جديد

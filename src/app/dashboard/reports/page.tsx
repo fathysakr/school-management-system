@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
+import { currentSchoolName } from '@/lib/school-brand';
 import {
   Box, Typography, Button, Paper, TextField, Chip, Alert, CircularProgress,
   FormControl, InputLabel, Select, MenuItem, Grid, Card, CardContent,
@@ -72,7 +73,7 @@ const printContent = (html: string) => {
       @media print { .no-print { display: none; } body { padding: 0; } }
     </style>
     </head><body>${html}
-    <div class="footer">تم إنشاء هذا التقرير بواسطة نظام مدرسة صفوة الرواد الأهلية</div>
+    <div class="footer">تم إنشاء هذا التقرير بواسطة ${currentSchoolName()}</div>
     </body></html>
   `);
   win.document.close();
@@ -322,7 +323,7 @@ export default function ReportsPage() {
     const html = `
       <div class="header">
         <h1>ملف الطالب الشامل</h1>
-        <p>مدرسة صفوة الرواد الأهلية</p>
+        <p>${currentSchoolName()}</p>
       </div>
       <div class="student-info"><table>
         <tr><td><strong>اسم الطالب:</strong> ${fileStudent.first_name} ${fileStudent.last_name}</td>
@@ -359,7 +360,7 @@ export default function ReportsPage() {
     const html = `
       <div class="header">
         <h1>${currentCfg?.label}</h1>
-        <p>مدرسة صفوة الرواد الأهلية - ${reports.length} تقرير</p>
+        <p>${currentSchoolName()} - ${reports.length} تقرير</p>
       </div>
       ${reportsHtml}
     `;
