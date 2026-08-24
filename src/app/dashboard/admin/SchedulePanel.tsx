@@ -3,15 +3,20 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box, Typography, Paper, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Alert, CircularProgress, IconButton,
-  FormControl, InputLabel, Select, MenuItem, Tabs, Tab, Grid, Chip
+  FormControl, InputLabel, Select, MenuItem, Tabs, Tab, Grid, Chip,
+  InputAdornment
 } from '@mui/material';
-import { Add, CalendarToday, FileDownload, AutoAwesome, Person, School, MeetingRoom, CloudUpload, Close as CloseIcon } from '@mui/icons-material';
+import { Add, CalendarToday, FileDownload, AutoAwesome, Person, School, MeetingRoom, CloudUpload, Close as CloseIcon, Search } from '@mui/icons-material';
 import { exportToExcel } from '@/lib/excel';
 import { api } from '@/lib/api';
 import { useAuth, stageOptions, FORCED_SCHOOL_STAGE } from '@/lib/auth-context';
 
 const dayLabels: Record<string, string> = { sunday: 'الأحد', monday: 'الاثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس' };
 const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
+
+// Loose time compare: "08:00", "8:0" and "9" all normalize for substring match
+const looseTime = (t: string): string =>
+  (t || '').split(':').map(p => String(parseInt(p, 10) || 0)).join(':');
 
 const subjectPalette: Record<string, string> = {
   'القرآن': '#4CAF50', 'التوحيد': '#9C27B0', 'الفقه': '#FF9800', 'الحديث': '#03A9F4',
@@ -42,6 +47,7 @@ export default function SchedulePanel() {
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [selectedRoom, setSelectedRoom] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
+  const [timeQuery, setTimeQuery] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
@@ -175,6 +181,13 @@ export default function SchedulePanel() {
     setSuccess('تم التصدير');
   };
 
+  // Global period numbering across all schedules (order of unique start times)
+  const globalTimes = [...new Set(schedules.map((s: any) => s.start_time))].sort();
+  const periodOf: Record<string, number> = {};
+  globalTimes.forEach((st, i) => { periodOf[st] = i + 1; });
+  const timeSearchNorm = timeQuery.replace(/[^\d:.]/g, '').replace('.', ':');
+  const timeSearching = timeSearchNorm.trim().length > 0;
+
   const renderCell = (slotSchedules: any[]) => {
     if (!slotSchedules.length) return <Typography sx={{ color: '#e0e0e0', fontSize: 18, textAlign: 'center' }}>—</Typography>;
     return slotSchedules.map(s => {
@@ -194,6 +207,8 @@ export default function SchedulePanel() {
   const renderTable = (data: any[], getTimeSlots: () => string[]) => {
     const times = getTimeSlots();
     if (!times.length) return <Typography sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>لا توجد حصص</Typography>;
+    const endOf: Record<string, string> = {};
+    data.forEach(s => { if (s.end_time && !endOf[s.start_time]) endOf[s.start_time] = s.end_time; });
     return (
       <Paper variant="outlined" sx={{ overflowX: 'auto', borderRadius: 2 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
@@ -204,13 +219,56 @@ export default function SchedulePanel() {
           <tbody>
             {times.map((st, i) => (
               <tr key={st} style={{ background: i % 2 === 0 ? '#fafbfc' : '#f5f6f8' }}>
-                <td style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontSize: 13, color: '#555', whiteSpace: 'nowrap' }}>{st}</td>
+                <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', whiteSpace: 'nowrap' }}>
+                  <Typography sx={{ fontWeight: 700, fontSize: 13, color: '#1565c0' }}>الحصة {periodOf[st] || i + 1}</Typography>
+                  <Typography sx={{ fontSize: 11, color: '#777' }}>{st} - {endOf[st] || ''}</Typography>
+                </td>
                 {days.map(d => <td key={d} style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', verticalAlign: 'top', minWidth: 100 }}>{renderCell(data.filter(s => s.day_of_week === d && s.start_time === st))}</td>)}
               </tr>
             ))}
           </tbody>
         </table>
       </Paper>
+    );
+  };
+
+  const renderTimeSearch = () => {
+    const nq = timeQuery.replace(/[^\d:.]/g, '').replace('.', ':');
+    const results = schedules
+      .filter(s => looseTime(s.start_time).includes(looseTime(nq)) || looseTime(s.end_time).includes(looseTime(nq)))
+      .sort((a: any, b: any) =>
+        days.indexOf(a.day_of_week) - days.indexOf(b.day_of_week) ||
+        String(a.start_time).localeCompare(String(b.start_time)) ||
+        String(a.class_name).localeCompare(String(b.class_name), 'ar'));
+    return (
+      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
+        <Alert severity={results.length ? 'info' : 'warning'} sx={{ borderRadius: 0 }}>
+          {results.length ? `تم العثور على ${results.length} حصة عند الوقت «${timeQuery}»` : 'لا توجد حصص في هذا الوقت'}
+        </Alert>
+        <Box sx={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }} dir="rtl">
+            <thead>
+              <tr style={{ background: 'linear-gradient(135deg, #1565c0, #1976d2)' }}>
+                {['اليوم', 'الحصة', 'الوقت', 'الفصل', 'المادة', 'المعلم'].map(h => (
+                  <th key={h} style={{ padding: '10px 12px', color: 'white', fontWeight: 600, textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.2)', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((s: any, i: number) => (
+                <tr key={s.id} style={{ background: i % 2 === 0 ? '#fafbfc' : '#f5f6f8' }}>
+                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontWeight: 600, fontSize: 13 }}>{dayLabels[s.day_of_week] || s.day_of_week}</td>
+                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontWeight: 700, color: '#1565c0', whiteSpace: 'nowrap' }}>الحصة {periodOf[s.start_time] || '-'}</td>
+                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontSize: 13, color: '#555', whiteSpace: 'nowrap' }}>{s.start_time} - {s.end_time}</td>
+                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>{s.class_name}</td>
+                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontWeight: 700, fontSize: 13 }}>{s.subject}</td>
+                  <td style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e0e0e0', fontSize: 13 }}>{s.teacher_first} {s.teacher_last}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Box>
+      </Box>
     );
   };
 
@@ -280,6 +338,21 @@ export default function SchedulePanel() {
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
+            size="small"
+            placeholder="ابحث بالوقت مثل: 08:00 أو 9"
+            value={timeQuery}
+            onChange={e => setTimeQuery(e.target.value)}
+            sx={{ width: { xs: '100%', sm: 240 } }}
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment>,
+              endAdornment: timeQuery ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setTimeQuery('')}><CloseIcon fontSize="small" /></IconButton>
+                </InputAdornment>
+              ) : undefined,
+            }}
+          />
           {viewTab === 1 && <FormControl size="small" sx={{ minWidth: 140 }}><InputLabel>الفصل</InputLabel><Select value={selectedClass} label="الفصل" onChange={e => { setSelectedClass(e.target.value); setSelectedTeacher(''); setSelectedRoom(''); }}><MenuItem value="">الكل</MenuItem>{classes.map(c => <MenuItem key={c.id} value={c.id}>{c.class_name}</MenuItem>)}</Select></FormControl>}
           {viewTab === 2 && <FormControl size="small" sx={{ minWidth: 140 }}><InputLabel>المعلم</InputLabel><Select value={selectedTeacher} label="المعلم" onChange={e => { setSelectedTeacher(e.target.value); setSelectedClass(''); setSelectedRoom(''); }}><MenuItem value="">الكل</MenuItem>{teachers.map(t => <MenuItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</MenuItem>)}</Select></FormControl>}
           {viewTab === 3 && <FormControl size="small" sx={{ minWidth: 140 }}><InputLabel>القاعة</InputLabel><Select value={selectedRoom} label="القاعة" onChange={e => { setSelectedRoom(e.target.value); setSelectedClass(''); setSelectedTeacher(''); }}><MenuItem value="">الكل</MenuItem>{uniqueRooms.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}</Select></FormControl>}
@@ -311,10 +384,14 @@ export default function SchedulePanel() {
         </Paper>
       ) : (
         <>
-          {viewTab === 0 && renderOverview()}
-          {viewTab === 1 && renderClassView()}
-          {viewTab === 2 && renderTeacherView()}
-          {viewTab === 3 && renderRoomView()}
+          {timeSearching ? renderTimeSearch() : (
+            <>
+              {viewTab === 0 && renderOverview()}
+              {viewTab === 1 && renderClassView()}
+              {viewTab === 2 && renderTeacherView()}
+              {viewTab === 3 && renderRoomView()}
+            </>
+          )}
         </>
       )}
 
