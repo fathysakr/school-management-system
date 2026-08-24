@@ -21,3 +21,4 @@ UsersfathyAppDataLocalTempgit-creds.txt
 
 # Student data - should not be in source
 src/data/import-students.json
+.env*

@@ -99,17 +99,24 @@ function createTursoAdapter() {
   return createLibsqlAdapter(client);
 }
 
+function toPlainRow(row: any, columns: string[]): Record<string, any> {
+  return Object.fromEntries(columns.map((c, i) => [c, row[i]]));
+}
+
 function createLibsqlAdapter(client: any): DbAdapter {
   return {
     prepare(sql: string) {
       return {
         get: async (...args: any[]) => {
           const result = await client.execute({ sql, args });
-          return result.rows[0] || null;
+          const row = result.rows[0];
+          if (!row) return null;
+          return toPlainRow(row, [...result.columns]);
         },
         all: async (...args: any[]) => {
           const result = await client.execute({ sql, args });
-          return result.rows;
+          const cols = [...result.columns];
+          return result.rows.map((row: any) => toPlainRow(row, cols));
         },
         run: async (...args: any[]) => {
           const result = await client.execute({ sql, args });

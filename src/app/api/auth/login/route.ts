@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       return unauthorized('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
 
-    const passwordValid = await comparePassword(password, user.password);
+    const passwordValid = await comparePassword(String(password), String(user.password ?? ''));
     if (!passwordValid) {
       return unauthorized('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
