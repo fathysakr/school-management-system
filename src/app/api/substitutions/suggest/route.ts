@@ -36,10 +36,12 @@ export async function POST(request: NextRequest) {
 
     const orphanedSchedules = await db.prepare(`
       SELECT s.*, c.class_name, c.grade,
-        t.first_name as teacher_first, t.last_name as teacher_last, t.specialization, t.school
+        t.first_name as teacher_first, t.last_name as teacher_last, t.specialization, t.school,
+        pt.period_number
       FROM schedules s
       JOIN classes c ON c.id = s.class_id
       JOIN teachers t ON t.id = s.teacher_id
+      LEFT JOIN period_times pt ON pt.start_time = s.start_time AND pt.end_time = s.end_time
       WHERE s.teacher_id IN (${absent_teacher_ids.map(() => '?').join(',')})
         AND s.day_of_week = ? AND s.status = 'active'
       ORDER BY s.start_time
@@ -99,6 +101,7 @@ export async function POST(request: NextRequest) {
         class_name: schedule.class_name,
         subject: schedule.subject,
         day_of_week: dayOfWeek,
+        period_number: schedule.period_number ?? null,
         start_time: schedule.start_time,
         end_time: schedule.end_time,
         absent_teacher: { id: schedule.teacher_id, name: `${schedule.teacher_first} ${schedule.teacher_last}` },

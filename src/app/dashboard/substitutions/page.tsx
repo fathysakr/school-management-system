@@ -207,7 +207,7 @@ export default function SubstitutionsPage() {
                   <TableRow>
                     <TableCell>الفصل</TableCell>
                     <TableCell>المادة</TableCell>
-                    <TableCell>الوقت</TableCell>
+                    <TableCell>الحصة</TableCell>
                       <TableCell>المعلم الغائب</TableCell>
                       <TableCell>البديل المقترح</TableCell>
                       <TableCell>بدائل أخرى</TableCell>
@@ -219,7 +219,9 @@ export default function SubstitutionsPage() {
                       <TableRow key={s.subject + s.class_name + s.start_time || i}>
                         <TableCell>{s.class_name}</TableCell>
                         <TableCell>{s.subject}</TableCell>
-                        <TableCell>{s.start_time} - {s.end_time}</TableCell>
+                        <TableCell>
+                          <Chip label={`الحصة ${s.period_number ?? '?'}`} size="small" color="primary" variant="outlined" />
+                        </TableCell>
                         <TableCell>
                           <Chip label={s.absent_teacher.name} size="small" color="error" variant="outlined" />
                         </TableCell>
@@ -284,7 +286,7 @@ export default function SubstitutionsPage() {
                     <TableCell>التاريخ</TableCell>
                     <TableCell>الفصل</TableCell>
                     <TableCell>المادة</TableCell>
-                    <TableCell>الوقت</TableCell>
+                    <TableCell>الحصة</TableCell>
                     <TableCell>المعلم الغائب</TableCell>
                     <TableCell>البديل</TableCell>
                     <TableCell>الحالة</TableCell>
@@ -297,7 +299,9 @@ export default function SubstitutionsPage() {
                       <TableCell>{h.date}</TableCell>
                       <TableCell>{h.class_name}</TableCell>
                       <TableCell>{h.subject}</TableCell>
-                      <TableCell>{h.start_time}</TableCell>
+                      <TableCell>
+                        <Chip label={`الحصة ${h.period_number ?? '?'}`} size="small" color="primary" variant="outlined" />
+                      </TableCell>
                       <TableCell>{h.absent_first} {h.absent_last}</TableCell>
                       <TableCell>{h.sub_first} {h.sub_last || '—'}</TableCell>
                       <TableCell>

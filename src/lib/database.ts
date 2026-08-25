@@ -892,6 +892,12 @@ function applyMigrations(bsql: any) {
         ALTER TABLE students ADD COLUMN annual_fee REAL DEFAULT 0;
       `
     },
+    {
+      name: '026_substitution_reminder',
+      sql: `
+        ALTER TABLE substitutions ADD COLUMN reminder_sent INTEGER DEFAULT 0;
+      `
+    },
   ];
 
   for (const migration of migrations) {

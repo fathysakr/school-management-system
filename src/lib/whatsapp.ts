@@ -143,6 +143,31 @@ export async function sendAnnouncement(opts: {
   return sendText(phone, message);
 }
 
+export async function sendSubstitutionReminder(opts: {
+  teacherPhone: string;
+  teacherName: string;
+  subject: string;
+  className: string;
+  periodNumber: number;
+  startTime: string;
+  date: string;
+}): Promise<SendResult> {
+  const phone = normalizeArabicPhone(opts.teacherPhone);
+  if (!phone) return { sent: false, reason: 'invalid-phone' };
+
+  const message =
+    `⏰ تذكير بحصة بديلة - ${serverSchoolFullName()}\n\n` +
+    `مرحباً ${opts.teacherName}،\n\n` +
+    `لديك حصة بديلة بعد 4 دقائق:\n` +
+    `📚 المادة: *${opts.subject}*\n` +
+    `🏫 الفصل: ${opts.className}\n` +
+    `📅 التاريخ: ${opts.date}\n` +
+    `🕐 الحصة: ${opts.periodNumber} (${opts.startTime})\n\n` +
+    `يرجى التوجه للفصل في الموعد المحدد.`;
+
+  return sendText(phone, message);
+}
+
 export function whatsappEnabled(): boolean {
   return isConfigured();
 }

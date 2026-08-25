@@ -37,11 +37,13 @@ export async function GET(request: NextRequest) {
       SELECT s.*,
         at.first_name as absent_first, at.last_name as absent_last,
         st.first_name as sub_first, st.last_name as sub_last,
-        c.class_name, c.grade
+        c.class_name, c.grade,
+        pt.period_number
       FROM substitutions s
       LEFT JOIN teachers at ON s.absent_teacher_id = at.id
       LEFT JOIN teachers st ON s.substitute_teacher_id = st.id
       LEFT JOIN classes c ON s.class_id = c.id
+      LEFT JOIN period_times pt ON pt.start_time = s.start_time AND pt.end_time = s.end_time
       ${where}
       ORDER BY s.date DESC, s.start_time ASC
       LIMIT ? OFFSET ?
