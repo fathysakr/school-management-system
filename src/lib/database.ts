@@ -1232,6 +1232,21 @@ async function _ensureTursoReady() {
     try { await db.exec(`CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date)`); } catch {}
     try { await db.exec(`ALTER TABLE students ADD COLUMN annual_fee REAL DEFAULT 0`); } catch {}
 
+    // Repair: replace JSON specialization strings with plain subject names
+    try {
+      const bad = await db.prepare("SELECT id, specialization FROM teachers WHERE specialization LIKE '[%'").all() as any[];
+      for (const t of bad) {
+        try {
+          const arr = JSON.parse(t.specialization);
+          const names = (Array.isArray(arr) ? arr : []).map((a: any) => a.n).filter(Boolean).join(' | ');
+          if (names) await db.prepare("UPDATE teachers SET specialization = ? WHERE id = ?").run(names, t.id);
+          else await db.prepare("UPDATE teachers SET specialization = '' WHERE id = ?").run(t.id);
+        } catch {
+          await db.prepare("UPDATE teachers SET specialization = '' WHERE id = ?").run(t.id);
+        }
+      }
+    } catch { /* no specialization column yet */ }
+
     const done = await db.prepare("SELECT 1 FROM _init_done WHERE flag = 1").get().catch(() => null) as any;
     if (done) { return; }
 
@@ -1674,20 +1689,6 @@ async function _ensureTursoReady() {
     for (const cmd of idxCmds) {
       try { await db.exec(cmd); } catch (e: any) { console.error('Index creation error:', e?.message); }
     }
-    // Repair: replace JSON specialization strings with plain subject names
-    try {
-      const bad = await db.prepare("SELECT id, specialization FROM teachers WHERE specialization LIKE '[%'").all() as any[];
-      for (const t of bad) {
-        try {
-          const arr = JSON.parse(t.specialization);
-          const names = (Array.isArray(arr) ? arr : []).map((a: any) => a.n).filter(Boolean).join(' | ');
-          if (names) await db.prepare("UPDATE teachers SET specialization = ? WHERE id = ?").run(names, t.id);
-          else await db.prepare("UPDATE teachers SET specialization = '' WHERE id = ?").run(t.id);
-        } catch {
-          await db.prepare("UPDATE teachers SET specialization = '' WHERE id = ?").run(t.id);
-        }
-      }
-    } catch { /* no specialization column yet */ }
     await db.prepare("INSERT OR IGNORE INTO _init_done (flag) VALUES (1)").run();
     tursoReady = true;
   } catch (e: any) {
