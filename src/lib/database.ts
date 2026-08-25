@@ -1237,6 +1237,7 @@ async function _ensureTursoReady() {
     try { await db.exec(`CREATE INDEX IF NOT EXISTS idx_payments_student ON payments(student_id)`); } catch {}
     try { await db.exec(`CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date)`); } catch {}
     try { await db.exec(`ALTER TABLE students ADD COLUMN annual_fee REAL DEFAULT 0`); } catch {}
+    try { await db.exec(`ALTER TABLE substitutions ADD COLUMN reminder_sent INTEGER DEFAULT 0`); } catch {}
 
     // Repair: replace JSON specialization strings with plain subject names
     try {
