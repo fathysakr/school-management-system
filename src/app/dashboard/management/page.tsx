@@ -62,7 +62,7 @@ export default function ManagementPage() {
   const [passwordDialog, setPasswordDialog] = useState<{ member: any } | null>(null);
   const [passwordForm, setPasswordForm] = useState({ password: '', show: false });
   const [formDialog, setFormDialog] = useState<{ open: boolean; edit: any | null }>({ open: false, edit: null });
-  const [formData, setFormData] = useState({ email: '', password: '', role: 'middle_supervisor', teacher_id: '' });
+  const [formData, setFormData] = useState({ email: '', password: '', role: FORCED_SCHOOL_STAGE === 'high' ? 'high_supervisor' : 'middle_supervisor', teacher_id: '' });
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [roleFilter, setRoleFilter] = useState('all');
   const [schoolFilter, setSchoolFilter] = useState<string>(FORCED_SCHOOL_STAGE ?? 'all');
@@ -117,7 +117,7 @@ export default function ManagementPage() {
   };
 
   const openAddDialog = () => {
-    setFormData({ email: '', password: '', role: 'middle_supervisor', teacher_id: '' });
+    setFormData({ email: '', password: '', role: FORCED_SCHOOL_STAGE === 'high' ? 'high_supervisor' : 'middle_supervisor', teacher_id: '' });
     setFormDialog({ open: true, edit: null });
     setError('');
   };

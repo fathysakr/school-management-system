@@ -16,7 +16,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('middle_teacher');
+  const [role, setRole] = useState(FORCED_SCHOOL_STAGE === 'high' ? 'high_teacher' : 'middle_teacher');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -61,7 +61,7 @@ export default function RegisterPage() {
     : allRoles;
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', py: 4 }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #1e3a8a 100%)', py: 4 }}>
       <Container maxWidth="sm">
         <Card sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: 4 }}>

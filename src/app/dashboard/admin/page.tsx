@@ -173,7 +173,7 @@ export default function AdminPage() {
   const [userSuccess, setUserSuccess] = useState('');
   const [userDialog, setUserDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [userForm, setUserForm] = useState({ email: '', password: '', role: 'middle_teacher', status: 'active', teacher_id: '' });
+  const [userForm, setUserForm] = useState({ email: '', password: '', role: FORCED_SCHOOL_STAGE === 'high' ? 'high_teacher' : 'middle_teacher', status: 'active', teacher_id: '' });
   const [userSaving, setUserSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -659,7 +659,7 @@ export default function AdminPage() {
                 <FormControl fullWidth>
                   <InputLabel>الدور</InputLabel>
                   <Select value={userForm.role} label="الدور" onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}>
-                    {Object.entries(roleLabels).filter(([k]) => k !== 'admin').map(([val, label]) => (
+                    {Object.entries(roleLabels).filter(([k]) => k !== 'admin' && (!FORCED_SCHOOL_STAGE || k === 'admin' || k.startsWith(FORCED_SCHOOL_STAGE))).map(([val, label]) => (
                       <MenuItem key={val} value={val}>{label}</MenuItem>
                     ))}
                   </Select>
