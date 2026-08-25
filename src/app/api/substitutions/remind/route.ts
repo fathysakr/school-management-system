@@ -34,12 +34,14 @@ export async function GET(request: NextRequest) {
 
     // Find approved substitutions for today with this start_time that haven't been reminded
     const subs = await db.prepare(`
-      SELECT s.id, s.subject, s.class_id, s.start_time, s.end_time, s.period_number,
+      SELECT s.id, s.subject, s.class_id, s.start_time, s.end_time,
+             pt.period_number,
              c.class_name,
              t.first_name, t.last_name, t.phone as teacher_phone
       FROM substitutions s
       JOIN classes c ON c.id = s.class_id
       JOIN teachers t ON t.id = s.substitute_teacher_id
+      LEFT JOIN period_times pt ON pt.start_time = s.start_time AND pt.end_time = s.end_time
       WHERE s.date = ?
         AND s.status = 'approved'
         AND s.start_time = ?
