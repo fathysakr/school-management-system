@@ -300,11 +300,11 @@ export async function POST(request: NextRequest) {
 
     const updateSpec = db.prepare('UPDATE teachers SET specialization = ? WHERE id = ?');
     for (const [tid, subMap] of teacherSubjects) {
-      const arr: any[] = [];
-      for (const [subName, data] of subMap) {
-        arr.push({ n: subName, s: data.sessions.size, classes: Array.from(data.classes) });
+      const names: string[] = [];
+      for (const subName of subMap.keys()) {
+        names.push(subName);
       }
-      if (arr.length > 0) updateSpec.run(JSON.stringify(arr), tid);
+      if (names.length > 0) updateSpec.run(names.join(' | '), tid);
     }
 
     // ---- Sync المواد الدراسية with the imported schedule ----
